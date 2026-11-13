@@ -27,7 +27,7 @@ Each `v*` tag uploads the addon zip to CurseForge, set to the newest **WoW Forev
 1. On CurseForge, create an **API token** (your account settings → API tokens).
 2. On GitHub, open the repo's **Settings → Secrets and variables → Actions**:
    - **Secrets** tab → New repository secret: name `CF_API_KEY`, value the token.
-   - **Variables** tab → New repository variable: name `CF_PROJECT_ID`, value the project id (the number in the project's URL on authors.curseforge.com).
+   - **Variables** tab → New repository variable: name `CF_PROJECT_ID`, value the project id (the number in the project's URL on authors.curseforge.com). A secret with that name works too.
 3. If the upload picks the wrong game version, also add a variable `CF_GAME_VERSIONS` with the right version id(s), comma-separated. The workflow log lists them.
 
 Without these, releases still publish on GitHub and just skip CurseForge. For the first release, uploading the zip by hand is fine too.
