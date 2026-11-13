@@ -779,7 +779,7 @@ local function preview(what)
 		showText("You were killed by Test-Killer.", "death")
 		playHumiliation()
 	elseif what == "other" then
-		showText("Friend-Name killed Test-Victim! (streak 3)", "other")
+		showText("Friend-Name (10) killed Test-Victim (12)! (streak 3)", "other")
 		celebrate("other")
 	end
 end
@@ -799,6 +799,48 @@ local function count(list, name)
 end
 
 local syncSendKill, syncSendDeath -- defined in the sync section below
+
+-- Levels of the units we have seen, by plain lower-case name, so a kill or death can say
+-- "Hogger (11)". Filled from the target, mouseover, focus and nameplates; the game may hide
+-- them in some content, and then there is simply no level.
+local levelByName, levelCount = {}, 0
+
+local function levelKey(name)
+	if not usableString(name) then return nil end
+	return strlower(strmatch(name, "^([^%-]+)") or name)
+end
+
+local function noteUnitLevel(unit)
+	local ok, name, level = pcall(function()
+		if not UnitExists(unit) then return nil end
+		return UnitName(unit), UnitLevel(unit)
+	end)
+	if not ok or isSecret(level) or type(level) ~= "number" then return end
+	local key = levelKey(name)
+	if not key then return end
+	if not levelByName[key] then
+		levelCount = levelCount + 1
+		if levelCount > 300 then
+			wipe(levelByName)
+			levelCount = 1
+		end
+	end
+	levelByName[key] = level
+end
+
+-- A unit's level by name: -1 for "??", nil when unknown
+local function levelOf(name)
+	local key = levelKey(name)
+	if not key or name == UNKNOWN_VICTIM then return nil end
+	for _, unit in ipairs({ "target", "mouseover", "focus", "softenemy" }) do noteUnitLevel(unit) end
+	return levelByName[key]
+end
+
+local function playerLevel()
+	local ok, level = pcall(UnitLevel, "player")
+	if ok and not isSecret(level) and type(level) == "number" then return level end
+	return nil
+end
 
 -- We landed a kill (or won a duel). victim: a name, or UNKNOWN_VICTIM.
 local function registerKill(victim, isDuel)
@@ -984,13 +1026,17 @@ end
 -- Every kill and death message ends with the sender's GUID, so our own broadcast coming back is
 -- recognised exactly. (Names are not enough on WoW Forever: characters have a family name, and
 -- UnitName may return only the given name while the sender arrives with both.)
+-- Since 0.1.1 the levels (ours, then the victim's or killer's; 0 = unknown, -1 = "??") come just
+-- before the GUID, so 0.1.0 readers, which take fields 3-6 and the last one, still work.
 syncSendKill = function(kind, victim, streakCount, multi, rank)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
-		tostring(multi or 0), tostring(rank or 0), playerGUID or "" }, "\t"))
+		tostring(multi or 0), tostring(rank or 0), tostring(playerLevel() or 0), tostring(levelOf(victim) or 0),
+		playerGUID or "" }, "\t"))
 end
 
 syncSendDeath = function(killer, isDuel)
-	broadcast(table.concat({ "D", VERSION, cleanField(killer), isDuel and "1" or "0", playerGUID or "" }, "\t"))
+	broadcast(table.concat({ "D", VERSION, cleanField(killer), isDuel and "1" or "0",
+		tostring(playerLevel() or 0), tostring(levelOf(killer) or 0), playerGUID or "" }, "\t"))
 end
 
 -- "Given Family-Realm" -> "givenfamily-realm" and "givenfamily" (no spaces, lower case)
@@ -1056,7 +1102,9 @@ local function sendTestSync()
 		chat("You are not in a group or guild you share with: there is nobody to send the test to.")
 		return
 	end
-	broadcast(table.concat({ "T", VERSION, "Test-Victim", "3", "0", "2", playerGUID or "" }, "\t"))
+	local level = playerLevel() or 0
+	broadcast(table.concat({ "T", VERSION, "Test-Victim", "3", "0", "2", tostring(level), tostring(level + 2),
+		playerGUID or "" }, "\t"))
 	chat("Sent a test kill to your " .. ((toGroup and toGuild) and "group and guild" or (toGroup and "group" or "guild"))
 		.. ". Other users of " .. TITLE .. " should see it.")
 end
@@ -1122,19 +1170,64 @@ local function safeText(text)
 	return strsub(text, 1, 60)
 end
 
+-- Feed lines: a chilli and a skull in front, the killer in an accent colour
+local FEED_ICONS = "|T" .. MEDIA .. "Chilli:14:14|t|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:14:14|t "
+local KILLER_COLOR = "|cffff7733"
+
+local function maxPlayerLevel()
+	for _, getter in ipairs({ GetMaxLevelForPlayerExpansion, GetMaxPlayerLevel }) do
+		if type(getter) == "function" then
+			local ok, level = pcall(getter)
+			if ok and not isSecret(level) and type(level) == "number" and level > 0 then return level end
+		end
+	end
+	return nil
+end
+
+-- A level from a sync message: a whole number from -1 ("??") to 255, nil when missing or 0
+local function levelField(value)
+	local level = tonumber(value)
+	if not level then return nil end
+	level = math.floor(level)
+	if level == 0 or level < -1 or level > 255 then return nil end
+	return level
+end
+
+-- The sender's level and the other unit's level, from where the message version keeps them
+local function messageLevels(kind, fields)
+	local count = kind == "D" and 7 or 9
+	if #fields < count then return nil, nil end
+	return levelField(fields[count - 2]), levelField(fields[count - 1])
+end
+
+-- "Bob (10)": the sender's level shows below max level; the other's when it differs from the sender's
+local function withLevel(name, level, otherLevel, isSender)
+	if not level then return name end
+	if isSender then
+		local maxLevel = maxPlayerLevel()
+		if level < 0 or (maxLevel and level >= maxLevel) then return name end
+	elseif level == otherLevel then
+		return name
+	end
+	return name .. " (" .. (level < 0 and "??" or tostring(level)) .. ")"
+end
+
 -- A kill, duel win, test or death from another user, shown by the settings for its source
 local function onFeedMessage(kind, sender, channel, fields)
 	local source = isGroupMember(sender, channel) and syncConfig().party or syncConfig().guild
 	local who = safeText(shortName(sender))
 	local name = safeText(fields[3])
 	if not who or not name then return end
+	local senderLevel, otherLevel = messageLevels(kind, fields)
+	local whoShown = withLevel(who, senderLevel, otherLevel, true)
+	local nameShown = withLevel(name, otherLevel, senderLevel, false)
 
 	if kind == "D" then
 		if seenRecently(sender .. "|D|" .. name) then return end
 		if not source.deaths then return end
-		local text = who .. " was " .. (fields[4] == "1" and "defeated" or "killed") .. " by " .. name .. "."
-		if source.feed then chat(text) end
-		if source.text then showText(text, "death") end
+		local verb = " was " .. (fields[4] == "1" and "defeated" or "killed") .. " by "
+		if source.feed then chat(FEED_ICONS .. whoShown .. verb .. KILLER_COLOR .. nameShown .. "|r.") end
+		if source.text then showText(whoShown .. verb .. nameShown .. ".", "death") end
 		if source.sound and fields[4] ~= "1" then playHumiliation() end
 		return
 	end
@@ -1149,18 +1242,19 @@ local function onFeedMessage(kind, sender, channel, fields)
 	rank = math.min(math.max(0, math.floor(rank)), #RANK_SOUNDS)
 	if seenRecently(sender .. "|" .. kind .. "|" .. name .. "|" .. streakCount) then return end
 
-	local text
+	local rest
 	if kind == "U" then
-		text = who .. " defeated " .. name .. " in a duel!"
+		rest = " defeated " .. nameShown .. " in a duel!"
 	else
-		text = who .. " killed " .. name .. "!"
+		rest = " killed " .. nameShown .. "!"
 	end
-	if streakCount > 1 then text = text .. " (streak " .. streakCount .. ")" end
-	if kind == "T" then text = text .. " [test]" end
+	if streakCount > 1 then rest = rest .. " (streak " .. streakCount .. ")" end
+	if kind == "T" then rest = rest .. " [test]" end
+	local text = whoShown .. rest
 
 	if source.feed then
-		chat(text)
-		if multi > 0 then chat(who .. ": " .. MULTI_TEXTS[multi]) end
+		chat(FEED_ICONS .. KILLER_COLOR .. whoShown .. "|r" .. rest)
+		if multi > 0 then chat(FEED_ICONS .. KILLER_COLOR .. who .. "|r: " .. MULTI_TEXTS[multi]) end
 	end
 	if source.text then
 		showText(text, "other")
@@ -1573,7 +1667,16 @@ function events.UNIT_HEALTH(unit)
 	checkTargetDeath()
 end
 
+function events.UPDATE_MOUSEOVER_UNIT()
+	noteUnitLevel("mouseover")
+end
+
+function events.NAME_PLATE_UNIT_ADDED(unit)
+	if usableString(unit) then noteUnitLevel(unit) end
+end
+
 function events.PLAYER_TARGET_CHANGED()
+	noteUnitLevel("target")
 	checkExecute()
 	checkTargetDeath()
 end
