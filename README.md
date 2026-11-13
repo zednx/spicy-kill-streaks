@@ -1,3 +1,5 @@
+<img src="docs/logo.png" width="128" align="right" alt="Spicy Kill Streaks logo">
+
 # 🌶️ Spicy Kill Streaks
 
 **Announcer voices, combat text and sparkles for your killing blows in WoW Forever.** Land a killing blow and hear *Killing Spree!*, *Rampage!*, *Godlike!*; chain kills for *Double Kill!* up to *Holy Shit!*. Die and get *Humiliation*.

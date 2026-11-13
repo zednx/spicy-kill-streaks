@@ -9,6 +9,8 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 | `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the whole addon; `libs/` is Ace3 (unchanged). |
 | `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README). |
 | `scripts/` | `check-release.sh`, `curseforge-upload.sh`. |
+| `tools/make_art.py` | Draws `docs/logo.png` and `docs/logo-400.png` (Pillow). Same tile and chilli as Spicy Side Quests. |
+| `docs/curseforge.md` | CurseForge project settings, upload setup and the listing description. |
 
 The game's `Interface/AddOns/SpicyKillStreaks` is a junction to `SpicyKillStreaks/` here, so `/reload` picks up edits directly. New files need a game restart.
 
