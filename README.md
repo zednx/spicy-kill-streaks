@@ -33,7 +33,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks test kill` | Simulate a kill (also `death`, `execute`, `prepare`) |
 | `/sks unlock` / `/sks lock` | Move the text and sparkles |
 | `/sks who` | Who in your group and guild runs the addon |
-| `/sks emote` | Send your last kill's emote (WoW Forever only lets emotes go out from a key press; put it in a macro) |
+| `/sks emote` | Send your last kill's custom emote message (WoW Forever only lets typed messages go out from a key press; put it in a macro). Built-in emotes like /cheer play by themselves after combat. |
 | `/sks synctest` | Send a test kill to your party/guild |
 | `/sks debug` | Print what the kill detection sees |
 

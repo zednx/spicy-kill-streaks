@@ -185,35 +185,62 @@ local function later(fn)
 	C_Timer.After(0, fn)
 end
 
--- Emotes and emote messages. WoW Forever only lets them go out from a key press or click
--- ("Interface action failed because of an addon" otherwise), so a kill only gets them ready and
--- /sks emote (typed, or in a macro on a key) sends them.
-local readyEmote = nil -- { text = ..., emote = ..., target = ... }
-local emoteHinted = false
+-- Emotes. WoW Forever treats the two kinds differently:
+--   * Built-in emotes (/cheer, /bow ...) can be sent by an addon, but not in combat: they wait
+--     until combat ends.
+--   * A custom emote message (free text) only goes out from a key press or click ("Interface
+--     action failed because of an addon" otherwise): a kill gets it ready and /sks emote (typed,
+--     or in a macro on a key) sends it.
+local pendingEmotes = {} -- built-in emotes waiting for combat to end: { emote, target }
+local readyText = nil    -- the custom emote message waiting for /sks emote
+local textHinted = false
 
-local function social(kind, a, b)
-	readyEmote = readyEmote or {}
-	if kind == "text" then readyEmote.text = a else readyEmote.emote, readyEmote.target = a, b end
-	if not emoteHinted then
-		emoteHinted = true
-		chat("Kill emote ready: type /sks emote, or put it in a macro on a key, to send it. "
-			.. "(WoW Forever doesn't let addons emote on their own.)")
+local function performEmote(emote, target)
+	if target then target = strmatch(target, "^([^%-]+)") end -- the emote wants the plain name
+	local ok, restricted
+	if C_ChatInfo and C_ChatInfo.PerformEmote then
+		ok, restricted = pcall(C_ChatInfo.PerformEmote, emote, target)
+		ok = ok and not (not isSecret(restricted) and restricted)
+	elseif DoEmote then
+		ok = pcall(DoEmote, emote, target)
 	end
+	if not ok then debugPrint("the game did not allow the emote", emote) end
+end
+
+local function flushEmotes()
+	if InCombatLockdown() then return end
+	local queue = pendingEmotes
+	pendingEmotes = {}
+	for i, item in ipairs(queue) do
+		C_Timer.After(i * 1.5, function() performEmote(item[1], item[2]) end)
+	end
+end
+
+-- kind "emote": a built-in emote token (a = token, b = target name); kind "text": a = message
+local function social(kind, a, b)
+	if kind == "text" then
+		readyText = a
+		if not textHinted then
+			textHinted = true
+			chat("Custom emote ready: type /sks emote, or put it in a macro on a key, to send it. "
+				.. "(WoW Forever only lets addons send typed messages from a key press.)")
+		end
+		return
+	end
+	if #pendingEmotes < 3 then pendingEmotes[#pendingEmotes + 1] = { a, b } end
+	if not InCombatLockdown() then C_Timer.After(0.5, flushEmotes) end
 end
 
 -- Call only straight from a slash command or click, never from a timer or event
 local function sendReadyEmote()
-	local ready = readyEmote
-	readyEmote = nil
-	if not ready then
-		chat("No kill emote waiting.")
+	local text = readyText
+	readyText = nil
+	if not text then
+		chat("No custom emote waiting.")
 		return
 	end
-	if ready.text then
-		local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
-		if send then send(ready.text, "EMOTE") end
-	end
-	if ready.emote and DoEmote then DoEmote(ready.emote, ready.target) end
+	local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+	if send then send(text, "EMOTE") end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -1556,6 +1583,11 @@ function events.PLAYER_REGEN_DISABLED()
 	checkTargetDeath()
 end
 
+-- Built-in emotes from kills during the fight
+function events.PLAYER_REGEN_ENABLED()
+	C_Timer.After(1, flushEmotes)
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Our own death
 -- ---------------------------------------------------------------------------------------------
@@ -1726,11 +1758,12 @@ local function runTest(what)
 			chat("No kill emote is set: turn on \"Send a custom emote message\" or pick an emote on the General tab.")
 			return
 		end
-		readyEmote = {
-			text = profile.dotxtemote and fill(profile.ksemote, { k = UnitName("player"), v = "Test-Victim", s = 1 }) or nil,
-			emote = profile.doemote ~= "none" and profile.doemote or nil,
-		}
-		sendReadyEmote()
+		-- The built-in emote goes the automatic way a kill's does; the message is sent from this command
+		if profile.doemote ~= "none" then social("emote", profile.doemote, nil) end
+		if profile.dotxtemote then
+			readyText = fill(profile.ksemote, { k = UnitName("player"), v = "Test-Victim", s = 1 })
+			sendReadyEmote()
+		end
 	elseif what == "reset" then
 		streak, deathstreak, multikill, lastKillTime, lastRank = 0, 0, 0, nil, nil
 		chat("Current streaks reset.")
@@ -2113,8 +2146,9 @@ local function buildOptions()
 					doscreen = toggle("doscreen", "Show kills and deaths on screen", 12),
 					kstext = input("kstext", "Kill text", 13, "$k = you, $v = victim, $s = streak"),
 					emoteHeader = header("Emotes on a kill", 20),
-					emoteNote = note("WoW Forever only lets emotes go out from a key press, so a kill gets them ready and "
-						.. "/sks emote sends them. Put /sks emote in a macro on a key for one-press emotes.", 20.5),
+					emoteNote = note("The emote plays by itself (after combat, if you are fighting). WoW Forever only lets "
+						.. "a custom message go out from a key press, so a kill gets it ready and /sks emote sends it: "
+						.. "put /sks emote in a macro on a key.", 20.5),
 					doemote = emoteSelect("doemote", "Emote", 21),
 					dotxtemote = toggle("dotxtemote", "Send a custom emote message", 22),
 					ksemote = input("ksemote", "Custom emote message", 23, "$v = victim, $s = streak"),

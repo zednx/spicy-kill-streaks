@@ -2,7 +2,8 @@
 
 ## v0.1.1
 
-- Kill and duel emotes work again. WoW Forever only lets emotes go out from a key press, so a kill now gets its emote ready and `/sks emote` sends it (put it in a macro on a key). This stops the "Interface action failed because of an addon" error.
+- Kill and duel emotes work again. Built-in emotes (/cheer, /bow ...) play by themselves, after combat if you are fighting.
+- WoW Forever only lets a custom emote message go out from a key press, so a kill now gets it ready and `/sks emote` sends it (put it in a macro on a key). This stops the "Interface action failed because of an addon" error.
 - `/sks test emote` sends your kill emote for real.
 
 ## v0.1.0
