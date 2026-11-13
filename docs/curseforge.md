@@ -14,7 +14,7 @@ Everything to fill in when creating the project at <https://authors.curseforge.c
 | Source | GitHub: `https://github.com/zednx/spicy-kill-streaks` |
 | Issues | `https://github.com/zednx/spicy-kill-streaks/issues` |
 | Logo / avatar | `docs/logo.png` (1024×1024), or `docs/logo-400.png` if the uploader wants a smaller file |
-| File to upload | `SpicyKillStreaks-v1.0.0.zip` from the GitHub Release |
+| File to upload | `SpicyKillStreaks-v0.1.0.zip` from the GitHub Release |
 | Game version for the file | WoW Forever |
 | Release type | Release (or Beta for a soft launch) |
 
