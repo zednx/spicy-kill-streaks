@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.ogg binary
+*.mp3 binary
+*.tga binary
+*.blp binary

@@ -1,0 +1,107 @@
+name: release
+
+# Push a tag like v1.0.0 to publish a GitHub Release with:
+#   SpicyKillStreaks-vX.Y.Z.zip   the addon (upload this one to CurseForge)
+#   SHA256SUMS.txt
+# and upload the zip to CurseForge when the CF_API_KEY secret and CF_PROJECT_ID variable are set.
+# The zip gets a GitHub build attestation, so anyone can check it was built here from this
+# repo's source: gh attestation verify <file> --repo zednx/spicy-kill-streaks
+#
+# Run it manually (Actions -> release -> Run workflow) for a dry run: same checks and zip,
+# uploaded as a workflow artifact, nothing published.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false # the token is only used by the publish step
+          fetch-depth: 0 # tags, for the version check
+
+      - name: Work out the version and check it
+        id: v
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then v="${GITHUB_REF_NAME#v}"
+          else v=$(sed -n 's/^## Version: *//p' SpicyKillStreaks/SpicyKillStreaks.toc | tr -d '\r'); fi
+          # Only plain X.Y.Z versions; anything else stops the release before it is used anywhere.
+          echo "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Bad version '$v'"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          scripts/check-release.sh "$v"
+
+      - name: Syntax check
+        run: |
+          sudo apt-get update && sudo apt-get install -y lua5.1
+          luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua
+
+      - name: Build the zip
+        env:
+          v: ${{ steps.v.outputs.version }}
+        run: |
+          mkdir -p dist
+          zip -rq "dist/SpicyKillStreaks-v$v.zip" SpicyKillStreaks
+          unzip -l "dist/SpicyKillStreaks-v$v.zip"
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/*.zip
+
+      - name: Release notes
+        env:
+          v: ${{ steps.v.outputs.version }}
+        run: |
+          awk -v want="## v$v" '$0==want{f=1;next} /^## /{f=0} f' CHANGELOG.md > notes.md
+          cat >> notes.md <<'EOF'
+
+          ---
+          **Install:** download `SpicyKillStreaks-v*.zip`, extract it into `World of Warcraft/_forever_/Interface/AddOns/`, then restart the game.
+
+          Built by GitHub Actions from this tag's source. To check: `gh attestation verify <file> --repo zednx/spicy-kill-streaks`
+          EOF
+          cat notes.md
+
+      - name: Publish GitHub Release
+        id: publish
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # If the release already exists (re-pushed tag), refresh the files but don't upload to CurseForge again.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+            echo "existed=true" >> "$GITHUB_OUTPUT"
+          else
+            gh release create "$GITHUB_REF_NAME" dist/* --title "Spicy Kill Streaks $GITHUB_REF_NAME" --notes-file notes.md
+          fi
+
+      - name: Upload to CurseForge
+        if: github.ref_type == 'tag' && steps.publish.outputs.existed != 'true'
+        env:
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          CF_PROJECT_ID: ${{ vars.CF_PROJECT_ID }}
+          CF_GAME_VERSIONS: ${{ vars.CF_GAME_VERSIONS }}
+          v: ${{ steps.v.outputs.version }}
+        run: |
+          if [ -z "$CF_API_KEY" ] || [ -z "$CF_PROJECT_ID" ]; then
+            echo "::warning::CF_API_KEY secret or CF_PROJECT_ID variable not set, skipping the CurseForge upload."
+            exit 0
+          fi
+          scripts/curseforge-upload.sh "dist/SpicyKillStreaks-v$v.zip" "$v" notes.md
+
+      - name: Upload dry-run zip
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: dry-run
+          path: dist/

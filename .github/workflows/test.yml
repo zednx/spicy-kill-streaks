@@ -1,0 +1,24 @@
+name: test
+on: [push, pull_request]
+
+# Tests only need to read the code.
+permissions:
+  contents: read
+
+jobs:
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - run: sudo apt-get update && sudo apt-get install -y lua5.1
+      - name: Syntax check
+        run: luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua
+      - name: Version strings agree
+        run: scripts/check-release.sh versions
+      - name: No BOM in the .toc (it stops the addon loading)
+        run: |
+          if head -c3 SpicyKillStreaks/SpicyKillStreaks.toc | grep -q $'\xEF\xBB\xBF'; then
+            echo "::error::SpicyKillStreaks.toc starts with a UTF-8 BOM"; exit 1
+          fi
