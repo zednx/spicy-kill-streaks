@@ -803,40 +803,41 @@ local syncSendKill, syncSendDeath -- defined in the sync section below
 -- Levels of the units we have seen, by plain lower-case name, so a kill or death can say
 -- "Hogger (11)". Filled from the target, mouseover, focus and nameplates; the game may hide
 -- them in some content, and then there is simply no level.
-local levelByName, levelCount = {}, 0
+-- (One table: Lua 5.1 allows only 200 locals at the top of a file.)
+local Levels = { byName = {}, count = 0 }
 
-local function levelKey(name)
+function Levels.key(name)
 	if not usableString(name) then return nil end
 	return strlower(strmatch(name, "^([^%-]+)") or name)
 end
 
-local function noteUnitLevel(unit)
+function Levels.note(unit)
 	local ok, name, level = pcall(function()
 		if not UnitExists(unit) then return nil end
 		return UnitName(unit), UnitLevel(unit)
 	end)
 	if not ok or isSecret(level) or type(level) ~= "number" then return end
-	local key = levelKey(name)
+	local key = Levels.key(name)
 	if not key then return end
-	if not levelByName[key] then
-		levelCount = levelCount + 1
-		if levelCount > 300 then
-			wipe(levelByName)
-			levelCount = 1
+	if not Levels.byName[key] then
+		Levels.count = Levels.count + 1
+		if Levels.count > 300 then
+			wipe(Levels.byName)
+			Levels.count = 1
 		end
 	end
-	levelByName[key] = level
+	Levels.byName[key] = level
 end
 
 -- A unit's level by name: -1 for "??", nil when unknown
-local function levelOf(name)
-	local key = levelKey(name)
+function Levels.of(name)
+	local key = Levels.key(name)
 	if not key or name == UNKNOWN_VICTIM then return nil end
-	for _, unit in ipairs({ "target", "mouseover", "focus", "softenemy" }) do noteUnitLevel(unit) end
-	return levelByName[key]
+	for _, unit in ipairs({ "target", "mouseover", "focus", "softenemy" }) do Levels.note(unit) end
+	return Levels.byName[key]
 end
 
-local function playerLevel()
+function Levels.player()
 	local ok, level = pcall(UnitLevel, "player")
 	if ok and not isSecret(level) and type(level) == "number" then return level end
 	return nil
@@ -1030,13 +1031,13 @@ end
 -- before the GUID, so 0.1.0 readers, which take fields 3-6 and the last one, still work.
 syncSendKill = function(kind, victim, streakCount, multi, rank)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
-		tostring(multi or 0), tostring(rank or 0), tostring(playerLevel() or 0), tostring(levelOf(victim) or 0),
+		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
 		playerGUID or "" }, "\t"))
 end
 
 syncSendDeath = function(killer, isDuel)
 	broadcast(table.concat({ "D", VERSION, cleanField(killer), isDuel and "1" or "0",
-		tostring(playerLevel() or 0), tostring(levelOf(killer) or 0), playerGUID or "" }, "\t"))
+		tostring(Levels.player() or 0), tostring(Levels.of(killer) or 0), playerGUID or "" }, "\t"))
 end
 
 -- "Given Family-Realm" -> "givenfamily-realm" and "givenfamily" (no spaces, lower case)
@@ -1102,7 +1103,7 @@ local function sendTestSync()
 		chat("You are not in a group or guild you share with: there is nobody to send the test to.")
 		return
 	end
-	local level = playerLevel() or 0
+	local level = Levels.player() or 0
 	broadcast(table.concat({ "T", VERSION, "Test-Victim", "3", "0", "2", tostring(level), tostring(level + 2),
 		playerGUID or "" }, "\t"))
 	chat("Sent a test kill to your " .. ((toGroup and toGuild) and "group and guild" or (toGroup and "group" or "guild"))
@@ -1171,10 +1172,10 @@ local function safeText(text)
 end
 
 -- Feed lines: a chilli and a skull in front, the killer in an accent colour
-local FEED_ICONS = "|T" .. MEDIA .. "Chilli:14:14|t|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:14:14|t "
-local KILLER_COLOR = "|cffff7733"
+Levels.FEED_ICONS = "|T" .. MEDIA .. "Chilli:14:14|t|TInterface\\TargetingFrame\\UI-RaidTargetingIcon_8:14:14|t "
+Levels.KILLER_COLOR = "|cffff7733"
 
-local function maxPlayerLevel()
+function Levels.max()
 	for _, getter in ipairs({ GetMaxLevelForPlayerExpansion, GetMaxPlayerLevel }) do
 		if type(getter) == "function" then
 			local ok, level = pcall(getter)
@@ -1185,7 +1186,7 @@ local function maxPlayerLevel()
 end
 
 -- A level from a sync message: a whole number from -1 ("??") to 255, nil when missing or 0
-local function levelField(value)
+function Levels.field(value)
 	local level = tonumber(value)
 	if not level then return nil end
 	level = math.floor(level)
@@ -1194,17 +1195,17 @@ local function levelField(value)
 end
 
 -- The sender's level and the other unit's level, from where the message version keeps them
-local function messageLevels(kind, fields)
+function Levels.fromMessage(kind, fields)
 	local count = kind == "D" and 7 or 9
 	if #fields < count then return nil, nil end
-	return levelField(fields[count - 2]), levelField(fields[count - 1])
+	return Levels.field(fields[count - 2]), Levels.field(fields[count - 1])
 end
 
 -- "Bob (10)": the sender's level shows below max level; the other's when it differs from the sender's
-local function withLevel(name, level, otherLevel, isSender)
+function Levels.label(name, level, otherLevel, isSender)
 	if not level then return name end
 	if isSender then
-		local maxLevel = maxPlayerLevel()
+		local maxLevel = Levels.max()
 		if level < 0 or (maxLevel and level >= maxLevel) then return name end
 	elseif level == otherLevel then
 		return name
@@ -1218,9 +1219,10 @@ local function onFeedMessage(kind, sender, channel, fields)
 	local who = safeText(shortName(sender))
 	local name = safeText(fields[3])
 	if not who or not name then return end
-	local senderLevel, otherLevel = messageLevels(kind, fields)
-	local whoShown = withLevel(who, senderLevel, otherLevel, true)
-	local nameShown = withLevel(name, otherLevel, senderLevel, false)
+	local senderLevel, otherLevel = Levels.fromMessage(kind, fields)
+	local whoShown = Levels.label(who, senderLevel, otherLevel, true)
+	local nameShown = Levels.label(name, otherLevel, senderLevel, false)
+	local FEED_ICONS, KILLER_COLOR = Levels.FEED_ICONS, Levels.KILLER_COLOR
 
 	if kind == "D" then
 		if seenRecently(sender .. "|D|" .. name) then return end
@@ -1668,15 +1670,15 @@ function events.UNIT_HEALTH(unit)
 end
 
 function events.UPDATE_MOUSEOVER_UNIT()
-	noteUnitLevel("mouseover")
+	Levels.note("mouseover")
 end
 
 function events.NAME_PLATE_UNIT_ADDED(unit)
-	if usableString(unit) then noteUnitLevel(unit) end
+	if usableString(unit) then Levels.note(unit) end
 end
 
 function events.PLAYER_TARGET_CHANGED()
-	noteUnitLevel("target")
+	Levels.note("target")
 	checkExecute()
 	checkTargetDeath()
 end
