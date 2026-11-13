@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.1.0"
+local VERSION = "0.1.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -183,6 +183,37 @@ end
 local function later(fn)
 	-- Chat sends, emotes and screenshots run outside the event handler
 	C_Timer.After(0, fn)
+end
+
+-- Emotes and emote messages. WoW Forever only lets them go out from a key press or click
+-- ("Interface action failed because of an addon" otherwise), so a kill only gets them ready and
+-- /sks emote (typed, or in a macro on a key) sends them.
+local readyEmote = nil -- { text = ..., emote = ..., target = ... }
+local emoteHinted = false
+
+local function social(kind, a, b)
+	readyEmote = readyEmote or {}
+	if kind == "text" then readyEmote.text = a else readyEmote.emote, readyEmote.target = a, b end
+	if not emoteHinted then
+		emoteHinted = true
+		chat("Kill emote ready: type /sks emote, or put it in a macro on a key, to send it. "
+			.. "(WoW Forever doesn't let addons emote on their own.)")
+	end
+end
+
+-- Call only straight from a slash command or click, never from a timer or event
+local function sendReadyEmote()
+	local ready = readyEmote
+	readyEmote = nil
+	if not ready then
+		chat("No kill emote waiting.")
+		return
+	end
+	if ready.text then
+		local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
+		if send then send(ready.text, "EMOTE") end
+	end
+	if ready.emote and DoEmote then DoEmote(ready.emote, ready.target) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -803,17 +834,14 @@ local function registerKill(victim, isDuel)
 	local emoteTarget = victim ~= UNKNOWN_VICTIM and victim or nil
 	if isDuel then
 		if profile.duelemotewin ~= "none" then
-			local emote = profile.duelemotewin
-			later(function() DoEmote(emote, emoteTarget) end)
+			social("emote", profile.duelemotewin, emoteTarget)
 		end
 	else
 		if profile.dotxtemote then
-			local text = fill(profile.ksemote, values)
-			later(function() SendChatMessage(text, "EMOTE") end)
+			social("text", fill(profile.ksemote, values))
 		end
 		if profile.doemote ~= "none" then
-			local emote = profile.doemote
-			later(function() DoEmote(emote, emoteTarget) end)
+			social("emote", profile.doemote, emoteTarget)
 		end
 	end
 
@@ -850,8 +878,7 @@ local function registerDeath(killer, isDuel)
 	if profile.dochat then chat(killer .. " has " .. (isDuel and "defeated" or "killed") .. " you " .. times .. " times.") end
 	if isDuel then
 		if profile.duelemoteloss ~= "none" then
-			local emote = profile.duelemoteloss
-			later(function() DoEmote(emote, killer) end)
+			social("emote", profile.duelemoteloss, killer)
 		end
 		if profile.shotduelloss then later(Screenshot) end
 	elseif profile.shotdeath then
@@ -1692,11 +1719,23 @@ local function runTest(what)
 		playSound(SOUND_PREPARE)
 	elseif what == "humiliation" then
 		playHumiliation()
+	elseif what == "emote" then
+		-- Really sends: the kill emote and message, as set, with "Test-Victim"
+		local profile = db.profile
+		if not profile.dotxtemote and profile.doemote == "none" then
+			chat("No kill emote is set: turn on \"Send a custom emote message\" or pick an emote on the General tab.")
+			return
+		end
+		readyEmote = {
+			text = profile.dotxtemote and fill(profile.ksemote, { k = UnitName("player"), v = "Test-Victim", s = 1 }) or nil,
+			emote = profile.doemote ~= "none" and profile.doemote or nil,
+		}
+		sendReadyEmote()
 	elseif what == "reset" then
 		streak, deathstreak, multikill, lastKillTime, lastRank = 0, 0, 0, nil, nil
 		chat("Current streaks reset.")
 	else
-		chat("Tests: /sks test kill, /sks test death, /sks test execute, /sks test prepare. "
+		chat("Tests: /sks test kill, /sks test death, /sks test execute, /sks test prepare, /sks test emote (really sends it). "
 			.. "Effects: /sks preview kill|rank|multi|big|death|other. Sync: /sks synctest, /sks who. Move: /sks unlock")
 	end
 end
@@ -2074,6 +2113,8 @@ local function buildOptions()
 					doscreen = toggle("doscreen", "Show kills and deaths on screen", 12),
 					kstext = input("kstext", "Kill text", 13, "$k = you, $v = victim, $s = streak"),
 					emoteHeader = header("Emotes on a kill", 20),
+					emoteNote = note("WoW Forever only lets emotes go out from a key press, so a kill gets them ready and "
+						.. "/sks emote sends them. Put /sks emote in a macro on a key for one-press emotes.", 20.5),
 					doemote = emoteSelect("doemote", "Emote", 21),
 					dotxtemote = toggle("dotxtemote", "Send a custom emote message", 22),
 					ksemote = input("ksemote", "Custom emote message", 23, "$v = victim, $s = streak"),
@@ -2370,6 +2411,8 @@ local function initialize()
 			openSetup()
 		elseif command == "who" then
 			versionCheck()
+		elseif command == "emote" then
+			sendReadyEmote()
 		elseif command == "synctest" then
 			sendTestSync()
 		elseif strmatch(command, "^preview") then
