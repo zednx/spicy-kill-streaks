@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.2
+
+- Added /pulse to the emotes you can pick for kills and duels.
+
 ## v0.1.1
 
 - Kill and duel emotes work again. Built-in emotes (/cheer, /bow ...) play by themselves, after combat if you are fighting.

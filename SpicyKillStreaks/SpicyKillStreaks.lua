@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.1.1"
+local VERSION = "0.1.2"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -42,7 +42,7 @@ local EMOTES = {
 	CHICKEN = "Chicken", CHUCKLE = "Chuckle", CLAP = "Clap", CRY = "Cry", DANCE = "Dance", FLEX = "Flex",
 	GLOAT = "Gloat", GOLFCLAP = "Golf Clap", GRIN = "Grin", GUFFAW = "Guffaw", INSULT = "Insult",
 	KISS = "Kiss", LAUGH = "Laugh", MOCK = "Mock", MOURN = "Mourn", NO = "No", PITY = "Pity", POINT = "Point",
-	ROAR = "Roar", ROFL = "ROFL", RUDE = "Rude", SALUTE = "Salute", SHRUG = "Shrug", SIGH = "Sigh",
+	PULSE = "Pulse", ROAR = "Roar", ROFL = "ROFL", RUDE = "Rude", SALUTE = "Salute", SHRUG = "Shrug", SIGH = "Sigh",
 	SPIT = "Spit", TAUNT = "Taunt", THANK = "Thank", VICTORY = "Victory", VIOLIN = "Violin", WAVE = "Wave",
 	YAWN = "Yawn",
 }
