@@ -1,7 +1,8 @@
 # Changelog
 
-## v0.1.2
+## v0.2.0
 
+- Party and guild sharing is now **on by default**: it's what makes the addon fun with friends. The setup has a new "Better with friends" screen that explains it, previews a friend's kill and has the boxes to switch it off. Players who set up 0.1.x see that screen once.
 - Added /pulse to the emotes you can pick for kills and duels.
 
 ## v0.1.1

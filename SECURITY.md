@@ -6,7 +6,7 @@ It runs inside WoW's addon sandbox. It has no network access and reads only its 
 
 | | When |
 |---|---|
-| **Addon messages** to your party/raid/battleground and guild | Only after you switch on sharing (off by default). They carry your kills and deaths: victim or killer name, streak, multikill level, your character's GUID and the addon version. |
+| **Addon messages** to your party/raid/battleground and guild | While sharing is on (on by default since 0.2.0; the first-run setup says so, and you can switch it off under `/sks` > Sync). They carry your kills and deaths: victim or killer name, streak, multikill level, levels, your character's GUID and the addon version. |
 | **Version answers** (whispered addon message) | Only when someone asks "who runs this addon?" **and** you share with someone. |
 | **Emotes and an emote chat message** | Only if you pick one in the options. |
 | **Screenshots** | Only if you switch them on. |

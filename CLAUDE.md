@@ -26,7 +26,7 @@ The game's `Interface/AddOns/SpicyKillStreaks` is a junction to `SpicyKillStreak
 
 - **Secret values:** never compare or do arithmetic on a value that may be secret; check `isSecret` first.
 - **Untrusted input:** everything from `CHAT_MSG_ADDON` goes through `safeText` / range checks before it is shown.
-- **Opt-in sharing:** nothing is sent unless `shareparty` / `shareguild` is on; don't add sends that bypass it.
+- **Sharing:** `shareparty` / `shareguild` are on by default (since 0.2.0; the setup's "Better with friends" screen says so, and 0.1.x users see that screen once). Nothing is sent while they are off; don't add sends that bypass them.
 - **No personal details** (character names, account names) in code, comments or commits.
 - The GitHub owner is **zednx** (repo: `zednx/spicy-kill-streaks`).
 - Pin GitHub Actions to commit SHAs.

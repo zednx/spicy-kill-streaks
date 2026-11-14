@@ -55,7 +55,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
   - Sparkle bursts: stars, chillies or confetti
   - A screen-edge flash for multikills and big streaks
   - Drag it anywhere, choose the size and font
-- **Party and guild sync** (opt-in): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it.
+- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it.
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.
 - **Quick setup** on first login, plus test buttons and previews for everything.
@@ -79,7 +79,7 @@ WoW Forever keeps the combat log from addons, so kills are read from the battleg
 
 ## Privacy
 
-Nothing leaves your game unless you switch on sharing. Shared kills travel as hidden addon messages to your party and/or guild; players without the addon see nothing.
+Sharing with your party and guild is on by default, and the first-run setup says so with a box to untick. Shared kills travel as hidden addon messages to your party and/or guild; players without the addon see nothing. Switch sharing off under `/sks` > Sync and nothing leaves your game.
 
 ## Credits
 

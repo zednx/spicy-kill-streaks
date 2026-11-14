@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.1.2"
+local VERSION = "0.2.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -50,6 +50,7 @@ local EMOTES = {
 local defaults = {
 	global = {
 		setupDone = false, -- the first-run setup has been finished or skipped (account-wide)
+		sharingShown = false, -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
 	},
 	profile = {
 		-- kills
@@ -101,9 +102,10 @@ local defaults = {
 		},
 		-- party and guild sync with other Spicy Kill Streaks users
 		sync = {
-			-- Sharing is opt-in: nothing is sent until one of these is switched on
-			shareparty = false, -- party, raid, battleground and arena
-			shareguild = false,
+			-- On by default (the setup's sharing screen says so and can switch it off): nothing is sent
+			-- while both are off
+			shareparty = true, -- party, raid, battleground and arena
+			shareguild = true,
 			logincount = true,  -- at login, one chat line: how many guildmates use the addon
 			-- What to do with kills and deaths shared by others
 			--   feed: a line in the chat window   sound: their streak / multikill sound
@@ -967,7 +969,7 @@ end
 --   D  <version> <killer> <duel 0/1>                    a death (or duel loss)
 --   V? <version>                                        who is running the addon?
 --   V! <version>                                        the answer (whispered back)
--- Sending is opt-in, separately for party and guild. What arrives is shown by the receiver's
+-- Sending is on by default and can be switched off separately for party and guild. What arrives is shown by the receiver's
 -- own settings for party members and guild members. Received kills never touch our own stats.
 -- ---------------------------------------------------------------------------------------------
 local PREFIX = "SpicyKS"
@@ -1814,11 +1816,16 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	wipe(watched)
 	wipe(killedBy)
 	killedByCount = 0
-	-- First install: offer the setup once the loading screen is gone
-	if not db.global.setupDone and not setupShownThisSession then
+	-- First install: offer the setup once the loading screen is gone. Players who set up an older
+	-- version get its sharing screen once, since sharing is now on by default.
+	if not setupShownThisSession and (not db.global.setupDone or not db.global.sharingShown) then
 		setupShownThisSession = true
 		C_Timer.After(3, function()
-			if not db.global.setupDone then openSetup() end
+			if not db.global.setupDone then
+				openSetup()
+			elseif not db.global.sharingShown then
+				openSetup(true)
+			end
 		end)
 	end
 end
@@ -2086,10 +2093,11 @@ local function buildSetup()
 			end
 		end)
 
-	addStep("Share with friends?",
-		"Share your kills and deaths with party and guild members who also run " .. TITLE
-		.. ". Nothing is shared unless you tick a box. What you see from others is set under "
-		.. "|cffffd100/sks|r > Sync.",
+	addStep("Better with friends",
+		"This is where it gets |cffff7733spicy|r: when a guildmate or party member lands a killing "
+		.. "spree, your screen lights up too, and when they get humiliated, everyone hears it.\n\n"
+		.. "Sharing is |cff33ff33on by default|r. Your kills and deaths (who, streak, levels) go as hidden addon "
+		.. "messages to party and guild members who run " .. TITLE .. ". Nobody else sees a thing.",
 		function(page, refreshers)
 			local party = makeCheck(page, "Share with my party (also raid, battleground and arena)",
 				function() return syncConfig().shareparty end, function(v) syncConfig().shareparty = v end)
@@ -2099,7 +2107,12 @@ local function buildSetup()
 			guild:SetPoint("TOPLEFT", 0, -28)
 			refreshers[#refreshers + 1] = party.refresh
 			refreshers[#refreshers + 1] = guild.refresh
+			makeButton(page, "Preview a friend's kill", 170, function() preview("other") end):SetPoint("TOPLEFT", 0, -64)
+			local hint = page:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+			hint:SetPoint("LEFT", page, "TOPLEFT", 180, -76)
+			hint:SetText("What you see from others: /sks > Sync")
 		end)
+	local sharingStep = #steps
 
 	addStep("You're ready!",
 		"|cffffd100/sks|r  all options\n|cffffd100/sks preview|r  show off the effects\n"
@@ -2118,6 +2131,7 @@ local function buildSetup()
 		stepLabel:SetText("Step " .. current .. " of " .. #steps)
 		body:SetText(step.text)
 		for _, refresh in ipairs(step.refreshers) do refresh() end
+		if current == sharingStep then db.global.sharingShown = true end
 		back:SetEnabled(current > 1)
 		skip:SetShown(current < #steps)
 		nextButton:SetText(current == #steps and "Finish" or "Next")
@@ -2127,10 +2141,12 @@ local function buildSetup()
 		if current == #steps then finishSetup(false) else show(current + 1) end
 	end)
 	f.showStep = show
+	f.sharingStep = sharingStep
 	return f
 end
 
-openSetup = function()
+-- atSharing: open on the sharing screen (shown once to players who set up an older version)
+openSetup = function(atSharing)
 	if not setupFrame then
 		local ok, result = pcall(buildSetup)
 		if not ok then
@@ -2139,7 +2155,7 @@ openSetup = function()
 		end
 		setupFrame = result
 	end
-	setupFrame.showStep(1)
+	setupFrame.showStep(atSharing and setupFrame.sharingStep or 1)
 	setupFrame:Show()
 end
 
@@ -2357,7 +2373,7 @@ local function buildOptions()
 				type = "group", name = "Sync", order = 2.7,
 				args = {
 					about = note("Share your kills and deaths with party and guild members who also run " .. TITLE
-						.. ". Players without the addon see nothing. Sharing is off until you switch it on.", 0),
+						.. ". Players without the addon see nothing. Sharing is on by default; untick both to share nothing.", 0),
 					shareHeader = header("Share my kills and deaths", 1),
 					shareparty = syncToggle({ "shareparty" }, "Share with my party (also raid, battleground and arena)", 2),
 					shareguild = syncToggle({ "shareguild" }, "Share with my guild", 3),
