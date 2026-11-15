@@ -12,7 +12,7 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 | `tools/make_art.py` | Draws `docs/logo.png` and `docs/logo-400.png` (Pillow). Same tile and chilli as Spicy Side Quests. |
 | `docs/curseforge.md` | CurseForge project settings, upload setup and the listing description. |
 
-The game's `Interface/AddOns/SpicyKillStreaks` is a junction to `SpicyKillStreaks/` here, so `/reload` picks up edits directly. New files need a game restart.
+The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp from the releases (it used to be a junction to this folder, but WowUp can't update over a junction). To try an edit in game before releasing, copy `SpicyKillStreaks/` over the installed folder and `/reload`; new files need a game restart.
 
 ## WoW Forever facts (verified in game)
 
