@@ -17,5 +17,15 @@ retribution.ogg
   Added for Spicy Kill Streaks 0.6.0. The file was encoded by Unreal Engine 3, so it comes from
   an Unreal Engine 3 game such as Unreal Tournament 3 ((c) Epic Games).
 
+flamboyant\
+  The Heroes of Newerth "Flamboyant" announcer (Heroes of Newerth is (c) S2 Games / Frostburn
+  Studios), taken from the MegaKill Announcer addon by Robison Karls Custodio
+  (github.com/robisonkarls/MegaKill_Announcer), which ships them as "used under fair use for a
+  personal addon". Converted to Ogg Vorbis and renamed to match the other packs.
+
+triplekill.ogg (male)
+  From MegaKill Announcer's Unreal Tournament pack (the same announcer as the male pack;
+  Unreal Tournament is (c) Epic Games). Converted to Ogg Vorbis and raised to the same level.
+
 custom\
   Your own files. Nothing ships there.

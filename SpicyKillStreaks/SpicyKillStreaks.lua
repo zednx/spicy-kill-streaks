@@ -21,7 +21,8 @@ local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- "custom" holds files the player adds (sounds\custom\humiliation.ogg, ...); anything missing
 -- there falls back to sounds\
 -- "humiliation" only has humiliation (the default humiliation voice).
-local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "baby\\", humiliation = "humiliation\\", custom = "custom\\" }
+local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "baby\\", flamboyant = "flamboyant\\",
+	humiliation = "humiliation\\", custom = "custom\\" }
 -- Files a voice pack does not ship; these are played from sounds\ instead
 local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
@@ -88,7 +89,7 @@ local defaults = {
 		soundchannel = "Master",
 		doprepare = false,
 		dodeathsound = true, -- "humiliation" when we die
-		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / custom
+		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / flamboyant / custom
 		-- text
 		dochat = true,
 		doscreen = true,
@@ -550,6 +551,38 @@ SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
 SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 -- Secret ranks: kills in a row -> their own sound and the big effects, no callout text
 SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "combowhore.ogg" }
+
+-- Voice packs that say something else get matching callout text (in rainbow letters)
+SPECIAL.PACK_TEXT = {
+	flamboyant = {
+		["FIRST BLOOD!"] = "CHERRY POPPAH!", ["HEADSHOT!"] = "DEAD!", ["KILLING SPREE!"] = "HOMICIDAL!",
+		["RAMPAGE!"] = "RAINBOW WARRIOR!", ["DOMINATING!"] = "DOMINATION!", ["UNSTOPPABLE!"] = "UNICORN STAMPEDE!",
+		["WICKED SICK!"] = "OH-EM-GEE!", ["GODLIKE!"] = "SUPER STAR!", ["RETRIBUTION!"] = "BITCH SLAPPED!",
+		["DOUBLE KILL!"] = "MACHOOO!", ["TRIPLE KILL!"] = "IT'S A THREE-WAY!", ["MULTI KILL!"] = "BIG BEAR!",
+		["MEGA KILL!"] = "HOME WRECKER!", ["ULTRA KILL!!!"] = "FABULOUS!", ["MONSTER KILL!!!"] = "DIVA!",
+		["LUDICROUS KILL!!!"] = "YAAAAY!", ["H O L Y  S H I T!!!"] = "CAN'T TOUCH THIS!",
+	},
+}
+-- Godlike on every kill gets tiring: these packs rotate through a few clips instead
+SPECIAL.TOP_ROTATION = {
+	flamboyant = { { file = "godlike.ogg", text = "SUPER STAR!" }, { file = "monsterkill.ogg", text = "DIVA!" },
+		{ file = "ultrakill.ogg", text = "FABULOUS!" } },
+}
+SPECIAL.RAINBOW = { "ff3b30", "ff9500", "ffcc00", "34c759", "32ade6", "af52de" }
+
+-- "BIG BEAR!" with every letter in the next rainbow colour
+function SPECIAL.rainbow(text)
+	local out, i = {}, 0
+	for ch in text:gmatch(".") do
+		if ch == " " then
+			out[#out + 1] = ch
+		else
+			i = i % #SPECIAL.RAINBOW + 1
+			out[#out + 1] = "|cff" .. SPECIAL.RAINBOW[i] .. ch .. "|r"
+		end
+	end
+	return table.concat(out)
+end
 
 -- The rank a streak has reached (1 = none yet)
 local function rankForStreak(count)
@@ -1066,6 +1099,20 @@ end
 
 -- One line of news: the log, the chat window and the screen
 local function announce(text, kind, level)
+	-- A pack with its own words: its callout text, in rainbow letters on screen and in chat
+	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
+	if packText then
+		text = packText[text] or text
+		local plain = text
+		if not testing then
+			table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. plain)
+			while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
+		end
+		text = SPECIAL.rainbow(text)
+		if db.profile.dochat then chat(text) end
+		if db.profile.doscreen then showText(text, kind, level) end
+		return
+	end
 	if not testing then
 		table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. text)
 		while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
@@ -1290,9 +1337,22 @@ local function registerKill(victim, isDuel, notGank)
 		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
-		if rank then playSound(RANK_SOUNDS[rank]) end
+		local rotation = rank == SPECIAL.TOP_RANK and lastRank == SPECIAL.TOP_RANK
+			and SPECIAL.TOP_ROTATION[profile.soundpack]
+		if rotation then
+			-- Godlike again: this pack has a few clips to take turns
+			SPECIAL.rotationIndex = (SPECIAL.rotationIndex or 0) % #rotation + 1
+			local pick = rotation[SPECIAL.rotationIndex]
+			playSound(pick.file)
+			announce(pick.text, "rank", rank)
+			celebrate("rank", rank)
+		elseif rank then
+			playSound(RANK_SOUNDS[rank])
+		end
 		-- A new rank gets its name on screen ("KILLING SPREE!"); Godlike says so on every kill
-		if rank and rank >= 2 and (rank ~= lastRank or rank == SPECIAL.TOP_RANK) then
+		if rotation then
+			-- (announced above)
+		elseif rank and rank >= 2 and (rank ~= lastRank or rank == SPECIAL.TOP_RANK) then
 			announce(strupper(RANK_NAMES[rank]) .. "!", "rank", rank)
 			celebrate("rank", rank)
 		else
@@ -2649,7 +2709,8 @@ local function buildSetup()
 	addStep("Pick a voice",
 		"Choose the announcer. Click a voice to hear it.",
 		function(page, refreshers)
-			local packs = { { "male", "Male" }, { "female", "Female" }, { "sexy", "Sexy" }, { "baby", "Baby" } }
+			local packs = { { "male", "Male" }, { "female", "Female" }, { "sexy", "Sexy" }, { "baby", "Baby" },
+				{ "flamboyant", "Flamboyant" } }
 			local buttons = {}
 			for i, pack in ipairs(packs) do
 				local b = makeButton(page, pack[2], 100, function()
@@ -2660,7 +2721,7 @@ local function buildSetup()
 					db.profile.dosound = was
 					for _, r in ipairs(refreshers) do r() end
 				end)
-				b:SetPoint("TOPLEFT", (i - 1) * 108, 0)
+				b:SetPoint("TOPLEFT", ((i - 1) % 3) * 108, -math.floor((i - 1) / 3) * 30)
 				buttons[i] = { button = b, key = pack[1], label = pack[2] }
 			end
 			refreshers[#refreshers + 1] = function()
@@ -2670,7 +2731,7 @@ local function buildSetup()
 			end
 			local sound = makeCheck(page, "Play sounds", function() return db.profile.dosound end,
 				function(value) db.profile.dosound = value end)
-			sound:SetPoint("TOPLEFT", 0, -36)
+			sound:SetPoint("TOPLEFT", 0, -66) -- below the two rows of voice buttons
 			refreshers[#refreshers + 1] = sound.refresh
 		end)
 
@@ -2927,7 +2988,8 @@ local function buildOptions()
 						.. "/sks snooze off to undo). Text and effects still show.", 8),
 					soundpack = {
 						type = "select", name = "Voice pack", order = 2,
-						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby" },
+						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)" },
+						desc = "Flamboyant also changes the callout text to match, in rainbow letters.",
 						get = function() return db.profile.soundpack end,
 						set = function(_, value) db.profile.soundpack = value end,
 					},
@@ -2944,7 +3006,7 @@ local function buildOptions()
 						desc = "Each voice pack has its own recording. \"Custom\" plays sounds\\custom\\humiliation.ogg if you add one.",
 						values = {
 							humiliation = "Humiliation (default)", pack = "Same as the voice pack", male = "Male",
-							female = "Female", sexy = "Sexy", baby = "Baby", custom = "Custom file",
+							female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", custom = "Custom file",
 						},
 						get = function() return db.profile.humiliationvoice end,
 						set = function(_, value)

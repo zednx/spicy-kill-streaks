@@ -11,15 +11,18 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `combowhore.ogg` (20 kills in a row) | [ ] | [ ] | [ ] | [ ] |
 | `gank.ogg` (you ganked someone 10+ levels lower) | [ ] | [ ] | [ ] | [ ] |
 | `ganked.ogg` (a player 10+ levels higher killed you) | [ ] | [ ] | [ ] | [ ] |
-| `triplekill.ogg` | [ ] | [ ] | [ ] | [ ] |
+| `triplekill.ogg` | done | [ ] | [ ] | [ ] |
 | `headshot.ogg` | done | [ ] | [ ] | [ ] |
 | `firstblood.ogg` | done | [ ] | [ ] | [ ] |
 | `retribution.ogg` | done | [ ] | [ ] | [ ] |
 | `pancake.ogg` | done | [ ] | [ ] | [ ] |
 | `monsterkill.ogg` | done | done | done | [ ] |
 
-Until a file is added: a pack without it plays the male one; with no male one either, `triplekill`
-plays Multi Kill, `ganked` plays Humiliation, and `combowhore` and `gank` stay silent.
+Until a file is added: a pack without it plays the male one; with no male one either, `ganked`
+plays Humiliation, and `combowhore` and `gank` stay silent.
+
+The **Flamboyant** pack (`sounds\flamboyant\`) is complete apart from `combowhore` and `prepare`,
+which use the male voice.
 
 - [ ] Listen to the HKSounds / MegaKill packs Claude sent ("Announcer sounds to review.zip"); MegaKill's
       Unreal pack has a `triple_kill.wav`
