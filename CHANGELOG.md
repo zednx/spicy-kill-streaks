@@ -2,6 +2,8 @@
 
 ## v0.7.0
 
+- **Rank sounds play once:** a streak rank's sound now only plays when you reach it. Kills between ranks alternate Headshot and Ownage instead of repeating the rank (Headshot, Ownage, Killing Spree, Headshot, Rampage, Ownage, Dominating...).
+- **More fonts for the combat text:** a Narrow font, plus every font your other addons share through SharedMedia (ElvUI, Details, SharedMedia...). Picking one shows a preview.
 - **Debug log window:** `/sks debug` (or the box under Tests > Troubleshooting) opens a small, movable, resizable window where the detection details are written, with timestamps and the client version at the top. The text can be selected: **Select all**, then Ctrl+C to copy it (addons can't write to the clipboard themselves). **Clear** empties it; closing the window turns debug off.
 - `/sks debug` now also shows who the Death Recap names when you die, how each kill's victim was found, and the Retribution check. `/sks recap` prints your last Death Recap.
 

@@ -578,9 +578,37 @@ local FONTS = {
 	impact = { name = "Impact (combat text)", path = "Fonts\\SKURRI.TTF" },
 	classic = { name = "Classic", path = "Fonts\\FRIZQT__.TTF" },
 	fancy = { name = "Fancy", path = "Fonts\\MORPHEUS.TTF" },
+	narrow = { name = "Narrow", path = "Fonts\\ARIALN.TTF" },
 }
 local FONT_NAMES = {}
 for key, font in pairs(FONTS) do FONT_NAMES[key] = font.name end
+
+-- The font picker: the built-in fonts plus every font other addons share through
+-- LibSharedMedia (SharedMedia, ElvUI, Details...), keyed "lsm:<name>". None is bundled.
+function SPECIAL.fontChoices()
+	local choices = {}
+	for key, name in pairs(FONT_NAMES) do choices[key] = name end
+	local lsm = LibStub and LibStub("LibSharedMedia-3.0", true)
+	if lsm then
+		local ok, names = pcall(lsm.List, lsm, "font")
+		if ok and type(names) == "table" then
+			for _, name in ipairs(names) do
+				if type(name) == "string" then choices["lsm:" .. name] = name .. " (SharedMedia)" end
+			end
+		end
+	end
+	return choices
+end
+
+-- The file for a font key, or nil (unknown, or its addon is gone: the standard font stays)
+function SPECIAL.fontPath(key)
+	if FONTS[key] then return FONTS[key].path end
+	local name = type(key) == "string" and strmatch(key, "^lsm:(.+)$")
+	local lsm = name and LibStub and LibStub("LibSharedMedia-3.0", true)
+	if not lsm then return nil end
+	local ok, path = pcall(lsm.Fetch, lsm, "font", name, true)
+	return ok and type(path) == "string" and path or nil
+end
 
 local RANK_COLORS = {
 	{ 1, 0.85, 0.3 },  -- Ownage: gold
@@ -690,9 +718,9 @@ local textPool, liveTexts = {}, {}
 
 local function setFont(fontString, size)
 	fontString:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, "THICKOUTLINE")
-	local font = FONTS[fxConfig().font]
+	local path = SPECIAL.fontPath(fxConfig().font)
 	-- A font the client lacks leaves the standard font in place
-	if font then pcall(fontString.SetFont, fontString, font.path, size, "THICKOUTLINE") end
+	if path then pcall(fontString.SetFont, fontString, path, size, "THICKOUTLINE") end
 end
 
 local function acquireTextHolder()
@@ -1118,6 +1146,7 @@ local function registerKill(victim, isDuel)
 
 	streak = streak + 1
 	deathstreak = 0
+	if streak == 1 then SPECIAL.fillers = 0 end -- a new streak: filler kills start again with Headshot
 	local newRecord = false
 	if streak > profile.maxstreak and not testing then
 		profile.maxstreak = streak
@@ -1170,15 +1199,25 @@ local function registerKill(victim, isDuel)
 		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
-		if rank then playSound(RANK_SOUNDS[rank]) end
-		-- Reaching a new rank gets its name on screen: "KILLING SPREE!"
-		if rank and rank >= 2 and rank ~= lastRank then
-			announce(strupper(RANK_NAMES[rank]) .. "!", "rank", rank)
-			celebrate("rank", rank)
-		else
+		if rank and rank == lastRank and profile.style ~= "ut" then
+			-- A kill between ranks: the rank's sound only plays when it is reached, so filler
+			-- kills alternate Headshot and Ownage. rank = nil: friends hear no repeat either.
+			SPECIAL.fillers = (SPECIAL.fillers or 0) + 1
+			local headshot = profile.doheadshot and SPECIAL.fillers % 2 == 1
+			playSound(headshot and SPECIAL.headshot or RANK_SOUNDS[1])
 			celebrate("kill", colorRank)
+			rank = nil
+		else
+			if rank then playSound(RANK_SOUNDS[rank]) end
+			-- Reaching a new rank gets its name on screen: "KILLING SPREE!"
+			if rank and rank >= 2 and rank ~= lastRank then
+				announce(strupper(RANK_NAMES[rank]) .. "!", "rank", rank)
+				celebrate("rank", rank)
+			else
+				celebrate("kill", colorRank)
+			end
+			if rank then lastRank = rank end
 		end
-		if rank then lastRank = rank end
 	end
 
 	if testing then return end
@@ -2660,9 +2699,13 @@ local function buildOptions()
 					about = note("Animated text, sparkles and a screen flash when you get kills. All optional.", 0),
 					fancytext = fxToggle("fancytext", "Animated text (punches in and floats up; the colour follows your streak)", 1),
 					font = {
-						type = "select", name = "Font", order = 2, values = FONT_NAMES,
+						type = "select", name = "Font", order = 2, values = function() return SPECIAL.fontChoices() end,
+						desc = "Fonts your other addons share through SharedMedia are listed too. Picking one shows a preview.",
 						get = function() return fxConfig().font end,
-						set = function(_, value) fxConfig().font = value end,
+						set = function(_, value)
+							fxConfig().font = value
+							preview("kill")
+						end,
 						disabled = function() return not fxConfig().fancytext end,
 					},
 					scale = {
