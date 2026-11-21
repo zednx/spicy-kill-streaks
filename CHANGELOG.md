@@ -1,8 +1,9 @@
 # Changelog
 
-## v0.6.1
+## v0.7.0
 
-- Troubleshooting: `/sks debug` now also shows who the Death Recap names when you die, how each kill's victim was found, and the Retribution check. `/sks recap` prints your last Death Recap.
+- **Debug log window:** `/sks debug` (or the box under General > Troubleshooting) opens a small, movable, resizable window where the detection details are written, with timestamps and the client version at the top. The text can be selected: **Select all**, then Ctrl+C to copy it (addons can't write to the clipboard themselves). **Clear** empties it; closing the window turns debug off.
+- `/sks debug` now also shows who the Death Recap names when you die, how each kill's victim was found, and the Retribution check. `/sks recap` prints your last Death Recap.
 
 ## v0.6.0
 

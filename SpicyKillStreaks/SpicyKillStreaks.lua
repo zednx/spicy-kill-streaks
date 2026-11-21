@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.6.1"
+local VERSION = "0.7.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -64,7 +64,8 @@ local defaults = {
 	global = {
 		setupDone = false, -- the first-run setup has been finished or skipped (account-wide)
 		sharingShown = false,
-		snoozeUntil = 0, -- time() until which sounds are off (/sks snooze); survives /reload -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
+		snoozeUntil = 0,
+		debugWindow = {}, -- position and size of the debug log window -- time() until which sounds are off (/sks snooze); survives /reload -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
 	},
 	profile = {
 		-- kills
@@ -162,6 +163,8 @@ local openSetup
 local setupShownThisSession = false
 
 local debugOn = false
+-- The debug log window: lines are kept here and shown in a small window with selectable text
+local DebugLog = { lines = {}, MAX = 1000 }
 local testing = false -- a simulated kill or death: no emotes, no screenshots, no stats
 
 -- ---------------------------------------------------------------------------------------------
@@ -191,7 +194,149 @@ local function debugPrint(...)
 		local value = select(i, ...)
 		parts[i] = isSecret(value) and "<secret>" or tostring(value)
 	end
-	chat("debug: " .. table.concat(parts, " "))
+	DebugLog.add(table.concat(parts, " "))
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Debug log window (/sks debug): resizable, selectable text, Select all to copy with Ctrl+C.
+-- Addons can't write to the clipboard, so copying is select-all plus Ctrl+C.
+-- ---------------------------------------------------------------------------------------------
+function DebugLog.text()
+	return table.concat(DebugLog.lines, "\n")
+end
+
+function DebugLog.refresh()
+	local w = DebugLog.window
+	if not w or not w:IsShown() then return end
+	w.edit:SetText(DebugLog.text())
+	-- After the layout pass, jump to the newest line
+	C_Timer.After(0, function()
+		w.scroll:SetVerticalScroll(w.scroll:GetVerticalScrollRange())
+	end)
+end
+
+function DebugLog.add(text)
+	local lines = DebugLog.lines
+	-- "|" would start an escape sequence in the edit box; show it literally
+	lines[#lines + 1] = date("%H:%M:%S") .. "  " .. tostring(text):gsub("|", "||")
+	if #lines > DebugLog.MAX then table.remove(lines, 1) end
+	DebugLog.refresh()
+end
+
+function DebugLog.header()
+	local version, build = "?", "?"
+	if type(GetBuildInfo) == "function" then
+		local ok, v, b = pcall(GetBuildInfo)
+		if ok then version, build = tostring(v), tostring(b) end
+	end
+	DebugLog.add(TITLE .. " " .. VERSION .. " debug log, " .. date("%Y-%m-%d") .. ", client " .. version .. " (" .. build .. ")")
+end
+
+function DebugLog.build()
+	local saved = db.global.debugWindow
+	local w = CreateFrame("Frame", "SpicyKillStreaksDebugLog", UIParent, "BackdropTemplate")
+	DebugLog.window = w
+	w:SetSize(saved.width or 520, saved.height or 300)
+	if saved.point then
+		w:SetPoint(saved.point, UIParent, saved.point, saved.x or 0, saved.y or 0)
+	else
+		w:SetPoint("CENTER", UIParent, "CENTER", 0, 150)
+	end
+	w:SetFrameStrata("DIALOG")
+	w:SetClampedToScreen(true)
+	w:SetMovable(true)
+	w:SetResizable(true)
+	if w.SetResizeBounds then w:SetResizeBounds(320, 160) elseif w.SetMinResize then w:SetMinResize(320, 160) end
+	w:SetBackdrop({
+		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+		tile = true, tileSize = 16, edgeSize = 16,
+		insets = { left = 4, right = 4, top = 4, bottom = 4 },
+	})
+	w:EnableMouse(true)
+	w:RegisterForDrag("LeftButton")
+	local function save()
+		local point, _, _, x, y = w:GetPoint()
+		saved.point, saved.x, saved.y = point, x, y
+		saved.width, saved.height = w:GetSize()
+	end
+	w:SetScript("OnDragStart", w.StartMoving)
+	w:SetScript("OnDragStop", function() w:StopMovingOrSizing() save() end)
+
+	local title = w:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+	title:SetPoint("TOPLEFT", 12, -10)
+	title:SetText(TITLE .. " debug log")
+
+	local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
+	close:SetPoint("TOPRIGHT", 0, 0)
+	close:SetScript("OnClick", function() DebugLog.setEnabled(false) end)
+
+	local scroll = CreateFrame("ScrollFrame", "SpicyKillStreaksDebugLogScroll", w, "UIPanelScrollFrameTemplate")
+	scroll:SetPoint("TOPLEFT", 10, -30)
+	scroll:SetPoint("BOTTOMRIGHT", -30, 38)
+	w.scroll = scroll
+
+	local edit = CreateFrame("EditBox", nil, scroll)
+	edit:SetMultiLine(true)
+	edit:SetAutoFocus(false)
+	edit:SetFontObject(GameFontHighlightSmall)
+	edit:SetWidth(scroll:GetWidth())
+	edit:SetScript("OnEscapePressed", edit.ClearFocus)
+	-- Read-only: typing puts the log back (selecting and Ctrl+C still work)
+	edit:SetScript("OnTextChanged", function(self, userInput)
+		if userInput then self:SetText(DebugLog.text()) end
+	end)
+	scroll:SetScrollChild(edit)
+	scroll:SetScript("OnSizeChanged", function(self, width) edit:SetWidth(width) end)
+	w.edit = edit
+
+	local hint = w:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
+	local function button(text, width, onClick)
+		local b = CreateFrame("Button", nil, w, "UIPanelButtonTemplate")
+		b:SetSize(width, 22)
+		b:SetText(text)
+		b:SetScript("OnClick", onClick)
+		return b
+	end
+	local selectAll = button("Select all", 90, function()
+		edit:SetFocus()
+		edit:HighlightText()
+		hint:SetText("Press Ctrl+C to copy")
+	end)
+	selectAll:SetPoint("BOTTOMLEFT", 10, 10)
+	local clear = button("Clear", 70, function()
+		wipe(DebugLog.lines)
+		DebugLog.header()
+		hint:SetText("")
+	end)
+	clear:SetPoint("LEFT", selectAll, "RIGHT", 6, 0)
+	hint:SetPoint("LEFT", clear, "RIGHT", 10, 0)
+	edit:SetScript("OnEditFocusLost", function(self) self:HighlightText(0, 0) hint:SetText("") end)
+
+	local grip = CreateFrame("Button", nil, w)
+	grip:SetSize(16, 16)
+	grip:SetPoint("BOTTOMRIGHT", -4, 4)
+	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	grip:SetScript("OnMouseDown", function() w:StartSizing("BOTTOMRIGHT") end)
+	grip:SetScript("OnMouseUp", function() w:StopMovingOrSizing() save() end)
+	w:Hide()
+end
+
+-- Debug on = the window is open and detection writes to it
+function DebugLog.setEnabled(on)
+	debugOn = on and true or false
+	if debugOn then
+		if not DebugLog.window then DebugLog.build() end
+		if #DebugLog.lines == 0 then DebugLog.header() end
+		DebugLog.window:Show()
+		DebugLog.refresh()
+		chat("Debug log on: detection details go to the debug window. /sks debug again (or close it) turns it off.")
+	else
+		if DebugLog.window then DebugLog.window:Hide() end
+		chat("Debug log off.")
+	end
 end
 
 -- "Name", "Name-Realm" and "Name Family" all become "name": the death recap, the scoreboard
@@ -2700,9 +2845,9 @@ local function buildOptions()
 					who = button("Who runs this addon?", 19.2, versionCheck),
 					debugHeader = header("Troubleshooting", 20),
 					debug = {
-						type = "toggle", name = "Print what the kill detection sees to chat", order = 21, width = "full",
+						type = "toggle", name = "Debug log: open a window showing what the kill detection sees", order = 21, width = "full",
 						get = function() return debugOn end,
-						set = function(_, value) debugOn = value end,
+						set = function(_, value) DebugLog.setEnabled(value) end,
 					},
 				},
 			},
@@ -2786,8 +2931,7 @@ local function initialize()
 			requestScoreData()
 			C_Timer.After(1, function() readScoreboard(true) end)
 		elseif command == "debug" then
-			debugOn = not debugOn
-			chat("Detection debug output is " .. (debugOn and "ON" or "OFF") .. ".")
+			DebugLog.setEnabled(not debugOn)
 		elseif command == "test" then
 			runTest("kill")
 		else
