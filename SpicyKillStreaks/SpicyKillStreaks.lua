@@ -577,8 +577,16 @@ local VIGNETTE = "Interface\\FullScreenTextures\\LowHealth"
 local FONTS = {
 	impact = { name = "Impact (combat text)", path = "Fonts\\SKURRI.TTF" },
 	classic = { name = "Classic", path = "Fonts\\FRIZQT__.TTF" },
-	fancy = { name = "Fancy", path = "Fonts\\MORPHEUS.TTF" },
 	narrow = { name = "Narrow", path = "Fonts\\ARIALN.TTF" },
+	-- Bundled (Media\Fonts, licences beside them)
+	bangers = { name = "Bangers", path = MEDIA .. "Fonts\\Bangers.ttf" },
+	luckiest = { name = "Luckiest Guy", path = MEDIA .. "Fonts\\LuckiestGuy.ttf" },
+	anton = { name = "Anton", path = MEDIA .. "Fonts\\Anton.ttf" },
+	bebas = { name = "Bebas Neue", path = MEDIA .. "Fonts\\BebasNeue.ttf" },
+	russo = { name = "Russo One", path = MEDIA .. "Fonts\\RussoOne.ttf" },
+	blackops = { name = "Black Ops One", path = MEDIA .. "Fonts\\BlackOpsOne.ttf" },
+	marker = { name = "Permanent Marker", path = MEDIA .. "Fonts\\PermanentMarker.ttf" },
+	teko = { name = "Teko", path = MEDIA .. "Fonts\\Teko.ttf" },
 }
 local FONT_NAMES = {}
 for key, font in pairs(FONTS) do FONT_NAMES[key] = font.name end
