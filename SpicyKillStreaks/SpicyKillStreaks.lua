@@ -30,7 +30,6 @@ local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominati
 local MULTI_TEXTS = { "DOUBLE KILL!", "TRIPLE KILL!", "MULTI KILL!", "MEGA KILL!", "ULTRA KILL!!!", "MONSTER KILL!!!", "LUDICROUS KILL!!!", "H O L Y  S H I T!!!" }
 local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
 local SOUND_PREPARE = "prepare.ogg"
-local SOUND_EXECUTE = "finishhim.ogg"
 local SOUND_HUMILIATION = "humiliation.ogg"
 -- Callouts outside the rank and multikill tables. (One table: the file is at Lua's 200-local limit.)
 --   headshot     the first kill of a streak
@@ -88,9 +87,6 @@ local defaults = {
 		doprepare = false,
 		dodeathsound = true, -- "humiliation" when we die
 		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / custom
-		doexecute = false,
-		doexecutepve = false,
-		executepercent = 25,
 		-- text
 		dochat = true,
 		doscreen = true,
@@ -1823,56 +1819,8 @@ local function checkTargetDeath()
 	end
 end
 
--- ---------------------------------------------------------------------------------------------
--- Execute sound ("finish him"): our target drops to or below the threshold
--- ---------------------------------------------------------------------------------------------
-local targetHealth = {}  -- GUID or name -> last health percent seen
-local lastExecuteReason  -- debug output only: why the last check was skipped
-local executeHiddenNoticed = false -- told the player that enemy health is hidden (once per session)
-
-local function checkExecute()
-	local profile = db.profile
-	if not (profile.doexecute or profile.doexecutepve) then return end
-	-- Unit information can be hidden (secret values) in some content; then there is nothing to compare
-	local ok, key, percent = pcall(function()
-		if not UnitExists("target") then return end
-		if not UnitCanAttack("player", "target") then return nil, "target cannot be attacked" end
-		local isPlayer = UnitIsPlayer("target")
-		if isPlayer and not profile.doexecute then return nil, "target is a player and the player option is off" end
-		if not isPlayer and not profile.doexecutepve then return nil, "target is an NPC and the NPC option is off" end
-		local health, healthMax = UnitHealth("target"), UnitHealthMax("target")
-		if isSecret(health) or isSecret(healthMax) then return nil, "target health is hidden from addons (secret value)" end
-		if not usableNumber(health) or not usableNumber(healthMax) or healthMax <= 0 then return nil, "target health is not a number" end
-		local id = UnitGUID("target")
-		if not usableString(id) then id = GetUnitName("target", true) end
-		if not usableString(id) then return nil, "target has no usable GUID or name" end
-		return id, floor(health / healthMax * 100)
-	end)
-	if not ok or not key then
-		local reason = not ok and ("error: " .. tostring(key)) or percent
-		-- Hidden health is the client's rule, not a setting: say so once per session
-		if not executeHiddenNoticed and type(reason) == "string" and reason:find("hidden", 1, true) then
-			executeHiddenNoticed = true
-			chat("\"Finish him\" cannot work here: the game hides enemy health from addons during combat.")
-		end
-		if reason and reason ~= lastExecuteReason then debugPrint("execute:", reason) end
-		lastExecuteReason = reason
-		return
-	end
-	lastExecuteReason = nil
-
-	local before = targetHealth[key]
-	targetHealth[key] = percent
-	local threshold = profile.executepercent
-	if before ~= percent then debugPrint("execute: target health", before, "->", percent, "percent, threshold", threshold) end
-	if percent <= threshold and percent > 1 and (before == nil or before > threshold) then
-		playSound(SOUND_EXECUTE)
-	end
-end
-
 function events.UNIT_HEALTH(unit)
 	if isSecret(unit) or unit ~= "target" then return end
-	checkExecute()
 	checkTargetDeath()
 end
 
@@ -1886,7 +1834,6 @@ end
 
 function events.PLAYER_TARGET_CHANGED()
 	Levels.note("target")
-	checkExecute()
 	checkTargetDeath()
 end
 
@@ -2016,7 +1963,6 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	wipe(enemyDeaths)
 	requestScoreData()
 	C_Timer.After(2, requestScoreData)
-	wipe(targetHealth)
 	wipe(credited)
 	wipe(watched)
 	wipe(killedBy)
@@ -2062,8 +2008,6 @@ local function runTest(what)
 		local ok, err = pcall(registerDeath, "Test-Killer", false)
 		testing = false
 		if not ok then chat("Test death failed: " .. tostring(err)) end
-	elseif what == "execute" then
-		playSound(SOUND_EXECUTE)
 	elseif what == "prepare" then
 		playSound(SOUND_PREPARE)
 	elseif what == "humiliation" then
@@ -2085,7 +2029,7 @@ local function runTest(what)
 		streak, deathstreak, multikill, lastKillTime, lastRank = 0, 0, 0, nil, nil
 		chat("Current streaks reset.")
 	else
-		chat("Tests: /sks test kill, /sks test death, /sks test execute, /sks test prepare, /sks test emote (really sends it). "
+		chat("Tests: /sks test kill, /sks test death, /sks test prepare, /sks test emote (really sends it). "
 			.. "Effects: /sks preview kill|rank|multi|big|death|other. Sync: /sks synctest, /sks who. Move: /sks unlock")
 	end
 end
@@ -2286,10 +2230,6 @@ local function buildSetup()
 			local options = {
 				{ "Count NPC kills too (spammy, but great for trying it out)", function() return db.profile.dopve end,
 					function(v) db.profile.dopve = v end },
-				{ "\"Finish him!\" when an enemy player gets low", function() return db.profile.doexecute end,
-					function(v) db.profile.doexecute = v end },
-				{ "\"Finish him!\" when an NPC gets low (where the game shows addons its health)", function() return db.profile.doexecutepve end,
-					function(v) db.profile.doexecutepve = v end },
 			}
 			for i, option in ipairs(options) do
 				local cb = makeCheck(page, option[1], option[2], option[3])
@@ -2526,17 +2466,6 @@ local function buildOptions()
 							playHumiliation()
 						end,
 					},
-					executeHeader = header("Finish him", 20),
-					executeNote = note("WoW Forever hides enemy health from addons during combat, so this only "
-						.. "works where the game still shows it. If it can't, you get one message in chat.", 20.5),
-					doexecute = toggle("doexecute", "Play \"finish him\" when an enemy player target drops below the threshold", 21),
-					doexecutepve = toggle("doexecutepve", "Play \"finish him\" when an NPC target drops below the threshold", 22),
-					executepercent = {
-						type = "range", name = "Threshold (percent health)", order = 23, width = "full",
-						min = 5, max = 50, step = 1,
-						get = function() return db.profile.executepercent end,
-						set = function(_, value) db.profile.executepercent = value end,
-					},
 				},
 			},
 			effects = {
@@ -2702,7 +2631,6 @@ local function buildOptions()
 						"Resets the killing streak, as dying does."),
 					reset = button("Reset current streaks", 4, function() runTest("reset") end),
 					soundHeader = header("Sounds", 10),
-					execute = button("Finish him", 11, function() runTest("execute") end),
 					prepare = button("Prepare", 12, function() runTest("prepare") end),
 					humiliation = button("Humiliation", 13, function() runTest("humiliation") end),
 					previewRank = {

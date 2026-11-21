@@ -77,8 +77,6 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
 
 WoW Forever keeps the combat log from addons, so kills are read from the battleground and arena **scoreboard**, and everywhere else from the game's own **killing-blow event**. Your killer comes from the **Death Recap**. Creature kills only count if you switch them on (great for trying it out).
 
-> **"Finish him!"** plays when your target gets low, but WoW Forever hides enemy health from addons during combat, so it only works where the game still shows it.
-
 ## Privacy
 
 Sharing with your party and guild is on by default, and the first-run setup says so with a box to untick. Shared kills travel as hidden addon messages to your party and/or guild; players without the addon see nothing. Switch sharing off under `/sks` > Sync and nothing leaves your game.
