@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.5.0"
+local VERSION = "0.6.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -32,7 +32,18 @@ local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "meg
 local SOUND_PREPARE = "prepare.ogg"
 local SOUND_EXECUTE = "finishhim.ogg"
 local SOUND_HUMILIATION = "humiliation.ogg"
-local SOUND_HEADSHOT = "headshot.ogg" -- not shipped: players add their own (sounds\ or a voice pack folder)
+-- Callouts outside the rank and multikill tables. (One table: the file is at Lua's 200-local limit.)
+--   headshot     the first kill of a streak
+--   firstblood   the first kill of the day (on this character)
+--   retribution  killing someone who killed us in the last RETRIBUTION_WINDOW seconds
+--   pancake      dying with no killer: falling, drowning, lava...
+local SPECIAL = {
+	headshot = "headshot.ogg", firstblood = "firstblood.ogg", retribution = "retribution.ogg", pancake = "pancake.ogg",
+	RETRIBUTION_WINDOW = 3600,
+	UNKNOWN_KILLER = "an unknown enemy", -- also what older versions send for such a death
+}
+
+
 
 -- Sounds the voice packs don't ship (players add their own); played instead while missing
 local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg" }
@@ -61,6 +72,9 @@ local defaults = {
 		style = "dota",          -- "dota": a sound on every kill, "ut": on the first kill and every utrank kills
 		utrank = 3,
 		doheadshot = true,       -- "Headshot" on the first kill of a streak; ranks start at the second
+		dofirstblood = true,     -- "First Blood" on the first kill of the day instead
+		doretribution = true,    -- "Retribution" for killing someone who killed you in the last hour
+		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
 		ksrank = { 2, 3, 5, 7, 9, 11, 13 }, -- kills needed for each rank (0 = rank off)
 		dopve = false,
 		dozonechange = false,
@@ -167,6 +181,45 @@ end
 
 local function usableNumber(value)
 	return not isSecret(value) and type(value) == "number"
+end
+
+-- "Name", "Name-Realm" and "Name Family" all become "name": the death recap, the scoreboard
+-- and chat write players differently on WoW Forever
+function SPECIAL.key(name)
+	if not usableString(name) then return nil end
+	local first = strmatch(name, "^[^%s%-]+")
+	return first and strlower(first) or nil
+end
+
+-- Our deaths by players: remember who, for Retribution
+function SPECIAL.rememberKiller(killer)
+	local key = SPECIAL.key(killer)
+	if not key then return end
+	local list = db.char.recentKillers or {}
+	db.char.recentKillers = list
+	local now = time()
+	for name, when in pairs(list) do
+		if now - when > SPECIAL.RETRIBUTION_WINDOW then list[name] = nil end
+	end
+	list[key] = now
+end
+
+-- True (once) when victim killed us within the window
+function SPECIAL.takeRetribution(victim)
+	local key = SPECIAL.key(victim)
+	local list = db.char.recentKillers
+	if not key or not list or not list[key] then return false end
+	local fresh = time() - list[key] <= SPECIAL.RETRIBUTION_WINDOW
+	list[key] = nil
+	return fresh
+end
+
+-- True when this is the first kill today on this character (and remembers today)
+function SPECIAL.firstOfDay()
+	local today = date("%Y-%m-%d")
+	if db.char.lastKillDay == today then return false end
+	db.char.lastKillDay = today
+	return true
 end
 
 local function chat(text)
@@ -908,15 +961,34 @@ local function registerKill(victim, isDuel)
 	local values = { k = playerName or "You", v = victim, s = streak }
 	local colorRank = rankForStreak(streak)
 	announce(fill(isDuel and profile.dueltext or profile.kstext, values), "kill", colorRank)
+
+	-- Retribution and First Blood (not for duels or tests; both remember state)
+	local retribution, firstBlood = false, false
+	if not isDuel and not testing then
+		retribution = SPECIAL.takeRetribution(victim) and profile.doretribution
+		firstBlood = SPECIAL.firstOfDay() and profile.dofirstblood
+	end
+
 	local rank = nil
-	if multi > 0 then
+	if retribution then
+		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
+		announce("RETRIBUTION!", "rank", 4)
+		playSound(SPECIAL.retribution)
+		celebrate("rank", 4)
+		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
+	elseif multi > 0 then
 		announce(MULTI_TEXTS[multi], "multi", multi)
 		playSound(MULTI_SOUNDS[multi])
 		celebrate("multi", multi)
+	elseif firstBlood then
+		-- The first kill of the day; afterwards a streak's first kill is a Headshot
+		announce("FIRST BLOOD!", "rank", 3)
+		playSound(SPECIAL.firstblood)
+		celebrate("rank", 3)
 	elseif streak == 1 and not isDuel and profile.doheadshot then
 		-- The first kill of a streak: "Headshot". rank stays nil, so others hear it as a plain kill
 		announce("HEADSHOT!", "rank", 1)
-		playSound(SOUND_HEADSHOT)
+		playSound(SPECIAL.headshot)
 		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
@@ -976,10 +1048,18 @@ local function registerDeath(killer, isDuel)
 	local profile = db.profile
 	resetStreakOnDeath()
 	deathstreak = deathstreak + 1
-	killer = usableString(killer) and killer or "an unknown enemy"
-	announce("You were " .. (isDuel and "defeated" or "killed") .. " by " .. killer .. ".", "death")
-	-- (A fled duel already plays it, from the duel setting)
-	if not isDuel and profile.dodeathsound then playHumiliation() end
+	-- No killer in the Death Recap: almost always falling, drowning or lava
+	local pancake = not isDuel and not usableString(killer) and profile.dopancake
+	killer = usableString(killer) and killer or SPECIAL.UNKNOWN_KILLER
+	if pancake then
+		announce("You just PANCAKED from falling or drowning.", "death")
+		if profile.dodeathsound then playSound(SPECIAL.pancake) end
+	else
+		announce("You were " .. (isDuel and "defeated" or "killed") .. " by " .. killer .. ".", "death")
+		-- (A fled duel already plays it, from the duel setting)
+		if not isDuel and profile.dodeathsound then playHumiliation() end
+	end
+	if not isDuel and not testing and killer ~= SPECIAL.UNKNOWN_KILLER then SPECIAL.rememberKiller(killer) end
 
 	if testing then return end
 
@@ -1268,6 +1348,13 @@ local function onFeedMessage(kind, sender, channel, fields)
 	if kind == "D" then
 		if seenRecently(sender .. "|D|" .. name) then return end
 		if not source.deaths then return end
+		if name == SPECIAL.UNKNOWN_KILLER and fields[4] ~= "1" and db.profile.dopancake then
+			local line = whoShown .. " just PANCAKED from falling or drowning."
+			if source.feed then chat(FEED_ICONS .. line) end
+			if source.text then showText(line, "death") end
+			if source.sound then playSound(SPECIAL.pancake) end
+			return
+		end
 		local verb = " was " .. (fields[4] == "1" and "defeated" or "killed") .. " by "
 		if source.feed then chat(FEED_ICONS .. whoShown .. verb .. KILLER_COLOR .. nameShown .. "|r.") end
 		if source.text then showText(whoShown .. verb .. nameShown .. ".", "death") end
@@ -1310,7 +1397,7 @@ local function onFeedMessage(kind, sender, channel, fields)
 		elseif rank > 0 then
 			playSound(RANK_SOUNDS[rank])
 		elseif streakCount == 1 and kind ~= "U" and db.profile.doheadshot then
-			playSound(SOUND_HEADSHOT)
+			playSound(SPECIAL.headshot)
 		end
 	end
 end
@@ -2379,6 +2466,12 @@ local function buildOptions()
 					doheadshot = toggle("doheadshot", "\"Headshot\" on the first kill", 1.5,
 						"The first kill of a streak says Headshot (add headshot.ogg to the sounds folder); "
 						.. "the streak ranks start at the second kill."),
+					dofirstblood = toggle("dofirstblood", "\"First Blood\" on your first kill of the day", 1.6,
+						"Instead of Headshot, once a day per character (add firstblood.ogg to the sounds folder)."),
+					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7,
+						"Add retribution.ogg to the sounds folder."),
+					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
+						"Plays instead of Humiliation (add pancake.ogg to the sounds folder)."),
 					dopve = toggle("dopve", "Count NPC kills too (spammy, good for testing)", 2,
 						"Your killing blows on creatures count as kills, not only those on players."),
 					dozonechange = toggle("dozonechange", "Reset streaks when changing zone", 3),

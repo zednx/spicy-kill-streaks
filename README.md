@@ -9,6 +9,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 ## Features
 
 - **Kill streaks**: *Headshot* on your first kill, then seven ranks from *Ownage* (2nd kill) to *Wicked Sick*, with their own sounds, colours and on-screen callouts. Every kill, or Unreal Tournament style (every few kills).
+- **Special callouts**: *First Blood* on your first kill of the day, *Retribution* when you kill someone who killed you in the last hour, and *Pancake* when you (or a friend) die from falling or drowning.
 - **Multikills**: kills within 30 seconds of each other chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and on.
 - **Only your killing blows count**, not kills your group finishes.
 - **Four voice packs**: male, female, sexy and baby. Pick a separate voice for *Humiliation*, or add your own sound files.

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0
+
+- **First Blood** on your first kill of the day (per character). After that, a streak's first kill is Headshot as before.
+- **Retribution** when you kill someone who killed you in the last hour. It plays instead of the other kill sounds.
+- **Pancake** when you die with no killer (falling, drowning, lava): "You just PANCAKED from falling or drowning." instead of "killed by an unknown enemy", with its own sound instead of Humiliation. Friends' deaths like that show as "Bob just PANCAKED from falling or drowning." (also from friends on older versions).
+- All three can be turned off under General. They use `firstblood.ogg`, `retribution.ogg` and `pancake.ogg` from `sounds\`.
+
 ## v0.5.0
 
 - **Mute sounds** in battlegrounds and arenas, dungeons or raids: three new boxes under Sounds. Text and effects still show.
