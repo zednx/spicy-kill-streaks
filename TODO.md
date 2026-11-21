@@ -13,7 +13,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `ganked.ogg` (a player 10+ levels higher killed you) | [ ] | [ ] | [ ] | [ ] |
 | `triplekill.ogg` | done | [ ] | [ ] | [ ] |
 | `headshot.ogg` | done | [ ] | [ ] | [ ] |
-| `firstblood.ogg` | done | [ ] | [ ] | [ ] |
+| `firstblood.ogg` | done | [ ] | done | [ ] |
 | `retribution.ogg` | done | [ ] | [ ] | [ ] |
 | `pancake.ogg` | done | [ ] | [ ] | [ ] |
 | `monsterkill.ogg` | done | done | done | [ ] |

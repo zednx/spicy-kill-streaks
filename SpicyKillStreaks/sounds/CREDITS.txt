@@ -23,6 +23,10 @@ flamboyant\
   (github.com/robisonkarls/MegaKill_Announcer), which ships them as "used under fair use for a
   personal addon". Converted to Ogg Vorbis and renamed to match the other packs.
 
+sexy\firstblood.ogg
+  From the HKSounds addon (github.com/ErnestasBaltinas/hksounds), whose "UT Classic (Female)"
+  pack is the same recordings as our sexy pack. Converted to mono Ogg Vorbis.
+
 triplekill.ogg (male)
   From MegaKill Announcer's Unreal Tournament pack (the same announcer as the male pack;
   Unreal Tournament is (c) Epic Games). Converted to Ogg Vorbis and raised to the same level.
