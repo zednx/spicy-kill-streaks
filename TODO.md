@@ -9,6 +9,8 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | File | Male `sounds\` | Female `sounds\female\` | Sexy `sounds\sexy\` | Baby `sounds\baby\` |
 |---|---|---|---|---|
 | `combowhore.ogg` (20 kills in a row) | [ ] | [ ] | [ ] | [ ] |
+| `gank.ogg` (you ganked someone 10+ levels lower) | [ ] | [ ] | [ ] | [ ] |
+| `ganked.ogg` (a player 10+ levels higher killed you) | [ ] | [ ] | [ ] | [ ] |
 | `triplekill.ogg` | [ ] | [ ] | [ ] | [ ] |
 | `headshot.ogg` | done | [ ] | [ ] | [ ] |
 | `firstblood.ogg` | done | [ ] | [ ] | [ ] |
@@ -17,7 +19,11 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `monsterkill.ogg` | done | done | done | [ ] |
 
 Until a file is added: a pack without it plays the male one; with no male one either, `triplekill`
-plays Multi Kill and `combowhore` stays silent.
+plays Multi Kill, `ganked` plays Humiliation, and `combowhore` and `gank` stay silent.
+
+- [ ] Listen to the HKSounds / MegaKill packs Claude sent ("Announcer sounds to review.zip"); MegaKill's
+      Unreal pack has a `triple_kill.wav`
+- [ ] Tell Claude where `headshot`, `firstblood` and `pancake` came from, for `sounds/CREDITS.txt`
 
 ### Where the current sounds came from
 

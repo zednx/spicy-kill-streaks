@@ -1,0 +1,21 @@
+Where the sounds come from
+
+The announcer recordings are not covered by the addon's GNU GPL v2 licence. They remain the
+property of their owners and are included only as they were in dG KillShot. If you hold the
+rights to one of them and want it removed, open an issue on GitHub (zednx/spicy-kill-streaks).
+
+Voice packs: male (this folder), female\, sexy\, baby\, humiliation\
+  Came with dG KillShot by Lance Inman (WowAce/CurseForge project "dgks"). dG KillShot describes
+  them as Unreal Tournament, DotA and Mortal Kombat sounds. The male and female packs are
+  Unreal Tournament style announcers (Unreal Tournament is (c) Epic Games). The original
+  source of "sexy" and "baby" is not stated anywhere we could find.
+
+headshot.ogg, firstblood.ogg, pancake.ogg
+  Added for Spicy Kill Streaks 0.6.0 from files supplied by the author. Source: to be confirmed.
+
+retribution.ogg
+  Added for Spicy Kill Streaks 0.6.0. The file was encoded by Unreal Engine 3, so it comes from
+  an Unreal Engine 3 game such as Unreal Tournament 3 ((c) Epic Games).
+
+custom\
+  Your own files. Nothing ships there.

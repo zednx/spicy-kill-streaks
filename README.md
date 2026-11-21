@@ -59,6 +59,12 @@ Sharing is on by default, and the first-run setup says so with a box to untick. 
 
 ## Credits and license
 
+- Made by **Spicy Bubbletea** (Horde, WoW Forever PvP). Feedback in game or on GitHub Issues.
 - Based on **dG KillShot** by Lance Inman. Its voice packs ship with this addon.
 - Uses the **Ace3** libraries.
-- Licensed under the **GNU GPL v2** (see [LICENSE](LICENSE)), as dG KillShot is.
+- The code is licensed under the **GNU GPL v2** (see [LICENSE](LICENSE)), as dG KillShot is.
+
+### Sounds and fonts
+
+- **Announcer voices are not covered by the GPL.** They belong to their owners (the Unreal Tournament announcers are © Epic Games) and are included as they were in dG KillShot. Where each sound comes from: [sounds/CREDITS.txt](SpicyKillStreaks/sounds/CREDITS.txt). Rights holders can ask for removal through GitHub Issues.
+- **Fonts** are from Google Fonts: Anton, Bangers, Bebas Neue, Black Ops One, Russo One and Teko under the SIL Open Font License 1.1; Luckiest Guy and Permanent Marker under the Apache License 2.0. Licences: [Media/Fonts](SpicyKillStreaks/Media/Fonts).

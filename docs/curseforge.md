@@ -83,11 +83,13 @@ Sharing with your party and guild is on by default, and the first-run setup says
 
 ## Credits
 
-Based on **dG KillShot** by Lance Inman, whose voice packs ship with this addon. Uses the **Ace3** libraries. Open source under the GNU GPL v2; the code is on GitHub (linked on this project).
+Made by **Spicy Bubbletea** (Horde, WoW Forever PvP). Based on **dG KillShot** by Lance Inman, whose voice packs ship with this addon. Uses the **Ace3** libraries. The code is open source under the GNU GPL v2 and on GitHub (linked on this project).
+
+**Sounds and fonts:** the announcer voices are not covered by the GPL. They belong to their owners (the Unreal Tournament announcers are © Epic Games) and are included as they were in dG KillShot; `sounds/CREDITS.txt` lists where each comes from, and rights holders can ask for removal on GitHub. The combat text fonts are from Google Fonts under the SIL Open Font License 1.1 and the Apache License 2.0, with their licences in `Media/Fonts`.
 
 ## Feedback
 
-Bugs and ideas are welcome on GitHub Issues. Happy hunting! 🌶️
+Message **Spicy Bubbletea** in game (Horde, WoW Forever PvP) or open a GitHub issue. A `/sks debug` log helps with bugs. Happy hunting! 🌶️
 
 ---
 
