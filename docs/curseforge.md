@@ -55,7 +55,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
   - Sparkle bursts: stars, chillies or confetti
   - A screen-edge flash for multikills and big streaks
   - Drag it anywhere, choose the size and font
-- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it.
+- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out.
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.
 - **Quick setup** on first login, plus test buttons and previews for everything.

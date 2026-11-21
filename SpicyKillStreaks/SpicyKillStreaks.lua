@@ -111,6 +111,7 @@ local defaults = {
 			shareparty = true, -- party, raid, battleground and arena
 			shareguild = true,
 			logincount = true,  -- at login, one chat line: how many guildmates use the addon
+			updatenotice = true, -- say so in chat when a guildmate or party member runs a newer version
 			-- What to do with kills and deaths shared by others
 			--   feed: a line in the chat window   sound: their streak / multikill sound
 			--   text: on-screen combat text       deaths: also show when they die
@@ -1293,6 +1294,39 @@ local function onFeedMessage(kind, sender, channel, fields)
 	end
 end
 
+-- "1.2.3" -> 1, 2, 3, or nil for anything else (the text comes from other players)
+local function parseVersion(text)
+	if not usableString(text) or #text > 20 then return nil end
+	local a, b, c = strmatch(text, "^(%d+)%.(%d+)%.(%d+)$")
+	if not a then return nil end
+	return tonumber(a), tonumber(b), tonumber(c)
+end
+
+-- true when version text a is higher than version text b
+local function isNewerThan(a, b)
+	local a1, a2, a3 = parseVersion(a)
+	local b1, b2, b3 = parseVersion(b)
+	if not (a1 and b1) then return false end
+	if a1 ~= b1 then return a1 > b1 end
+	if a2 ~= b2 then return a2 > b2 end
+	return a3 > b3
+end
+
+local function isNewer(text)
+	return isNewerThan(text, VERSION)
+end
+
+-- Once per session for each newer version seen: tell the player an update is out
+local newestSeen
+local function noticeVersion(sender, version)
+	if not syncConfig().updatenotice or not isNewer(version) then return end
+	if newestSeen and not isNewerThan(version, newestSeen) then return end
+	newestSeen = version
+	local who = safeText(shortName(sender)) or "Someone"
+	chat("A newer version is out: " .. who .. " runs " .. TITLE .. " " .. version .. " (you have " .. VERSION
+		.. "). Update it with WowUp or CurseForge.")
+end
+
 function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	if prefix ~= PREFIX then return end
 	-- Addon message payloads can be secret values in restricted content
@@ -1305,6 +1339,10 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	if overBudget(sender) then return end
 
 	local kind = fields[1]
+	-- Every message carries the sender's version second
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" then
+		noticeVersion(sender, fields[2])
+	end
 	if kind == "K" or kind == "U" or kind == "T" or kind == "D" then
 		-- Kills and deaths travel by party/raid/instance or guild only
 		if channel ~= "WHISPER" then onFeedMessage(kind, sender, channel, fields) end
@@ -2441,6 +2479,8 @@ local function buildOptions()
 					shareguild = syncToggle({ "shareguild" }, "Share with my guild", 3),
 					logincount = syncToggle({ "logincount" }, "At login, tell me how many guildmates use the addon", 4,
 						"Needs \"Share with my guild\". Counts guildmates who also share."),
+					updatenotice = syncToggle({ "updatenotice" }, "Tell me when a guildmate or party member has a newer version", 5,
+						"Shown once per session in chat. You only hear from players who share with you."),
 					partyHeader = header("Kills and deaths shared by party members", 10),
 					partyFeed = syncToggle({ "party", "feed" }, "Show their kills in the chat feed", 11),
 					partyText = syncToggle({ "party", "text" }, "Show their kills as combat text on screen", 12),

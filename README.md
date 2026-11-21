@@ -13,7 +13,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 - **Only your killing blows count**, not kills your group finishes.
 - **Four voice packs**: male, female, sexy and baby. Pick a separate voice for *Humiliation*, or add your own sound files.
 - **Effects** (all optional): animated combat text that punches in and floats up, sparkle bursts (stars, chillies or confetti), and a screen-edge flash for big moments. Drag them anywhere.
-- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills show in chat, as combat text, with sound, and whether their deaths show too.
+- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills show in chat, as combat text, with sound, and whether their deaths show too. If a guildmate or party member has a newer version, it tells you in chat.
 - **Duels**: wins count, losses and fleeing get a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent log.
 - **First-run setup** that walks you through voice, effects and sharing in about 30 seconds.
