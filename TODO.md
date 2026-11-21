@@ -8,7 +8,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 
 | File | Male `sounds\` | Female `sounds\female\` | Sexy `sounds\sexy\` | Baby `sounds\baby\` |
 |---|---|---|---|---|
-| `combowhore.ogg` (20 kills in a row) | [ ] | [ ] | [ ] | [ ] |
+| `combowhore.ogg` (20 kills in a row) | done | [ ] | [ ] | [ ] |
 | `gank.ogg` (you ganked someone 10+ levels lower) | [ ] | [ ] | [ ] | [ ] |
 | `ganked.ogg` (a player 10+ levels higher killed you) | [ ] | [ ] | [ ] | [ ] |
 | `triplekill.ogg` | done | [ ] | [ ] | [ ] |
