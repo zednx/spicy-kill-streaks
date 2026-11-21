@@ -560,7 +560,7 @@ SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "combowhore.ogg" }
 -- Now and then Retribution is the Candle King instead: "You no take candle!" (game file ID;
 -- if this client lacks it, the normal Retribution sound plays)
-SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 0.25
+SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 1 / 3
 
 -- Voice packs that say something else get matching callout text (in rainbow letters)
 SPECIAL.PACK_TEXT = {
