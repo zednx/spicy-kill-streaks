@@ -512,6 +512,11 @@ end
 
 function playSound(file, pack)
 	if not file or not db.profile.dosound or soundMuted() then return end
+	-- A number is one of the game's own sound files, by file ID
+	if type(file) == "number" then
+		local ok, played = pcall(PlaySoundFile, file, db.profile.soundchannel or "Master")
+		return ok and played
+	end
 	pack = pack or db.profile.soundpack
 	local folder = PACK_FOLDER[pack] or ""
 	local missing = PACK_MISSING[pack]
@@ -530,12 +535,8 @@ function playSound(file, pack)
 		willPlay = PlaySoundFile(SOUND_ROOT .. file:gsub("%.ogg$", ".mp3"), channel)
 	end
 	-- Nobody has added this one yet: play its stand-in
-	local standin = SOUND_STANDIN[file]
-	if not willPlay and type(standin) == "number" then
-		local ok, played = pcall(PlaySoundFile, standin, channel)
-		return ok and played
-	elseif not willPlay and standin then
-		return playSound(standin, pack)
+	if not willPlay and SOUND_STANDIN[file] then
+		return playSound(SOUND_STANDIN[file], pack)
 	end
 	return willPlay
 end
@@ -557,6 +558,9 @@ SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
 SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 -- Secret ranks: kills in a row -> their own sound and the big effects, no callout text
 SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "combowhore.ogg" }
+-- Now and then Retribution is the Candle King instead: "You no take candle!" (game file ID;
+-- if this client lacks it, the normal Retribution sound plays)
+SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 0.25
 
 -- Voice packs that say something else get matching callout text (in rainbow letters)
 SPECIAL.PACK_TEXT = {
@@ -1318,7 +1322,9 @@ local function registerKill(victim, isDuel, notGank)
 	if retribution then
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
 		announce("RETRIBUTION!", "rank", 4)
-		playSound(SPECIAL.retribution)
+		if not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
+			playSound(SPECIAL.retribution)
+		end
 		celebrate("rank", 4)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif SPECIAL.SECRETS[streak] and not isDuel then

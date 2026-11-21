@@ -39,5 +39,10 @@ Getting ganked (all packs but flamboyant)
   Not a file in the addon: it plays the game's own sound/creature/peon/peonpissed4.ogg (the Peon's
   "Me not that kind of orc!", (c) Blizzard Entertainment) by its file ID.
 
+Retribution, now and then (all packs)
+  Not a file in the addon: it plays the game's own
+  sound/creature/candle_king/vo_110_candle_king_01_m.ogg (the Candle King's "You no take candle!",
+  (c) Blizzard Entertainment) by its file ID.
+
 custom\
   Your own files. Nothing ships there.
