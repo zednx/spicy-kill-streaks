@@ -179,6 +179,21 @@ local function usableNumber(value)
 	return not isSecret(value) and type(value) == "number"
 end
 
+
+local function chat(text)
+	print("|cffff5533" .. TITLE .. "|r: " .. tostring(text))
+end
+
+local function debugPrint(...)
+	if not debugOn then return end
+	local parts = {}
+	for i = 1, select("#", ...) do
+		local value = select(i, ...)
+		parts[i] = isSecret(value) and "<secret>" or tostring(value)
+	end
+	chat("debug: " .. table.concat(parts, " "))
+end
+
 -- "Name", "Name-Realm" and "Name Family" all become "name": the death recap, the scoreboard
 -- and chat write players differently on WoW Forever
 function SPECIAL.key(name)
@@ -198,16 +213,52 @@ function SPECIAL.rememberKiller(killer)
 		if now - when > SPECIAL.RETRIBUTION_WINDOW then list[name] = nil end
 	end
 	list[key] = now
+	debugPrint("retribution: remembered killer", killer, "as", key)
 end
 
 -- True (once) when victim killed us within the window
 function SPECIAL.takeRetribution(victim)
 	local key = SPECIAL.key(victim)
 	local list = db.char.recentKillers
+	if debugOn then
+		local known = {}
+		for name, when in pairs(list or {}) do known[#known + 1] = name .. " (" .. floor((time() - when) / 60) .. " min ago)" end
+		debugPrint("retribution: victim", victim, "as", key, "- killers remembered:", #known > 0 and table.concat(known, ", ") or "none")
+	end
 	if not key or not list or not list[key] then return false end
 	local fresh = time() - list[key] <= SPECIAL.RETRIBUTION_WINDOW
 	list[key] = nil
 	return fresh
+end
+
+-- Every entry of the latest Death Recap, field by field (debug output, or /sks recap)
+SPECIAL.RECAP_FIELDS = { "event", "sourceName", "sourceGUID", "spellName", "environmentalType", "amount", "overkill" }
+function SPECIAL.dumpRecap(toChat)
+	local out = toChat and function(text) chat(text) end or function(text) debugPrint(text) end
+	local function show(value)
+		if isSecret(value) then return "<secret>" end
+		if value == nil then return "-" end
+		return (tostring(value):gsub("|", "||"))
+	end
+	if not (C_DeathRecap and C_DeathRecap.GetRecapEvents) then
+		out("recap: this client has no Death Recap for addons")
+		return
+	end
+	local ok, recap = pcall(C_DeathRecap.GetRecapEvents)
+	if not ok then out("recap: error " .. show(recap)) return end
+	if isSecret(recap) then out("recap: the whole recap is <secret>") return end
+	if type(recap) ~= "table" or #recap == 0 then out("recap: empty (no recent death)") return end
+	out("recap: " .. #recap .. " entries, newest first:")
+	for i, entry in ipairs(recap) do
+		if i > 6 then out("recap: ...") break end
+		if type(entry) ~= "table" then
+			out("recap " .. i .. ": " .. show(entry))
+		else
+			local parts = {}
+			for _, field in ipairs(SPECIAL.RECAP_FIELDS) do parts[#parts + 1] = field .. "=" .. show(entry[field]) end
+			out("recap " .. i .. ": " .. table.concat(parts, " "))
+		end
+	end
 end
 
 -- True when this is the first kill today on this character (and remembers today)
@@ -216,20 +267,6 @@ function SPECIAL.firstOfDay()
 	if db.char.lastKillDay == today then return false end
 	db.char.lastKillDay = today
 	return true
-end
-
-local function chat(text)
-	print("|cffff5533" .. TITLE .. "|r: " .. tostring(text))
-end
-
-local function debugPrint(...)
-	if not debugOn then return end
-	local parts = {}
-	for i = 1, select("#", ...) do
-		local value = select(i, ...)
-		parts[i] = isSecret(value) and "<secret>" or tostring(value)
-	end
-	chat("debug: " .. table.concat(parts, " "))
 end
 
 -- "$k killed $v!" with { k = ..., v = ..., s = ... }
@@ -1699,6 +1736,8 @@ function events.UPDATE_BATTLEFIELD_SCORE()
 	else
 		victims = { deadEnemyTargetName() }
 	end
+	debugPrint("scoreboard kill:", gained, "killing blow(s), victims:", #fallen == gained and "from enemy deaths" or "from our dead target",
+		table.concat(victims, ", "))
 	for i = 1, gained do
 		registerKill(victims[i] or UNKNOWN_VICTIM, false)
 	end
@@ -1720,6 +1759,7 @@ local GUESS_DELAY = 0.6
 local function creditKill(guid, name)
 	if credited[guid] then return end
 	credited[guid] = true
+	debugPrint("kill: credited", guid, "name", name or "none")
 	registerKill(name, false)
 end
 
@@ -1864,6 +1904,8 @@ function events.PLAYER_DEAD()
 		if not ok then killer = nil end
 		if killer or attempts >= 4 then
 			deathPending = false
+			debugPrint("death: killer from the recap:", killer or "none", "after", attempts, "tries")
+			if debugOn then SPECIAL.dumpRecap(false) end
 			registerDeath(killer, false)
 		else
 			C_Timer.After(0.5, resolve)
@@ -2737,6 +2779,8 @@ local function initialize()
 					if db.global.snoozeUntil == untilTime then chat("Snooze over: sounds are back on.") end
 				end)
 			end
+		elseif command == "recap" then
+			SPECIAL.dumpRecap(true)
 		elseif command == "score" then
 			if not (inBG or inArena) then chat("Run /sks score inside a battleground or arena.") end
 			requestScoreData()
