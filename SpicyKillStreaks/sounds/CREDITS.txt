@@ -44,5 +44,10 @@ Retribution, now and then (all packs)
   sound/creature/candle_king/vo_110_candle_king_01_m.ogg (the Candle King's "You no take candle!",
   (c) Blizzard Entertainment) by its file ID.
 
+A kill after dying 3+ times in a row (all packs)
+  Not a file in the addon: it plays the game's own
+  sound/creature/thebutcher/vo_60_ogreraid_butcher_victory.ogg (the Butcher's "Looks like meat's
+  back on the menu, boys!", (c) Blizzard Entertainment) by its file ID.
+
 custom\
   Your own files. Nothing ships there.

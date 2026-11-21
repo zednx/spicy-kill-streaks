@@ -78,6 +78,7 @@ local defaults = {
 		dofirstblood = true,     -- "First Blood" on the first kill of the day instead
 		doretribution = true,    -- "Retribution" for killing someone who killed you in the last hour
 		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
+		docomeback = true,       -- the Butcher's "meat's back on the menu" for the first kill after 3+ deaths
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
@@ -561,6 +562,9 @@ SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "combowhore.ogg" }
 -- Now and then Retribution is the Candle King instead: "You no take candle!" (game file ID;
 -- if this client lacks it, the normal Retribution sound plays)
 SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 1 / 3
+-- The first kill after dying this many times in a row: the Butcher's "Looks like meat's back on
+-- the menu, boys!" (game file ID; if this client lacks it, the normal first-kill sound plays)
+SPECIAL.MEAT, SPECIAL.MEAT_DEATHS = 995083, 3
 
 -- Voice packs that say something else get matching callout text (in rainbow letters)
 SPECIAL.PACK_TEXT = {
@@ -1286,6 +1290,7 @@ local function registerKill(victim, isDuel, notGank)
 		return
 	end
 
+	local deathsBefore = deathstreak
 	streak = streak + 1
 	deathstreak = 0
 	if not testing and not isDuel then SPECIAL.noteMyKill(streak) end
@@ -1312,10 +1317,12 @@ local function registerKill(victim, isDuel, notGank)
 	announce(fill(isDuel and profile.dueltext or profile.kstext, values), "kill", colorRank)
 
 	-- Retribution and First Blood (not for duels or tests; both remember state)
-	local retribution, firstBlood = false, false
+	local retribution, firstBlood, comeback = false, false, false
 	if not isDuel and not testing then
 		retribution = SPECIAL.takeRetribution(victim) and profile.doretribution
-		firstBlood = SPECIAL.firstOfDay() and profile.dofirstblood
+		comeback = not retribution and profile.docomeback and deathsBefore >= SPECIAL.MEAT_DEATHS
+		-- (A comeback leaves First Blood for the next kill)
+		firstBlood = not comeback and SPECIAL.firstOfDay() and profile.dofirstblood
 	end
 
 	local rank = nil
@@ -1337,6 +1344,10 @@ local function registerKill(victim, isDuel, notGank)
 		announce(MULTI_TEXTS[multi], "multi", multi)
 		playSound(MULTI_SOUNDS[multi])
 		celebrate("multi", multi)
+	elseif comeback then
+		announce("MEAT'S BACK ON THE MENU!", "rank", 3)
+		if not playSound(SPECIAL.MEAT) then playSound(SPECIAL.headshot) end
+		celebrate("rank", 3)
 	elseif firstBlood then
 		-- The first kill of the day; afterwards a streak's first kill is a Headshot
 		announce("FIRST BLOOD!", "rank", 3)
@@ -2966,6 +2977,7 @@ local function buildOptions()
 					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7),
 					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
 						"Plays instead of Humiliation."),
+					docomeback = toggle("docomeback", "\"Meat's back on the menu\" when you get a kill after dying 3+ times", 1.84),
 					dogank = toggle("dogank", "Shame ganks: killing a player 10+ levels below you", 1.85,
 						"No callout and no streak for it, just a bit of shame. Only when the levels are certain "
 						.. "and no honor came for the kill; otherwise it counts as a normal kill."),
