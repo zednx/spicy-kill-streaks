@@ -31,7 +31,7 @@ local MULTI_TEXTS = { "DOUBLE KILL!", "TRIPLE KILL!", "MULTI KILL!", "MEGA KILL!
 local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
 local SOUND_PREPARE = "prepare.ogg"
 local SOUND_HUMILIATION = "humiliation.ogg"
--- Callouts outside the rank and multikill tables. (One table: the file is at Lua's 200-local limit.)
+-- Callouts outside the rank and multikill tables (their sounds are in sounds\, male voice only). (One table: the file is at Lua's 200-local limit.)
 --   headshot     the first kill of a streak
 --   firstblood   the first kill of the day (on this character)
 --   retribution  killing someone who killed us in the last RETRIBUTION_WINDOW seconds
@@ -2404,14 +2404,13 @@ local function buildOptions()
 						set = function(_, value) db.profile.style = value end,
 					},
 					doheadshot = toggle("doheadshot", "\"Headshot\" on the first kill", 1.5,
-						"The first kill of a streak says Headshot (add headshot.ogg to the sounds folder); "
+						"The first kill of a streak says Headshot; "
 						.. "the streak ranks start at the second kill."),
 					dofirstblood = toggle("dofirstblood", "\"First Blood\" on your first kill of the day", 1.6,
-						"Instead of Headshot, once a day per character (add firstblood.ogg to the sounds folder)."),
-					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7,
-						"Add retribution.ogg to the sounds folder."),
+						"Instead of Headshot, once a day per character."),
+					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7),
 					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
-						"Plays instead of Humiliation (add pancake.ogg to the sounds folder)."),
+						"Plays instead of Humiliation."),
 					dopve = toggle("dopve", "Count NPC kills too (spammy, good for testing)", 2,
 						"Your killing blows on creatures count as kills, not only those on players."),
 					dozonechange = toggle("dozonechange", "Reset streaks when changing zone", 3),
