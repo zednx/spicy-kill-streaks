@@ -25,8 +25,8 @@ local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "b
 -- Files a voice pack does not ship; these are played from sounds\ instead
 local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
-local RANK_NAMES = { "Ownage", "Killing Spree", "Rampage", "Dominating", "Unstoppable", "Godlike", "Wicked Sick", "Holy Shit" }
-local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominating.ogg", "unstoppable.ogg", "godlike.ogg", "whickedsick.ogg", "holyshit.ogg" }
+local RANK_NAMES = { "Ownage", "Killing Spree", "Rampage", "Dominating", "Unstoppable", "Godlike", "Wicked Sick" }
+local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominating.ogg", "unstoppable.ogg", "godlike.ogg", "whickedsick.ogg" }
 local MULTI_TEXTS = { "DOUBLE KILL!", "TRIPLE KILL!", "MULTI KILL!", "MEGA KILL!", "ULTRA KILL!!!", "MONSTER KILL!!!", "LUDICROUS KILL!!!", "H O L Y  S H I T!!!" }
 local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
 local SOUND_PREPARE = "prepare.ogg"
@@ -128,6 +128,7 @@ local defaults = {
 			shareguild = true,
 			logincount = true,  -- at login, one chat line: how many guildmates use the addon
 			updatenotice = true, -- say so in chat when a guildmate or party member runs a newer version
+			loginboard = true,  -- at login, the guild's top 3 killers of the month
 			-- What to do with kills and deaths shared by others
 			--   feed: a line in the chat window   sound: their streak / multikill sound
 			--   text: on-screen combat text       deaths: also show when they die
@@ -539,17 +540,16 @@ local function playHumiliation()
 	playSound(SOUND_HUMILIATION, (voice and voice ~= "pack") and voice or nil)
 end
 
--- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8, Godlike again
--- at 9, then Holy Shit at 10 and on every kill after. Values are indexes into RANK_NAMES /
--- RANK_SOUNDS (sync messages send them, so existing indexes never change). Index 1, Ownage,
--- is not a rank: it is the 2nd kill's sound.
+-- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8, which then
+-- plays on every kill after. Values are indexes into RANK_NAMES / RANK_SOUNDS (sync messages
+-- send them, so the indexes never change). Index 1, Ownage, is not a rank: it is the 2nd kill's sound.
 SPECIAL.TIERS = { { rank = 2, kills = 3 }, { rank = 3, kills = 4 }, { rank = 4, kills = 5 },
-	{ rank = 5, kills = 6 }, { rank = 7, kills = 7 }, { rank = 6, kills = 8 }, { rank = 8, kills = 10 } }
-SPECIAL.TOP_RANK = 8 -- Holy Shit: repeats on every kill once reached
--- Rank index -> how big it looks (colour, sparkles): Wicked Sick 6, Godlike 7, Holy Shit 8 (the top)
-SPECIAL.LEVEL = { [6] = 7, [7] = 6, [8] = 8 }
--- A hidden rank: its own sound and effects, no callout text
-SPECIAL.combo, SPECIAL.COMBO_KILLS = "combowhore.ogg", 20
+	{ rank = 5, kills = 6 }, { rank = 7, kills = 7 }, { rank = 6, kills = 8 } }
+SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
+-- Rank index -> how big it looks (colour, sparkles): Wicked Sick 6, Godlike 7 (the top)
+SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
+-- Secret ranks: kills in a row -> their own sound and the big effects, no callout text
+SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "combowhore.ogg" }
 
 -- The rank a streak has reached (1 = none yet)
 local function rankForStreak(count)
@@ -639,8 +639,7 @@ local RANK_COLORS = {
 	{ 1, 0.12, 0.12 }, -- Dominating: red
 	{ 1, 0.25, 0.65 }, -- Unstoppable: pink
 	{ 0.75, 0.35, 1 }, -- level 6, Wicked Sick: purple
-	{ 0.3, 0.9, 1 },   -- level 7, Godlike: cyan
-	{ 1, 1, 1 },       -- level 8, Holy Shit (the top): white hot
+	{ 0.3, 0.9, 1 },   -- level 7, Godlike (the top): cyan
 }
 local MULTI_COLOR = { 1, 0.85, 0.2 }
 local DEATH_COLOR = { 0.6, 0.65, 0.75 }
@@ -1232,6 +1231,7 @@ local function registerKill(victim, isDuel, notGank)
 
 	streak = streak + 1
 	deathstreak = 0
+	if not testing and not isDuel then SPECIAL.noteMyKill(streak) end
 	local newRecord = false
 	if streak > profile.maxstreak and not testing then
 		profile.maxstreak = streak
@@ -1268,10 +1268,10 @@ local function registerKill(victim, isDuel, notGank)
 		playSound(SPECIAL.retribution)
 		celebrate("rank", 4)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
-	elseif streak == SPECIAL.COMBO_KILLS and not isDuel then
-		-- The hidden rank: its own sound and the big effects, but no callout text. It wins over a
+	elseif SPECIAL.SECRETS[streak] and not isDuel then
+		-- A secret rank: its own sound and the big effects, but no callout text. It wins over a
 		-- multikill's sound (the multikill still shows its text).
-		playSound(SPECIAL.combo)
+		playSound(SPECIAL.SECRETS[streak])
 		celebrate("rank", 6)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif multi > 0 then
@@ -1522,7 +1522,7 @@ local function versionCheck()
 	census = { names = {}, quiet = false }
 	chat("Asking your group and guild who runs " .. TITLE .. "...")
 	-- Asking is an explicit request, so it goes out whatever the sharing settings say
-	local message = "V?\t" .. VERSION
+	local message = "V?\t" .. VERSION .. "\t" .. SPECIAL.statsFields()
 	if groupChannel() then sendAddonMessage(message, groupChannel()) end
 	if inGuild() then sendAddonMessage(message, "GUILD") end
 	if not (groupChannel() or inGuild()) then
@@ -1769,6 +1769,132 @@ local function noticeVersion(sender, version)
 		.. "). Update it with WowUp or CurseForge.")
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Guild board: each player's best kill streak and kills this calendar month, shared with
+-- guildmates who run the addon (in the "who runs it?" question and answer, and from their
+-- kills in guild chat), kept per guild and month so offline players stay on it.
+-- ---------------------------------------------------------------------------------------------
+SPECIAL.BOARD_MAX = 200 -- players kept per guild
+
+function SPECIAL.monthKey() return date("%Y-%m") end
+
+-- Our own numbers for this month (they start again on the 1st)
+function SPECIAL.myMonth()
+	local c = db.char
+	if c.month ~= SPECIAL.monthKey() then
+		c.month, c.monthBest, c.monthKills = SPECIAL.monthKey(), 0, 0
+	end
+	return c
+end
+
+function SPECIAL.noteMyKill(streakCount)
+	local m = SPECIAL.myMonth()
+	m.monthKills = (m.monthKills or 0) + 1
+	if streakCount > (m.monthBest or 0) then m.monthBest = streakCount end
+end
+
+function SPECIAL.guildName()
+	if not inGuild() or type(GetGuildInfo) ~= "function" then return nil end
+	local ok, name = pcall(GetGuildInfo, "player")
+	return ok and usableString(name) and name or nil
+end
+
+-- This month's board for our guild (a new month starts an empty one)
+function SPECIAL.board()
+	local guild = SPECIAL.guildName()
+	if not guild then return nil end
+	db.global.boards = db.global.boards or {}
+	local board = db.global.boards[guild]
+	if not board or board.month ~= SPECIAL.monthKey() then
+		board = { month = SPECIAL.monthKey(), players = {} }
+		db.global.boards[guild] = board
+	end
+	return board
+end
+
+-- A guildmate's numbers (from their messages: checked, capped, and only ever raised)
+function SPECIAL.boardNote(name, best, kills)
+	local board = SPECIAL.board()
+	if not board or not name then return end
+	best, kills = tonumber(best), tonumber(kills)
+	if not best or best < 0 or best > 999 then return end
+	if kills and (kills < 0 or kills > 99999) then kills = nil end
+	local entry = board.players[name]
+	if not entry then
+		local count = 0
+		for _ in pairs(board.players) do count = count + 1 end
+		if count >= SPECIAL.BOARD_MAX then return end
+		entry = { best = 0, kills = 0 }
+		board.players[name] = entry
+	end
+	entry.best = math.max(entry.best, math.floor(best))
+	if kills then entry.kills = math.max(entry.kills, math.floor(kills)) end
+	entry.at = time()
+end
+
+-- "<month>\t<best>\t<kills>\t<guild>": what we add to the who-runs-it question and answer
+function SPECIAL.statsFields()
+	local m = SPECIAL.myMonth()
+	return table.concat({ SPECIAL.monthKey(), tostring(m.monthBest or 0), tostring(m.monthKills or 0),
+		cleanField(SPECIAL.guildName() or "") }, "\t")
+end
+
+-- Take a guildmate's numbers from a V?/V! message, if they are for this month and our guild.
+-- trustedGuild: it came through guild chat, so the sender is in our guild whatever it says.
+function SPECIAL.readStats(who, fields, trustedGuild)
+	if fields[3] ~= SPECIAL.monthKey() then return end
+	local guild = SPECIAL.guildName()
+	if not guild then return end
+	if not trustedGuild and fields[6] ~= cleanField(guild) then return end
+	SPECIAL.boardNote(who, fields[4], fields[5])
+end
+
+-- The top players by best streak (then kills), us included
+function SPECIAL.top(count)
+	local board = SPECIAL.board()
+	if not board then return {} end
+	local m = SPECIAL.myMonth()
+	if playerName and (m.monthBest or 0) > 0 then
+		board.players[playerName] = { best = m.monthBest, kills = m.monthKills or 0, at = time() }
+	end
+	local list = {}
+	for name, entry in pairs(board.players) do
+		if entry.best > 0 then list[#list + 1] = { name = name, best = entry.best, kills = entry.kills } end
+	end
+	table.sort(list, function(a, b)
+		if a.best ~= b.best then return a.best > b.best end
+		if a.kills ~= b.kills then return a.kills > b.kills end
+		return a.name < b.name
+	end)
+	while #list > count do table.remove(list) end
+	return list
+end
+
+-- "1. Bob 12 in a row, 2. Alice 9 in a row, 3. Carl 7 in a row", or nil when nobody has a streak
+function SPECIAL.topLine(count)
+	local list = SPECIAL.top(count)
+	if #list == 0 then return nil end
+	local parts = {}
+	for i, entry in ipairs(list) do parts[i] = i .. ". " .. entry.name .. " " .. entry.best .. " in a row" end
+	return table.concat(parts, ", ")
+end
+
+-- Post the top 3 to guild or party chat (from a button press)
+function SPECIAL.shareBoard(channel)
+	local line = SPECIAL.topLine(3)
+	if not line then
+		chat("Nobody in your guild has a kill streak this month yet.")
+		return
+	end
+	if channel == "GUILD" and not inGuild() then chat("You are not in a guild.") return end
+	if channel == "PARTY" then
+		channel = groupChannel()
+		if not channel then chat("You are not in a group.") return end
+	end
+	local ok = pcall(SendChatMessage, "Top killers this month (best kill streak): " .. line, channel)
+	if not ok then chat("Could not post to chat.") end
+end
+
 function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	if prefix ~= PREFIX then return end
 	-- Addon message payloads can be secret values in restricted content
@@ -1788,15 +1914,22 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	if kind == "K" or kind == "U" or kind == "T" or kind == "D" then
 		-- Kills and deaths travel by party/raid/instance or guild only
 		if channel ~= "WHISPER" then onFeedMessage(kind, sender, channel, fields) end
+		-- A guildmate's kill streak, live: their best this month is at least this
+		if kind == "K" and channel == "GUILD" and syncConfig().shareguild then
+			SPECIAL.boardNote(safeText(shortName(sender)), fields[4], nil)
+		end
 	elseif kind == "V?" then
 		-- Only answer when the player shares with someone: otherwise stay invisible
 		local cfg = syncConfig()
 		if cfg.shareparty or cfg.shareguild then
-			later(function() sendAddonMessage("V!\t" .. VERSION, "WHISPER", sender) end)
+			later(function() sendAddonMessage("V!\t" .. VERSION .. "\t" .. SPECIAL.statsFields(), "WHISPER", sender) end)
 		end
+		local who = safeText(shortName(sender))
+		if who and cfg.shareguild then SPECIAL.readStats(who, fields, channel == "GUILD") end
 	elseif kind == "V!" then
 		local who, version = safeText(shortName(sender)), safeText(fields[2])
 		if not who then return end
+		if syncConfig().shareguild then SPECIAL.readStats(who, fields, false) end
 		if census then
 			if census.names[who] then return end -- answered through party and guild
 			census.names[who] = version or "?"
@@ -1818,7 +1951,7 @@ local function loginCensus()
 	C_Timer.After(CENSUS_DELAY, function()
 		if not inGuild() or not registerPrefix() then return end
 		census = { names = {}, quiet = true }
-		sendAddonMessage("V?\t" .. VERSION, "GUILD")
+		sendAddonMessage("V?\t" .. VERSION .. "\t" .. SPECIAL.statsFields(), "GUILD")
 		C_Timer.After(CENSUS_WAIT, function()
 			if not census or not census.quiet then return end -- a manual check took over
 			local names = {}
@@ -1832,6 +1965,8 @@ local function loginCensus()
 			local line = #names .. (#names == 1 and " guildmate is" or " guildmates are") .. " using " .. TITLE
 			if #names <= MAX_NAMES_SHOWN then line = line .. ": " .. table.concat(names, ", ") end
 			chat(line .. ".")
+			local top = cfg.loginboard and SPECIAL.topLine(3)
+			if top then chat("Top killers this month: " .. top .. ".") end
 		end)
 	end)
 end
@@ -2885,6 +3020,8 @@ local function buildOptions()
 						"Needs \"Share with my guild\". Counts guildmates who also share."),
 					updatenotice = syncToggle({ "updatenotice" }, "Tell me when a guildmate or party member has a newer version", 5,
 						"Shown once per session in chat. You only hear from players who share with you."),
+					loginboard = syncToggle({ "loginboard" }, "At login, show the guild's top 3 killers this month", 6,
+						"Needs \"Share with my guild\"."),
 					partyHeader = header("Kills and deaths shared by party members", 10),
 					partyFeed = syncToggle({ "party", "feed" }, "Show their kills in the chat feed", 11),
 					partyText = syncToggle({ "party", "text" }, "Show their kills as combat text on screen", 12),
@@ -2905,8 +3042,8 @@ local function buildOptions()
 				type = "group", name = "Ranks", order = 3,
 				args = {
 					about = note("Kills in a row without dying: Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, "
-						.. "Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and 9, Holy Shit 10 and every kill after. "
-						.. "There's also a hidden one...", 0),
+						.. "Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and every kill after. "
+						.. "There are also a couple of secrets...", 0),
 					utrank = {
 						type = "range", name = "Unreal Tournament style: kills between sounds", order = 20, width = "full",
 						min = 1, max = 10, step = 1,
@@ -2971,6 +3108,31 @@ local function buildOptions()
 							profile.log, profile.kills, profile.deaths = {}, {}, {}
 						end,
 					},
+				},
+			},
+			board = {
+				type = "group", name = "Guild board", order = 2.8,
+				args = {
+					about = note("This month's best kill streaks in your guild, from guildmates who run " .. TITLE
+						.. " and share with the guild. It starts again on the 1st of each month.", 0),
+					list = {
+						type = "description", order = 1, fontSize = "medium",
+						name = function()
+							local list = SPECIAL.top(10)
+							if not SPECIAL.guildName() then return "You are not in a guild." end
+							if #list == 0 then return "Nobody has a kill streak this month yet." end
+							local lines = {}
+							for i, entry in ipairs(list) do
+								lines[i] = i .. ".  " .. entry.name .. "  |cffffd100" .. entry.best .. " in a row|r  ("
+									.. entry.kills .. " kills)"
+							end
+							return table.concat(lines, "\n")
+						end,
+					},
+					shareGuild = button("Share top 3 in guild chat", 10, function() SPECIAL.shareBoard("GUILD") end),
+					shareParty = button("Share top 3 in party chat", 11, function() SPECIAL.shareBoard("PARTY") end),
+					ask = button("Ask guildmates now", 12, versionCheck,
+						"Guildmates who are online send their numbers; the list updates as they answer."),
 				},
 			},
 			about = {

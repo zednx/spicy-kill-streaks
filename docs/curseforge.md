@@ -46,7 +46,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
 
 ## Features
 
-- **Kill streaks**: *Headshot* on your first kill, then a rank for every kill from *Killing Spree* (3 in a row) up to *Godlike* (8) and *Holy Shit* (10 and beyond), each with its own sound, colour and big on-screen callout. On every kill, or Unreal Tournament style (every few kills).
+- **Kill streaks**: *Headshot* on your first kill, then a rank for every kill from *Killing Spree* (3 in a row) up to *Godlike* (8 and beyond), each with its own sound, colour and big on-screen callout. On every kill, or Unreal Tournament style (every few kills).
 - **Special callouts**: *First Blood* on your first kill of the day, *Retribution* when you kill someone who killed you in the last hour, and *Pancake* when you (or a friend) die from falling or drowning.
 - **Multikills**: kills within 30 seconds chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and beyond.
 - **Only your killing blows count**, not kills your group finishes.
@@ -56,6 +56,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
   - Sparkle bursts: stars, chillies or confetti
   - A screen-edge flash for multikills and big streaks
   - Drag it anywhere, choose the size and font
+- **Guild board**: the month's top killers in your guild (best kill streak), shown at login and in the settings, with a button to post the top 3 in guild chat.
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out.
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.
