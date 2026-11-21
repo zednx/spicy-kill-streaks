@@ -2,7 +2,9 @@
 
 ## v0.7.0
 
-- **New rank ladder, one rank per kill:** Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, **Godlike 8**, the top tier with the biggest effects, which then plays on every kill. The kill counts are fixed; the sliders are gone.
+- **New rank ladder, one rank per kill:** Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and 9, then **Holy Shit** from 10, the top tier with the biggest effects, on every kill after. The kill counts are fixed; the sliders are gone.
+- **Ganks:** killing a player 10+ levels below you gets a bit of shame ("Bob ganked a level 12 Alice. Bully!") instead of a callout, and doesn't count towards your streak. Dying to a player 10+ levels above you (or "??") says "You got ganked by Bob (60)". Both only happen when the addon is sure: the levels were seen in the last few minutes, the other side is a player, and for your kill no honor came. Anything unclear plays as normal. Friends see your ganks too (with 0.7.0+). Both can be turned off under General.
+- **About:** who makes the addon and where to send feedback.
 - Something special happens at 20 kills in a row.
 - **More fonts for the combat text:** eight bundled fonts (Bangers, Luckiest Guy, Anton, Bebas Neue, Russo One, Black Ops One, Permanent Marker, Teko), WoW's Narrow, and every font your other addons share through SharedMedia (ElvUI, Details...). Picking one shows a preview. The Fancy font is gone (it falls back to Classic). Restart the game after updating so WoW sees the new font files.
 - **Debug log window:** `/sks debug` (or the box under Tests > Troubleshooting) opens a small, movable, resizable window where the detection details are written, with timestamps and the client version at the top. The text can be selected: **Select all**, then Ctrl+C to copy it (addons can't write to the clipboard themselves). **Clear** empties it; closing the window turns debug off.

@@ -27,7 +27,7 @@ The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp
 - **Secret values:** never compare or do arithmetic on a value that may be secret; check `isSecret` first.
 - **Untrusted input:** everything from `CHAT_MSG_ADDON` goes through `safeText` / range checks before it is shown.
 - **Sharing:** `shareparty` / `shareguild` are on by default (since 0.2.0; the setup's "Better with friends" screen says so, and 0.1.x users see that screen once). Nothing is sent while they are off; don't add sends that bypass them.
-- **No personal details** (character names, account names) in code, comments or commits.
+- **No personal details** (character names, account names) in code, comments or commits. One exception the user chose: the author credit **Spicy Bubbletea** (their public in-game name) in the About section and docs.
 - The GitHub owner is **zednx** (repo: `zednx/spicy-kill-streaks`).
 - Pin GitHub Actions to commit SHAs.
 

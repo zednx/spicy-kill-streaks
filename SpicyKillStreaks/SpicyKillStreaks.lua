@@ -25,8 +25,8 @@ local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "b
 -- Files a voice pack does not ship; these are played from sounds\ instead
 local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
-local RANK_NAMES = { "Ownage", "Killing Spree", "Rampage", "Dominating", "Unstoppable", "Godlike", "Wicked Sick" }
-local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominating.ogg", "unstoppable.ogg", "godlike.ogg", "whickedsick.ogg" }
+local RANK_NAMES = { "Ownage", "Killing Spree", "Rampage", "Dominating", "Unstoppable", "Godlike", "Wicked Sick", "Holy Shit" }
+local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominating.ogg", "unstoppable.ogg", "godlike.ogg", "whickedsick.ogg", "holyshit.ogg" }
 local MULTI_TEXTS = { "DOUBLE KILL!", "TRIPLE KILL!", "MULTI KILL!", "MEGA KILL!", "ULTRA KILL!!!", "MONSTER KILL!!!", "LUDICROUS KILL!!!", "H O L Y  S H I T!!!" }
 local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
 local SOUND_PREPARE = "prepare.ogg"
@@ -75,6 +75,8 @@ local defaults = {
 		dofirstblood = true,     -- "First Blood" on the first kill of the day instead
 		doretribution = true,    -- "Retribution" for killing someone who killed you in the last hour
 		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
+		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
+		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
 		dozonechange = false,
 		-- sound
@@ -537,14 +539,15 @@ local function playHumiliation()
 	playSound(SOUND_HUMILIATION, (voice and voice ~= "pack") and voice or nil)
 end
 
--- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8; every kill
--- after that is Godlike again. Values are indexes into RANK_NAMES / RANK_SOUNDS (unchanged,
--- because sync messages send them). Index 1, Ownage, is not a rank: it is the 2nd kill's sound.
+-- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8, Godlike again
+-- at 9, then Holy Shit at 10 and on every kill after. Values are indexes into RANK_NAMES /
+-- RANK_SOUNDS (sync messages send them, so existing indexes never change). Index 1, Ownage,
+-- is not a rank: it is the 2nd kill's sound.
 SPECIAL.TIERS = { { rank = 2, kills = 3 }, { rank = 3, kills = 4 }, { rank = 4, kills = 5 },
-	{ rank = 5, kills = 6 }, { rank = 7, kills = 7 }, { rank = 6, kills = 8 } }
-SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
--- Rank index -> how big it looks (colour, sparkles): Godlike (6) is the top tier, above Wicked Sick (7)
-SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
+	{ rank = 5, kills = 6 }, { rank = 7, kills = 7 }, { rank = 6, kills = 8 }, { rank = 8, kills = 10 } }
+SPECIAL.TOP_RANK = 8 -- Holy Shit: repeats on every kill once reached
+-- Rank index -> how big it looks (colour, sparkles): Wicked Sick 6, Godlike 7, Holy Shit 8 (the top)
+SPECIAL.LEVEL = { [6] = 7, [7] = 6, [8] = 8 }
 -- A hidden rank: its own sound and effects, no callout text
 SPECIAL.combo, SPECIAL.COMBO_KILLS = "combowhore.ogg", 20
 
@@ -636,7 +639,8 @@ local RANK_COLORS = {
 	{ 1, 0.12, 0.12 }, -- Dominating: red
 	{ 1, 0.25, 0.65 }, -- Unstoppable: pink
 	{ 0.75, 0.35, 1 }, -- level 6, Wicked Sick: purple
-	{ 0.3, 0.9, 1 },   -- level 7, Godlike (the top): cyan
+	{ 0.3, 0.9, 1 },   -- level 7, Godlike: cyan
+	{ 1, 1, 1 },       -- level 8, Holy Shit (the top): white hot
 }
 local MULTI_COLOR = { 1, 0.85, 0.2 }
 local DEATH_COLOR = { 0.6, 0.65, 0.75 }
@@ -1120,7 +1124,7 @@ local syncSendKill, syncSendDeath -- defined in the sync section below
 -- "Hogger (11)". Filled from the target, mouseover, focus and nameplates; the game may hide
 -- them in some content, and then there is simply no level.
 -- (One table: Lua 5.1 allows only 200 locals at the top of a file.)
-local Levels = { byName = {}, count = 0 }
+local Levels = { byName = {}, players = {}, seenAt = {}, count = 0 }
 
 function Levels.key(name)
 	if not usableString(name) then return nil end
@@ -1128,9 +1132,9 @@ function Levels.key(name)
 end
 
 function Levels.note(unit)
-	local ok, name, level = pcall(function()
+	local ok, name, level, isPlayer = pcall(function()
 		if not UnitExists(unit) then return nil end
-		return UnitName(unit), UnitLevel(unit)
+		return UnitName(unit), UnitLevel(unit), UnitIsPlayer(unit)
 	end)
 	if not ok or isSecret(level) or type(level) ~= "number" then return end
 	local key = Levels.key(name)
@@ -1139,10 +1143,14 @@ function Levels.note(unit)
 		Levels.count = Levels.count + 1
 		if Levels.count > 300 then
 			wipe(Levels.byName)
+			wipe(Levels.players)
+			wipe(Levels.seenAt)
 			Levels.count = 1
 		end
 	end
 	Levels.byName[key] = level
+	Levels.players[key] = (not isSecret(isPlayer) and isPlayer) and true or nil
+	Levels.seenAt[key] = GetTime()
 end
 
 -- A unit's level by name: -1 for "??", nil when unknown
@@ -1153,17 +1161,74 @@ function Levels.of(name)
 	return Levels.byName[key]
 end
 
+-- For the gank checks: the level of a PLAYER seen in the last 5 minutes, or nil. Anything
+-- less certain (an NPC, a stale or hidden level) returns nil, and the normal callouts play.
+function Levels.recentPlayer(name)
+	local level = Levels.of(name)
+	local key = Levels.key(name)
+	if not level or not key or not Levels.players[key] then return nil end
+	if not Levels.seenAt[key] or GetTime() - Levels.seenAt[key] > 300 then return nil end
+	return level
+end
+
 function Levels.player()
 	local ok, level = pcall(UnitLevel, "player")
 	if ok and not isSecret(level) and type(level) == "number" then return level end
 	return nil
 end
 
+-- Ganks. Both only fire when every fact is known; anything unclear plays the normal callouts.
+SPECIAL.GANK_LEVELS = 10   -- levels between killer and victim
+SPECIAL.GANK_WAIT = 1.5    -- seconds to wait for an honorable kill that would rule a gank out
+SPECIAL.gank = "gank.ogg"     -- not shipped yet: silent until added
+SPECIAL.ganked = "ganked.ogg" -- not shipped yet: Humiliation plays until added
+SPECIAL.FLAIR = { "Bully!", "Pick on someone your own size!", "Big hero.", "Shameful.", "Their mum is on the way." }
+
+-- Our kill of victim is a gank: a player we saw in the last 5 minutes, 10+ levels below us
+function SPECIAL.gankCandidate(victim)
+	if inBG or inArena then return false end -- levels are bracketed there, and kills always give honor
+	local theirs, ours = Levels.recentPlayer(victim), Levels.player()
+	return theirs ~= nil and ours ~= nil and theirs > 0 and ours - theirs >= SPECIAL.GANK_LEVELS
+end
+
+-- The killer's level if they ganked us (a player 10+ levels above us, or "??" = -1), else nil
+function SPECIAL.gankerLevel(killer, killerGUID)
+	local key = Levels.key(killer)
+	local theirs, ours = Levels.of(killer), Levels.player()
+	if not key or not theirs or not ours then return nil end
+	-- A player for sure: the Death Recap's GUID says so, or we saw them as a player recently
+	local isPlayer = (usableString(killerGUID) and strsub(killerGUID, 1, 7) == "Player-")
+		or (Levels.players[key] and Levels.seenAt[key] and GetTime() - Levels.seenAt[key] <= 300)
+	if not isPlayer then return nil end
+	if theirs == -1 or theirs - ours >= SPECIAL.GANK_LEVELS then return theirs end
+	return nil
+end
+
 -- We landed a kill (or won a duel). victim: a name, or UNKNOWN_VICTIM.
-local function registerKill(victim, isDuel)
+local function registerKill(victim, isDuel, notGank)
 	local profile = db.profile
 	local now = GetTime()
 	victim = usableString(victim) and victim or UNKNOWN_VICTIM
+
+	-- A gank (a player 10+ levels below us, worth no honor): wait a moment for an honorable
+	-- kill. If one comes, it was not a gank after all and counts as a normal kill.
+	if not isDuel and not notGank and not testing and profile.dogank and SPECIAL.gankCandidate(victim) then
+		-- Every gank still waiting is ruled out by an honorable kill (two at once: neither is sure)
+		local pending = { victim = victim, honor = false }
+		SPECIAL.pendingGanks = SPECIAL.pendingGanks or {}
+		SPECIAL.pendingGanks[pending] = true
+		debugPrint("gank: candidate", victim, "- waiting for an honorable kill")
+		C_Timer.After(SPECIAL.GANK_WAIT, function()
+			SPECIAL.pendingGanks[pending] = nil
+			if pending.honor then
+				debugPrint("gank: honor came, a normal kill after all")
+				registerKill(pending.victim, false, true)
+			else
+				SPECIAL.registerGank(pending.victim)
+			end
+		end)
+		return
+	end
 
 	streak = streak + 1
 	deathstreak = 0
@@ -1239,7 +1304,7 @@ local function registerKill(victim, isDuel)
 	if testing then return end
 
 	-- Tell other Spicy Kill Streaks users in the group and guild
-	syncSendKill(isDuel and "U" or "K", victim, streak, multi, rank)
+	syncSendKill(isDuel and "U" or "K", victim, streak, multi, rank, false)
 
 	if victim ~= UNKNOWN_VICTIM then
 		local times = count(profile.kills, victim)
@@ -1277,16 +1342,22 @@ local function resetStreakOnDeath()
 end
 
 -- We died (or lost a duel). killer: a name or nil.
-local function registerDeath(killer, isDuel)
+local function registerDeath(killer, isDuel, killerGUID)
 	local profile = db.profile
 	resetStreakOnDeath()
 	deathstreak = deathstreak + 1
 	-- No killer in the Death Recap: almost always falling, drowning or lava
 	local pancake = not isDuel and not usableString(killer) and profile.dopancake
 	killer = usableString(killer) and killer or SPECIAL.UNKNOWN_KILLER
+	-- Ganked: a player 10+ levels above us (or "??") killed us, and we're sure of both
+	local gankedBy = not isDuel and not pancake and profile.doganked and SPECIAL.gankerLevel(killer, killerGUID)
 	if pancake then
 		announce("You just PANCAKED from falling or drowning.", "death")
 		if profile.dodeathsound then playSound(SPECIAL.pancake) end
+	elseif gankedBy then
+		announce("You got ganked by " .. killer .. " (" .. (gankedBy < 0 and "??" or gankedBy) .. ").", "death")
+		-- Its own sound when one is added, Humiliation until then
+		if profile.dodeathsound and not playSound(SPECIAL.ganked) then playHumiliation() end
 	else
 		announce("You were " .. (isDuel and "defeated" or "killed") .. " by " .. killer .. ".", "death")
 		-- (A fled duel already plays it, from the duel setting)
@@ -1296,7 +1367,7 @@ local function registerDeath(killer, isDuel)
 
 	if testing then return end
 
-	syncSendDeath(killer, isDuel)
+	syncSendDeath(killer, isDuel, gankedBy and true or false)
 	if deathstreak > profile.maxdeathstreak then profile.maxdeathstreak = deathstreak end
 	local times = count(profile.deaths, killer)
 	if profile.dochat then chat(killer .. " has " .. (isDuel and "defeated" or "killed") .. " you " .. times .. " times.") end
@@ -1308,6 +1379,18 @@ local function registerDeath(killer, isDuel)
 	elseif profile.shotdeath then
 		later(Screenshot)
 	end
+end
+
+-- We ganked someone: shame instead of fame. Not part of the streak, no multikill, no rank.
+function SPECIAL.registerGank(victim)
+	local profile = db.profile
+	local level = Levels.of(victim)
+	local flair = SPECIAL.FLAIR[math.random(#SPECIAL.FLAIR)]
+	announce((playerName or "You") .. " ganked a level " .. tostring(level or "?") .. " " .. victim .. ". " .. flair, "death")
+	playSound(SPECIAL.gank)
+	syncSendKill("K", victim, streak, 0, 0, true)
+	local times = count(profile.kills, victim)
+	if profile.dochat then chat("You have ganked " .. victim .. " " .. times .. " times. " .. flair) end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -1383,15 +1466,17 @@ end
 -- UnitName may return only the given name while the sender arrives with both.)
 -- Since 0.1.1 the levels (ours, then the victim's or killer's; 0 = unknown, -1 = "??") come just
 -- before the GUID, so 0.1.0 readers, which take fields 3-6 and the last one, still work.
-syncSendKill = function(kind, victim, streakCount, multi, rank)
+-- Since 0.7.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
+-- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
+syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
 		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
-		playerGUID or "" }, "\t"))
+		gank and "G" or "-", playerGUID or "" }, "\t"))
 end
 
-syncSendDeath = function(killer, isDuel)
+syncSendDeath = function(killer, isDuel, ganked)
 	broadcast(table.concat({ "D", VERSION, cleanField(killer), isDuel and "1" or "0",
-		tostring(Levels.player() or 0), tostring(Levels.of(killer) or 0), playerGUID or "" }, "\t"))
+		tostring(Levels.player() or 0), tostring(Levels.of(killer) or 0), ganked and "G" or "-", playerGUID or "" }, "\t"))
 end
 
 -- "Given Family-Realm" -> "givenfamily-realm" and "givenfamily" (no spaces, lower case)
@@ -1588,6 +1673,13 @@ local function onFeedMessage(kind, sender, channel, fields)
 			if source.sound then playSound(SPECIAL.pancake) end
 			return
 		end
+		if fields[7] == "G" and fields[4] ~= "1" and db.profile.doganked and #fields >= 8 then
+			local line = whoShown .. " got ganked by " .. nameShown .. "."
+			if source.feed then chat(FEED_ICONS .. line) end
+			if source.text then showText(line, "death") end
+			if source.sound and not playSound(SPECIAL.ganked) then playHumiliation() end
+			return
+		end
 		local verb = " was " .. (fields[4] == "1" and "defeated" or "killed") .. " by "
 		if source.feed then chat(FEED_ICONS .. whoShown .. verb .. KILLER_COLOR .. nameShown .. "|r.") end
 		if source.text then showText(whoShown .. verb .. nameShown .. ".", "death") end
@@ -1604,6 +1696,15 @@ local function onFeedMessage(kind, sender, channel, fields)
 	multi = math.min(math.max(0, math.floor(multi)), #MULTI_TEXTS)
 	rank = math.min(math.max(0, math.floor(rank)), #RANK_SOUNDS)
 	if seenRecently(sender .. "|" .. kind .. "|" .. name .. "|" .. streakCount) then return end
+
+	if kind == "K" and fields[9] == "G" and #fields >= 10 and db.profile.dogank then
+		local line = whoShown .. " ganked a level " .. (otherLevel and otherLevel > 0 and otherLevel or "?") .. " " .. name
+			.. ". " .. SPECIAL.FLAIR[math.random(#SPECIAL.FLAIR)]
+		if source.feed then chat(FEED_ICONS .. line) end
+		if source.text then showText(line, "death") end
+		if source.sound then playSound(SPECIAL.gank) end
+		return
+	end
 
 	local rest
 	if kind == "U" then
@@ -1752,7 +1853,9 @@ local function recapKiller()
 			if not bestTime or stamp >= bestTime then best, bestTime = entry, stamp end
 		end
 	end
-	if best and usableString(best.sourceName) then return best.sourceName end
+	if best and usableString(best.sourceName) then
+		return best.sourceName, usableString(best.sourceGUID) and best.sourceGUID or nil
+	end
 	return nil
 end
 
@@ -1893,6 +1996,8 @@ function events.PLAYER_PVP_KILLS_CHANGED(unit)
 	debugPrint("PLAYER_PVP_KILLS_CHANGED", unit)
 	-- Also fires for our raid unit ("raid9") and for other players; only "player" is counted
 	if isSecret(unit) or (unit ~= nil and unit ~= "player") then return end
+	-- An honorable kill: whatever we are waiting on was not a gank
+	for pending in pairs(SPECIAL.pendingGanks or {}) do pending.honor = true end
 	requestScoreData()
 	-- The first answer can arrive before the server has added the killing blow: ask once more
 	if not scoreRecheckPending then
@@ -2100,13 +2205,13 @@ function events.PLAYER_DEAD()
 	local attempts = 0
 	local function resolve()
 		attempts = attempts + 1
-		local ok, killer = pcall(recapKiller)
-		if not ok then killer = nil end
+		local ok, killer, killerGUID = pcall(recapKiller)
+		if not ok then killer, killerGUID = nil, nil end
 		if killer or attempts >= 4 then
 			deathPending = false
 			debugPrint("death: killer from the recap:", killer or "none", "after", attempts, "tries")
 			if debugOn then SPECIAL.dumpRecap(false) end
-			registerDeath(killer, false)
+			registerDeath(killer, false, killerGUID)
 		else
 			C_Timer.After(0.5, resolve)
 		end
@@ -2653,6 +2758,11 @@ local function buildOptions()
 					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7),
 					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
 						"Plays instead of Humiliation."),
+					dogank = toggle("dogank", "Shame ganks: killing a player 10+ levels below you", 1.85,
+						"No callout and no streak for it, just a bit of shame. Only when the levels are certain "
+						.. "and no honor came for the kill; otherwise it counts as a normal kill."),
+					doganked = toggle("doganked", "\"Got ganked\" when a player 10+ levels above you (or ??) kills you", 1.86,
+						"Only when the killer's level and that they're a player are certain."),
 					dopve = toggle("dopve", "Count NPC kills too (spammy, good for testing)", 2,
 						"Your killing blows on creatures count as kills, not only those on players."),
 					dozonechange = toggle("dozonechange", "Reset streaks when changing zone", 3),
@@ -2795,7 +2905,7 @@ local function buildOptions()
 				type = "group", name = "Ranks", order = 3,
 				args = {
 					about = note("Kills in a row without dying: Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, "
-						.. "Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and every kill after. "
+						.. "Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and 9, Holy Shit 10 and every kill after. "
 						.. "There's also a hidden one...", 0),
 					utrank = {
 						type = "range", name = "Unreal Tournament style: kills between sounds", order = 20, width = "full",
@@ -2861,6 +2971,16 @@ local function buildOptions()
 							profile.log, profile.kills, profile.deaths = {}, {}, {}
 						end,
 					},
+				},
+			},
+			about = {
+				type = "group", name = "About", order = 8,
+				args = {
+					bio = note(TITLE .. " " .. VERSION .. " is made by |cffff7733Spicy Bubbletea|r (Horde, WoW Forever PvP).\n\n"
+						.. "Feedback, ideas or something not working? Send Spicy Bubbletea a message in game, or open an issue "
+						.. "on GitHub (zednx/spicy-kill-streaks). A /sks debug log helps a lot with bugs.", 1),
+					credits = note("Based on dG KillShot by Lance Inman. The announcer voices came with dG KillShot; "
+						.. "fonts are from Google Fonts (licences in Media\\Fonts). Libraries: Ace3.", 2),
 				},
 			},
 			tests = {
