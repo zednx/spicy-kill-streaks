@@ -53,7 +53,8 @@ local EMOTES = {
 local defaults = {
 	global = {
 		setupDone = false, -- the first-run setup has been finished or skipped (account-wide)
-		sharingShown = false, -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
+		sharingShown = false,
+		snoozeUntil = 0, -- time() until which sounds are off (/sks snooze); survives /reload -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
 	},
 	profile = {
 		-- kills
@@ -65,6 +66,9 @@ local defaults = {
 		dozonechange = false,
 		-- sound
 		dosound = true,
+		mutebg = false,      -- no sounds in battlegrounds and arenas
+		mutedungeon = false, -- ... in dungeons
+		muteraid = false,    -- ... in raids
 		soundpack = "male",
 		soundchannel = "Master",
 		doprepare = false,
@@ -254,8 +258,24 @@ end
 -- Sound
 -- ---------------------------------------------------------------------------------------------
 -- pack: play from this voice pack instead of the chosen one (nil = the chosen one)
-local function playSound(file, pack)
-	if not file or not db.profile.dosound then return end
+-- (do-block: keeps soundMuted out of the file's 200-local limit)
+local playSound
+do
+-- Why sounds are off right now ("snoozed", "battleground", "dungeon", "raid"), or nil
+local function soundMuted()
+	if (db.global.snoozeUntil or 0) > time() then return "snoozed" end
+	local profile = db.profile
+	if not (profile.mutebg or profile.mutedungeon or profile.muteraid) then return nil end
+	local ok, inInstance, instanceType = pcall(IsInInstance)
+	if not ok or isSecret(instanceType) or not inInstance then return nil end
+	if profile.mutebg and (instanceType == "pvp" or instanceType == "arena") then return "battleground" end
+	if profile.mutedungeon and instanceType == "party" then return "dungeon" end
+	if profile.muteraid and instanceType == "raid" then return "raid" end
+	return nil
+end
+
+function playSound(file, pack)
+	if not file or not db.profile.dosound or soundMuted() then return end
 	pack = pack or db.profile.soundpack
 	local folder = PACK_FOLDER[pack] or ""
 	local missing = PACK_MISSING[pack]
@@ -279,6 +299,7 @@ local function playSound(file, pack)
 	end
 	return willPlay
 end
+end -- do
 
 -- "Humiliation" in the voice picked for it (Sounds tab), which can differ from the main pack
 local function playHumiliation()
@@ -2379,6 +2400,12 @@ local function buildOptions()
 				type = "group", name = "Sounds", order = 2,
 				args = {
 					dosound = toggle("dosound", "Play sounds", 1),
+					muteHeader = header("Mute sounds in", 4),
+					mutebg = toggle("mutebg", "Battlegrounds and arenas", 5),
+					mutedungeon = toggle("mutedungeon", "Dungeons", 6),
+					muteraid = toggle("muteraid", "Raids", 7),
+					snoozeNote = note("/sks snooze mutes all sounds for 30 minutes (/sks snooze 60 for an hour, "
+						.. "/sks snooze off to undo). Text and effects still show.", 8),
 					soundpack = {
 						type = "select", name = "Voice pack", order = 2,
 						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby" },
@@ -2674,6 +2701,22 @@ local function initialize()
 			sendTestSync()
 		elseif strmatch(command, "^preview") then
 			preview(strmatch(command, "^preview%s+(%a+)$") or "big")
+		elseif strmatch(command, "^snooze") then
+			local arg = strmatch(command, "^snooze%s+(%S+)$")
+			if arg == "off" then
+				db.global.snoozeUntil = 0
+				chat("Snooze off: sounds are back on.")
+			else
+				local minutes = tonumber(arg) or 30
+				minutes = math.min(math.max(1, math.floor(minutes)), 24 * 60)
+				db.global.snoozeUntil = time() + minutes * 60
+				chat("Sounds snoozed for " .. minutes .. " minutes (until " .. date("%H:%M", db.global.snoozeUntil)
+					.. "). /sks snooze off turns them back on.")
+				local untilTime = db.global.snoozeUntil
+				C_Timer.After(minutes * 60, function()
+					if db.global.snoozeUntil == untilTime then chat("Snooze over: sounds are back on.") end
+				end)
+			end
 		elseif command == "score" then
 			if not (inBG or inArena) then chat("Run /sks score inside a battleground or arena.") end
 			requestScoreData()

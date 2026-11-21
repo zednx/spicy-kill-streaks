@@ -70,6 +70,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
 | `/sks test kill` | Simulate a kill |
 | `/sks unlock` | Move the text and sparkles (`/sks lock` when done) |
 | `/sks who` | See who in your group and guild runs it |
+| `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze off` to undo) |
 
 ## How it knows you got the kill
 

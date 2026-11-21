@@ -35,6 +35,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks who` | Who in your group and guild runs the addon |
 | `/sks emote` | Send your last kill's custom emote message (WoW Forever only lets typed messages go out from a key press; put it in a macro). Built-in emotes like /cheer play by themselves after combat. |
 | `/sks synctest` | Send a test kill to your party/guild |
+| `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze 60` for an hour, `/sks snooze off` to undo) |
 | `/sks debug` | Print what the kill detection sees |
 
 ## How kills are detected

@@ -3,6 +3,8 @@
 ## v0.4.0
 
 - **Update notice:** when a guildmate or party member runs a newer version, a chat line says so (once per session). Only players on 0.4.0 or later get the notice, so 0.3.0 users need to update once by hand. Turn it off under Sync.
+- **Mute sounds** in battlegrounds and arenas, dungeons or raids: three new boxes under Sounds. Text and effects still show.
+- **`/sks snooze`** mutes the sounds for 30 minutes (`/sks snooze 60` for an hour, `/sks snooze off` to undo). It lasts through a /reload and says when it's over.
 
 ## v0.3.0
 
