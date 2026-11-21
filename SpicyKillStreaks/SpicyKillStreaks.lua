@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.2.0"
+local VERSION = "0.3.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -32,6 +32,7 @@ local MULTI_SOUNDS = { "doublekill.ogg", "multikill.ogg", "megakill.ogg", "ultra
 local SOUND_PREPARE = "prepare.ogg"
 local SOUND_EXECUTE = "finishhim.ogg"
 local SOUND_HUMILIATION = "humiliation.ogg"
+local SOUND_HEADSHOT = "headshot.ogg" -- not shipped: players add their own (sounds\ or a voice pack folder)
 
 local MULTIKILL_WINDOW = 10       -- seconds between kills that still chain into a multikill
 local LOG_LIMIT = 20
@@ -56,7 +57,8 @@ local defaults = {
 		-- kills
 		style = "dota",          -- "dota": a sound on every kill, "ut": on the first kill and every utrank kills
 		utrank = 3,
-		ksrank = { 1, 2, 4, 6, 8, 10, 12 }, -- kills needed for each rank (0 = rank off)
+		doheadshot = true,       -- "Headshot" on the first kill of a streak; ranks start at the second
+		ksrank = { 2, 3, 5, 7, 9, 11, 13 }, -- kills needed for each rank (0 = rank off)
 		dopve = false,
 		dozonechange = false,
 		-- sound
@@ -879,6 +881,11 @@ local function registerKill(victim, isDuel)
 		announce(MULTI_TEXTS[multi], "multi", multi)
 		playSound(MULTI_SOUNDS[multi])
 		celebrate("multi", multi)
+	elseif streak == 1 and not isDuel and profile.doheadshot then
+		-- The first kill of a streak: "Headshot". rank stays nil, so others hear it as a plain kill
+		announce("HEADSHOT!", "rank", 1)
+		playSound(SOUND_HEADSHOT)
+		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
 		if rank then playSound(RANK_SOUNDS[rank]) end
@@ -1270,6 +1277,8 @@ local function onFeedMessage(kind, sender, channel, fields)
 			playSound(MULTI_SOUNDS[multi])
 		elseif rank > 0 then
 			playSound(RANK_SOUNDS[rank])
+		elseif streakCount == 1 and kind ~= "U" and db.profile.doheadshot then
+			playSound(SOUND_HEADSHOT)
 		end
 	end
 end
@@ -1399,31 +1408,71 @@ local function ownNames()
 	return names
 end
 
--- Returns our killing blows and a table of enemy name -> deaths, or nil when our row is not there
-local function readScoreboard()
+-- Our first names without realm ("Name" from "Name-Realm"): WoW Forever characters also have a
+-- family name, and the scoreboard can list "Name Family" where UnitName gives only "Name".
+local function ownFirstNames()
+	local bases = {}
+	for name in pairs(ownNames()) do
+		local base = strsplit("-", name)
+		base = strsplit(" ", base)
+		if base ~= "" then bases[base] = true end
+	end
+	return bases
+end
+
+-- A scoreboard name that is one of our first names followed by a family name or realm
+local function isOurFamilyName(name, bases)
+	local first = strmatch(name, "^([^%s%-]+)[%s%-]")
+	return first ~= nil and bases[first] == true
+end
+
+-- Returns our killing blows and a table of enemy name -> deaths, or nil when our row is not there.
+-- report = true prints how our row was found (/sks score).
+local function readScoreboard(report)
 	local rowCount = type(GetNumBattlefieldScores) == "function" and GetNumBattlefieldScores() or 0
 	if not usableNumber(rowCount) or rowCount < 1 then return nil end
 
-	local mineNames = ownNames()
+	local mineNames, firstNames = ownNames(), ownFirstNames()
 	local rows = {}
-	local mine, mineByName
+	local mine, mineByName, family, familyCount = nil, nil, nil, 0
+	local guidsReadable = false
 	for i = 1, rowCount do
 		local name, guid, kb, deaths, faction = readScoreRow(i)
 		if usableString(name) then
 			local row = { name = name, kb = kb, deaths = deaths, faction = faction }
 			rows[#rows + 1] = row
-			if usableString(guid) then
-				if guid == playerGUID then mine = row end
+			if usableString(guid) then guidsReadable = true end
+			if usableString(guid) and guid == playerGUID then
+				mine = row
 			elseif mineNames[name] or mineNames[(strsplit("-", name))] then
 				mineByName = mineByName or row
+			elseif isOurFamilyName(name, firstNames) then
+				family, familyCount = row, familyCount + 1
 			end
 		end
 	end
-	mine = mine or mineByName
+	-- By GUID, else by exact name, else by "first name + family name" if only one row fits
+	local how = (mine and "GUID") or (mineByName and "name") or (familyCount == 1 and "first name + family name") or nil
+	mine = mine or mineByName or (familyCount == 1 and family or nil)
+	if report then
+		local names = {}
+		for name in pairs(mineNames) do names[#names + 1] = safeText(name) or "?" end
+		chat("Scoreboard: " .. rowCount .. " rows, GUIDs " .. (guidsReadable and "readable" or "hidden")
+			.. ". Your names: " .. table.concat(names, ", ") .. ".")
+		if mine then
+			chat("Your row: \"" .. (safeText(mine.name) or "?") .. "\", found by " .. how .. ". Killing blows: "
+				.. (usableNumber(mine.kb) and mine.kb or "hidden") .. ".")
+		elseif familyCount > 1 then
+			chat("Your row: not found. " .. familyCount .. " rows start with your first name, so it can't tell which is you.")
+		else
+			chat("Your row: not found. First row is \"" .. (safeText(rows[1] and rows[1].name) or "?") .. "\".")
+		end
+	end
 	if not mine then
 		debugPrint("scoreboard:", rowCount, "rows, none is ours. We are", playerName, "/", playerGUID, "- first row:", rows[1] and rows[1].name)
 		return nil
 	end
+	if how ~= "GUID" then debugPrint("scoreboard: our row found by", how, "-", mine.name) end
 	if not usableNumber(mine.kb) then
 		debugPrint("scoreboard: our killing blows are not readable:", mine.kb)
 		return nil
@@ -2258,6 +2307,9 @@ local function buildOptions()
 						get = function() return db.profile.style end,
 						set = function(_, value) db.profile.style = value end,
 					},
+					doheadshot = toggle("doheadshot", "\"Headshot\" on the first kill", 1.5,
+						"The first kill of a streak says Headshot (add headshot.ogg to the sounds folder); "
+						.. "the streak ranks start at the second kill."),
 					dopve = toggle("dopve", "Count NPC kills too (spammy, good for testing)", 2,
 						"Your killing blows on creatures count as kills, not only those on players."),
 					dozonechange = toggle("dozonechange", "Reset streaks when changing zone", 3),
@@ -2572,6 +2624,10 @@ local function initialize()
 			sendTestSync()
 		elseif strmatch(command, "^preview") then
 			preview(strmatch(command, "^preview%s+(%a+)$") or "big")
+		elseif command == "score" then
+			if not (inBG or inArena) then chat("Run /sks score inside a battleground or arena.") end
+			requestScoreData()
+			C_Timer.After(1, function() readScoreboard(true) end)
 		elseif command == "debug" then
 			debugOn = not debugOn
 			chat("Detection debug output is " .. (debugOn and "ON" or "OFF") .. ".")
