@@ -43,6 +43,7 @@ plays Multi Kill, `ganked` plays Humiliation, and `combowhore` and `gank` stay s
 - [ ] `/sks debug`: die to a player and get a kill in the open world and in a battleground,
       then Select all, Ctrl+C and paste the log to Claude (for exact Retribution matching)
 - [ ] Try a few of the new fonts (/sks > Effects > Font)
+- [ ] Guild board: with a guildmate on 0.7.0, check the login line and /sks > Guild board, and try Share
 
 ## Release
 
