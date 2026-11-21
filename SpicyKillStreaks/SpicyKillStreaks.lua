@@ -46,7 +46,9 @@ local SPECIAL = {
 
 
 -- Sounds the voice packs don't ship (players add their own); played instead while missing
-local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg" }
+-- A number is one of the game's own sound files (its file ID): nothing to ship
+--   558146  sound/creature/peon/peonpissed4.ogg, the Peon's "Me not that kind of orc!"
+local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg", ["ganked.ogg"] = 558146 }
 local MULTIKILL_WINDOW = 30       -- seconds between kills that still chain into a multikill
 local LOG_LIMIT = 20
 local UNKNOWN_VICTIM = "an enemy" -- the scoreboard says that we killed, not whom
@@ -528,8 +530,12 @@ function playSound(file, pack)
 		willPlay = PlaySoundFile(SOUND_ROOT .. file:gsub("%.ogg$", ".mp3"), channel)
 	end
 	-- Nobody has added this one yet: play its stand-in
-	if not willPlay and SOUND_STANDIN[file] then
-		return playSound(SOUND_STANDIN[file], pack)
+	local standin = SOUND_STANDIN[file]
+	if not willPlay and type(standin) == "number" then
+		local ok, played = pcall(PlaySoundFile, standin, channel)
+		return ok and played
+	elseif not willPlay and standin then
+		return playSound(standin, pack)
 	end
 	return willPlay
 end
@@ -1227,7 +1233,7 @@ end
 SPECIAL.GANK_LEVELS = 10   -- levels between killer and victim
 SPECIAL.GANK_WAIT = 1.5    -- seconds to wait for an honorable kill that would rule a gank out
 SPECIAL.gank = "gank.ogg"     -- not shipped yet: silent until added
-SPECIAL.ganked = "ganked.ogg" -- not shipped yet: Humiliation plays until added
+SPECIAL.ganked = "ganked.ogg" -- Flamboyant has one; the other packs play the Peon (SOUND_STANDIN)
 SPECIAL.FLAIR = { "Bully!", "Pick on someone your own size!", "Big hero.", "Shameful.", "Their mum is on the way." }
 
 -- Our kill of victim is a gank: a player we saw in the last 5 minutes, 10+ levels below us

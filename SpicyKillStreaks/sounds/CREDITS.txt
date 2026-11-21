@@ -35,5 +35,9 @@ triplekill.ogg (male)
   From MegaKill Announcer's Unreal Tournament pack (the same announcer as the male pack;
   Unreal Tournament is (c) Epic Games). Converted to Ogg Vorbis and raised to the same level.
 
+Getting ganked (all packs but flamboyant)
+  Not a file in the addon: it plays the game's own sound/creature/peon/peonpissed4.ogg (the Peon's
+  "Me not that kind of orc!", (c) Blizzard Entertainment) by its file ID.
+
 custom\
   Your own files. Nothing ships there.

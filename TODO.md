@@ -10,7 +10,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 |---|---|---|---|---|
 | `combowhore.ogg` (20 kills in a row) | done | [ ] | [ ] | [ ] |
 | `gank.ogg` (you ganked someone 10+ levels lower) | [ ] | [ ] | [ ] | [ ] |
-| `ganked.ogg` (a player 10+ levels higher killed you) | [ ] | [ ] | [ ] | [ ] |
+| `ganked.ogg` (a player 10+ levels higher killed you) | Peon (built in) | Peon | Peon | Peon |
 | `triplekill.ogg` | done | [ ] | [ ] | [ ] |
 | `headshot.ogg` | done | [ ] | [ ] | [ ] |
 | `firstblood.ogg` | done | [ ] | done | [ ] |
@@ -18,8 +18,8 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `pancake.ogg` | done | [ ] | [ ] | [ ] |
 | `monsterkill.ogg` | done | done | done | [ ] |
 
-Until a file is added: a pack without it plays the male one; with no male one either, `ganked`
-plays Humiliation and `gank` stays silent.
+Until a file is added: a pack without it plays the male one; with no male one either, `gank`
+stays silent. `ganked` plays the game's own Peon line ("Me not that kind of orc!", file ID 558146).
 
 The **Flamboyant** pack (`sounds\flamboyant\`) is complete apart from `combowhore` and `prepare`,
 which use the male voice.
