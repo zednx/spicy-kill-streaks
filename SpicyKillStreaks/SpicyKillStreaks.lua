@@ -27,14 +27,16 @@ local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
 local RANK_NAMES = { "Ownage", "Killing Spree", "Rampage", "Dominating", "Unstoppable", "Godlike", "Wicked Sick" }
 local RANK_SOUNDS = { "ownage.ogg", "killingspree.ogg", "rampage.ogg", "dominating.ogg", "unstoppable.ogg", "godlike.ogg", "whickedsick.ogg" }
-local MULTI_TEXTS = { "DOUBLE KILL!", "MULTI KILL!", "MEGA KILL!", "ULTRA KILL!!!", "MONSTER KILL!!!", "LUDICROUS KILL!!!", "H O L Y  S H I T!!!" }
-local MULTI_SOUNDS = { "doublekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
+local MULTI_TEXTS = { "DOUBLE KILL!", "TRIPLE KILL!", "MULTI KILL!", "MEGA KILL!", "ULTRA KILL!!!", "MONSTER KILL!!!", "LUDICROUS KILL!!!", "H O L Y  S H I T!!!" }
+local MULTI_SOUNDS = { "doublekill.ogg", "triplekill.ogg", "multikill.ogg", "megakill.ogg", "ultrakill.ogg", "monsterkill.ogg", "ludicrouskill.ogg", "holyshit.ogg" }
 local SOUND_PREPARE = "prepare.ogg"
 local SOUND_EXECUTE = "finishhim.ogg"
 local SOUND_HUMILIATION = "humiliation.ogg"
 local SOUND_HEADSHOT = "headshot.ogg" -- not shipped: players add their own (sounds\ or a voice pack folder)
 
-local MULTIKILL_WINDOW = 10       -- seconds between kills that still chain into a multikill
+-- Sounds the voice packs don't ship (players add their own); played instead while missing
+local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg" }
+local MULTIKILL_WINDOW = 30       -- seconds between kills that still chain into a multikill
 local LOG_LIMIT = 20
 local UNKNOWN_VICTIM = "an enemy" -- the scoreboard says that we killed, not whom
 
@@ -265,8 +267,16 @@ local function playSound(file, pack)
 	end
 	-- The pack lacks this file: play the one in sounds\
 	if not willPlay and folder ~= "" then
-		PlaySoundFile(SOUND_ROOT .. file, channel)
+		willPlay = PlaySoundFile(SOUND_ROOT .. file, channel)
 	end
+	if not willPlay and file:find("%.ogg$") then
+		willPlay = PlaySoundFile(SOUND_ROOT .. file:gsub("%.ogg$", ".mp3"), channel)
+	end
+	-- Nobody has added this one yet: play its stand-in
+	if not willPlay and SOUND_STANDIN[file] then
+		return playSound(SOUND_STANDIN[file], pack)
+	end
+	return willPlay
 end
 
 -- "Humiliation" in the voice picked for it (Sounds tab), which can differ from the main pack
@@ -776,9 +786,9 @@ local function preview(what)
 	elseif what == "big" then
 		showText((playerName or "You") .. " killed Test-Victim!", "kill", 7)
 		showText(strupper(RANK_NAMES[7]) .. "!", "rank", 7)
-		showText(MULTI_TEXTS[7], "multi", 7)
-		playSound(MULTI_SOUNDS[7])
-		celebrate("multi", 7)
+		showText(MULTI_TEXTS[#MULTI_TEXTS], "multi", #MULTI_TEXTS)
+		playSound(MULTI_SOUNDS[#MULTI_SOUNDS])
+		celebrate("multi", #MULTI_TEXTS)
 	elseif what == "death" then
 		showText("You were killed by Test-Killer.", "death")
 		playHumiliation()
@@ -2527,7 +2537,7 @@ local function buildOptions()
 						name = function() return "Current killing streak: " .. streak .. "\n" end,
 					},
 					kill = button("Simulate a kill", 2, function() runTest("kill") end,
-						"Runs a made-up scoreboard update through the real detection. Press again within 10 seconds for a multikill."),
+						"Runs a made-up scoreboard update through the real detection. Press again within 30 seconds for a multikill."),
 					death = button("Simulate a death", 3, function() runTest("death") end,
 						"Resets the killing streak, as dying does."),
 					reset = button("Reset current streaks", 4, function() runTest("reset") end),

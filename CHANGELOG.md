@@ -4,6 +4,7 @@
 
 - **Battlegrounds:** kills are found again when the scoreboard lists you with your family name ("Name Family") or hides GUIDs. New `/sks score` (in a battleground or arena) shows how the addon finds your row on the scoreboard.
 - **Headshot** on the first kill of a streak. The ranks now start at the second kill: Ownage 2, Killing Spree 3, Rampage 5, Dominating 7, Unstoppable 9, Godlike 11, Wicked Sick 13 (change them under Streak ranks). Turn Headshot off under General. The sound isn't included: put a `headshot.ogg` (or `.mp3`) in `sounds\` or your voice pack's folder.
+- **Multikills:** kills within **30 seconds** (was 10) chain, and there's a new **Triple Kill** between Double and Multi: Double, Triple, Multi, Mega, Ultra, Monster, Ludicrous, Holy Shit. Add a `triplekill.ogg` to `sounds\` for its voice; until then it plays the Multi Kill sound. Friends still on 0.2.0 see your multikills one step lower (your Triple shows as their Multi).
 
 ## v0.2.0
 
