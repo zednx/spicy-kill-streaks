@@ -512,7 +512,9 @@ local function soundMuted()
 end
 
 function playSound(file, pack)
-	if not file or not db.profile.dosound or soundMuted() then return end
+	if not file then return end
+	-- (The sound board plays even with sounds off, muted or snoozed)
+	if not SPECIAL.forceSound and (not db.profile.dosound or soundMuted()) then return end
 	-- A number is one of the game's own sound files, by file ID
 	if type(file) == "number" then
 		local ok, played = pcall(PlaySoundFile, file, db.profile.soundchannel or "Master")
@@ -2949,7 +2951,6 @@ local function topList(list, limit)
 	return table.concat(lines, "\n") .. "\n"
 end
 
-local previewRank, previewMulti = 1, 1
 
 local function buildOptions()
 	local options = {
@@ -3246,24 +3247,7 @@ local function buildOptions()
 						"Resets the killing streak, as dying does."),
 					reset = button("Reset current streaks", 4, function() runTest("reset") end),
 					soundHeader = header("Sounds", 10),
-					prepare = button("Prepare", 12, function() runTest("prepare") end),
-					humiliation = button("Humiliation", 13, function() runTest("humiliation") end),
-					previewRank = {
-						type = "select", name = "Play a streak sound", order = 14, values = RANK_NAMES,
-						get = function() return previewRank end,
-						set = function(_, value)
-							previewRank = value
-							playSound(RANK_SOUNDS[value])
-						end,
-					},
-					previewMulti = {
-						type = "select", name = "Play a multikill sound", order = 15, values = MULTI_TEXTS,
-						get = function() return previewMulti end,
-						set = function(_, value)
-							previewMulti = value
-							playSound(MULTI_SOUNDS[value])
-						end,
-					},
+					soundNote = note("Every sound, with when it plays, is on the Sound board page.", 11),
 					fxHeader = header("Effects", 16),
 					previewKill = button("Preview a kill", 17, function() preview("kill") end),
 					previewBig = button("Preview the big one", 18, function() preview("big") end,
@@ -3282,6 +3266,67 @@ local function buildOptions()
 			},
 		},
 	}
+
+	-- Sound board: every sound, what it is and when it plays, in the chosen voice pack.
+	-- Plays even with sounds off, muted or snoozed.
+	local function play(file)
+		return function()
+			SPECIAL.forceSound = true
+			if file == "humiliation" then playHumiliation() else playSound(file) end
+			SPECIAL.forceSound = false
+		end
+	end
+	local multiName = function(i) return (MULTI_TEXTS[i]:gsub("!", ""):gsub("H O L Y  S H I T", "Holy Shit"):gsub("(%a)(%w*)", function(a, b) return a .. strlower(b) end)) end
+	local board = {
+		{ section = "Kill streak (kills in a row without dying)" },
+		{ "Headshot", "Your first kill of a streak", SPECIAL.headshot },
+		{ "First Blood", "Your first kill of the day (instead of Headshot)", SPECIAL.firstblood },
+		{ "Ownage", "2 kills in a row", RANK_SOUNDS[1] },
+		{ "Killing Spree", "3 kills in a row", RANK_SOUNDS[2] },
+		{ "Rampage", "4 kills in a row", RANK_SOUNDS[3] },
+		{ "Dominating", "5 kills in a row", RANK_SOUNDS[4] },
+		{ "Unstoppable", "6 kills in a row", RANK_SOUNDS[5] },
+		{ "Wicked Sick", "7 kills in a row", RANK_SOUNDS[7] },
+		{ "Godlike", "8 kills in a row, and every kill after (Flamboyant takes turns with Diva and Fabulous)", RANK_SOUNDS[6] },
+		{ "Holy Shit", "Secret: 10 kills in a row (also the 8th multikill)", SPECIAL.SECRETS[10] },
+		{ "Combo Whore", "Secret: 20 kills in a row", SPECIAL.SECRETS[20] },
+		{ section = "Multikills (each kill within 30 seconds of the last)" },
+	}
+	for i = 1, #MULTI_SOUNDS do
+		board[#board + 1] = { multiName(i), (i + 1) .. " kills in a row, quickly", MULTI_SOUNDS[i] }
+	end
+	local specials = {
+		{ section = "Special moments" },
+		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
+		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
+		{ "Meat's back on the menu", "Your first kill after dying 3+ times in a row (a game sound)", SPECIAL.MEAT },
+		{ "Gank", "You kill a player 10+ levels below you (no sound yet except in Flamboyant)", SPECIAL.gank },
+		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
+		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
+		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },
+		{ "Prepare", "A battleground or duel is about to start (if switched on)", SOUND_PREPARE },
+	}
+	for _, entry in ipairs(specials) do board[#board + 1] = entry end
+
+	local args = {
+		about = {
+			type = "description", order = 0, fontSize = "medium",
+			name = function()
+				local pack = db.profile.soundpack or "male"
+				return "Click a sound to hear it in your voice pack (" .. pack:sub(1, 1):upper() .. pack:sub(2)
+					.. "). It plays even with sounds off, muted or snoozed."
+			end,
+		},
+	}
+	for i, entry in ipairs(board) do
+		if entry.section then
+			args["h" .. i] = header(entry.section, i * 2)
+		else
+			args["b" .. i] = { type = "execute", name = entry[1], order = i * 2, func = play(entry[3]) }
+			args["d" .. i] = { type = "description", name = entry[2], order = i * 2 + 1, width = "double", fontSize = "medium" }
+		end
+	end
+	options.args.soundboard = { type = "group", name = "Sound board", order = 7.5, args = args }
 	return options
 end
 

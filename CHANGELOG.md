@@ -7,6 +7,7 @@
 - **Comeback:** your first kill after dying 3+ times in a row gets the Butcher: "Looks like meat's back on the menu, boys!" (the game's own sound). Turn it off under General.
 - One Retribution in three is the Candle King: "You no take candle!" (the game's own sound).
 - Getting ganked plays the Peon's "Me not that kind of orc!" (the game's own sound; Flamboyant has its own line).
+- **Sound board** (`/sks` > Sound board): every sound with a play button, what it is and when it plays, in your voice pack. It plays even with sounds off, muted or snoozed.
 - **About:** who makes the addon and where to send feedback.
 - A couple of secrets at 10 and 20 kills in a row.
 - **New voice pack: Flamboyant**, the Heroes of Newerth announcer. Cherry Poppah, Rainbow Warrior, Unicorn Stampede, It's a three-way... The callout text changes to match, in rainbow letters, and Godlike takes turns between Super Star, Diva and Fabulous.
