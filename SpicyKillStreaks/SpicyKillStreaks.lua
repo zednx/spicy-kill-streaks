@@ -42,6 +42,8 @@ local SPECIAL = {
 	RETRIBUTION_WINDOW = 3600,
 	UNKNOWN_KILLER = "an unknown enemy", -- also what older versions send for such a death
 }
+-- The addon's private table, shared with UI.lua (the settings window, setup and minimap button)
+SPECIAL.ns = select(2, ...)
 
 
 
@@ -67,8 +69,10 @@ local defaults = {
 	global = {
 		setupDone = false, -- the first-run setup has been finished or skipped (account-wide)
 		sharingShown = false,
-		snoozeUntil = 0,
-		debugWindow = {}, -- position and size of the debug log window -- time() until which sounds are off (/sks snooze); survives /reload -- the setup's sharing screen has been seen (shown once to 0.1.x users too)
+		snoozeUntil = 0,  -- time() until which sounds are off (/sks snooze); survives /reload
+		debugWindow = {}, -- position and size of the debug log window
+		window = {},      -- position of the settings window
+		minimap = { angle = 200, hide = false }, -- the chilli on the minimap
 	},
 	profile = {
 		-- kills
@@ -2860,6 +2864,11 @@ end
 
 -- atSharing: open on the sharing screen (shown once to players who set up an older version)
 openSetup = function(atSharing)
+	if SPECIAL.ns.ui and SPECIAL.ns.ui.openSetup then
+		local ok, err = pcall(SPECIAL.ns.ui.openSetup, atSharing)
+		if ok then return end
+		chat("The new setup failed to open (" .. tostring(err) .. "); showing the classic one.")
+	end
 	if not setupFrame then
 		local ok, result = pcall(buildSetup)
 		if not ok then
@@ -2870,6 +2879,78 @@ openSetup = function(atSharing)
 	end
 	setupFrame.showStep(atSharing and setupFrame.sharingStep or 1)
 	setupFrame:Show()
+end
+
+-- Snooze: "off", or minutes (30 when nil)
+function SPECIAL.snooze(arg)
+	if arg == "off" then
+		db.global.snoozeUntil = 0
+		chat("Snooze off: sounds are back on.")
+		return
+	end
+	local minutes = tonumber(arg) or 30
+	minutes = math.min(math.max(1, math.floor(minutes)), 24 * 60)
+	db.global.snoozeUntil = time() + minutes * 60
+	chat("Sounds snoozed for " .. minutes .. " minutes (until " .. date("%H:%M", db.global.snoozeUntil)
+		.. "). /sks snooze off turns them back on.")
+	local untilTime = db.global.snoozeUntil
+	C_Timer.After(minutes * 60, function()
+		if db.global.snoozeUntil == untilTime then chat("Snooze over: sounds are back on.") end
+	end)
+end
+
+function SPECIAL.snoozedUntil()
+	local t = db.global.snoozeUntil or 0
+	return t > time() and t or nil
+end
+
+-- Play a sound whatever the sound settings say (the sound board, setup samples)
+function SPECIAL.playForced(file)
+	SPECIAL.forceSound = true
+	local ok, played = pcall(function()
+		if file == "humiliation" then return playHumiliation() end
+		return playSound(file)
+	end)
+	SPECIAL.forceSound = false
+	return ok and played
+end
+
+-- Every sound with when it plays: { section = "..." } or { label, when, file }
+function SPECIAL.soundBoard()
+	local function multiName(i)
+		return (MULTI_TEXTS[i]:gsub("!", ""):gsub("H O L Y  S H I T", "Holy Shit")
+			:gsub("(%a)(%w*)", function(a, b) return a .. strlower(b) end))
+	end
+	local board = {
+		{ section = "Kill streak (kills in a row without dying)" },
+		{ "Headshot", "Your first kill of a streak", SPECIAL.headshot },
+		{ "First Blood", "Your first kill of the day (instead of Headshot)", SPECIAL.firstblood },
+		{ "Ownage", "2 kills in a row", RANK_SOUNDS[1] },
+		{ "Killing Spree", "3 kills in a row", RANK_SOUNDS[2] },
+		{ "Rampage", "4 kills in a row", RANK_SOUNDS[3] },
+		{ "Dominating", "5 kills in a row", RANK_SOUNDS[4] },
+		{ "Unstoppable", "6 kills in a row", RANK_SOUNDS[5] },
+		{ "Wicked Sick", "7 kills in a row", RANK_SOUNDS[7] },
+		{ "Godlike", "8 kills in a row, and every kill after (Flamboyant takes turns with Diva and Fabulous)", RANK_SOUNDS[6] },
+		{ "Holy Shit", "Secret: 10 kills in a row (also the 8th multikill)", SPECIAL.SECRETS[10] },
+		{ "Combo Whore", "Secret: 20 kills in a row", SPECIAL.SECRETS[20] },
+		{ section = "Multikills (each kill within 30 seconds of the last)" },
+	}
+	for i = 1, #MULTI_SOUNDS do
+		board[#board + 1] = { multiName(i), (i + 1) .. " kills in a row, quickly", MULTI_SOUNDS[i] }
+	end
+	for _, entry in ipairs({
+		{ section = "Special moments" },
+		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
+		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
+		{ "Meat's back on the menu", "Your first kill after dying 3+ times in a row (a game sound)", SPECIAL.MEAT },
+		{ "Gank", "You kill a player 10+ levels below you (no sound yet except in Flamboyant)", SPECIAL.gank },
+		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
+		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
+		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },
+		{ "Prepare", "A battleground or duel is about to start (if switched on)", SOUND_PREPARE },
+	}) do board[#board + 1] = entry end
+	return board
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -3269,45 +3350,7 @@ local function buildOptions()
 
 	-- Sound board: every sound, what it is and when it plays, in the chosen voice pack.
 	-- Plays even with sounds off, muted or snoozed.
-	local function play(file)
-		return function()
-			SPECIAL.forceSound = true
-			if file == "humiliation" then playHumiliation() else playSound(file) end
-			SPECIAL.forceSound = false
-		end
-	end
-	local multiName = function(i) return (MULTI_TEXTS[i]:gsub("!", ""):gsub("H O L Y  S H I T", "Holy Shit"):gsub("(%a)(%w*)", function(a, b) return a .. strlower(b) end)) end
-	local board = {
-		{ section = "Kill streak (kills in a row without dying)" },
-		{ "Headshot", "Your first kill of a streak", SPECIAL.headshot },
-		{ "First Blood", "Your first kill of the day (instead of Headshot)", SPECIAL.firstblood },
-		{ "Ownage", "2 kills in a row", RANK_SOUNDS[1] },
-		{ "Killing Spree", "3 kills in a row", RANK_SOUNDS[2] },
-		{ "Rampage", "4 kills in a row", RANK_SOUNDS[3] },
-		{ "Dominating", "5 kills in a row", RANK_SOUNDS[4] },
-		{ "Unstoppable", "6 kills in a row", RANK_SOUNDS[5] },
-		{ "Wicked Sick", "7 kills in a row", RANK_SOUNDS[7] },
-		{ "Godlike", "8 kills in a row, and every kill after (Flamboyant takes turns with Diva and Fabulous)", RANK_SOUNDS[6] },
-		{ "Holy Shit", "Secret: 10 kills in a row (also the 8th multikill)", SPECIAL.SECRETS[10] },
-		{ "Combo Whore", "Secret: 20 kills in a row", SPECIAL.SECRETS[20] },
-		{ section = "Multikills (each kill within 30 seconds of the last)" },
-	}
-	for i = 1, #MULTI_SOUNDS do
-		board[#board + 1] = { multiName(i), (i + 1) .. " kills in a row, quickly", MULTI_SOUNDS[i] }
-	end
-	local specials = {
-		{ section = "Special moments" },
-		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
-		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
-		{ "Meat's back on the menu", "Your first kill after dying 3+ times in a row (a game sound)", SPECIAL.MEAT },
-		{ "Gank", "You kill a player 10+ levels below you (no sound yet except in Flamboyant)", SPECIAL.gank },
-		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
-		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
-		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },
-		{ "Prepare", "A battleground or duel is about to start (if switched on)", SOUND_PREPARE },
-	}
-	for _, entry in ipairs(specials) do board[#board + 1] = entry end
-
+	local board = SPECIAL.soundBoard()
 	local args = {
 		about = {
 			type = "description", order = 0, fontSize = "medium",
@@ -3322,7 +3365,8 @@ local function buildOptions()
 		if entry.section then
 			args["h" .. i] = header(entry.section, i * 2)
 		else
-			args["b" .. i] = { type = "execute", name = entry[1], order = i * 2, func = play(entry[3]) }
+			local file = entry[3]
+			args["b" .. i] = { type = "execute", name = entry[1], order = i * 2, func = function() SPECIAL.playForced(file) end }
 			args["d" .. i] = { type = "description", name = entry[2], order = i * 2 + 1, width = "double", fontSize = "medium" }
 		end
 	end
@@ -3333,6 +3377,11 @@ end
 local optionsCategory
 
 local function openOptions()
+	if SPECIAL.ns.ui and SPECIAL.ns.ui.open then
+		local ok, err = pcall(SPECIAL.ns.ui.open)
+		if ok then return end
+		chat("The settings window failed to open (" .. tostring(err) .. "); showing the classic options.")
+	end
 	if Settings and Settings.OpenToCategory and optionsCategory then
 		if pcall(Settings.OpenToCategory, optionsCategory) then return end
 	end
@@ -3353,6 +3402,10 @@ local function initialize()
 
 	placeAnchor()
 	registerPrefix()
+	if SPECIAL.ns.ui and SPECIAL.ns.ui.init then
+		local ok, err = pcall(SPECIAL.ns.ui.init)
+		if not ok then chat("Could not create the minimap button: " .. tostring(err)) end
+	end
 
 	-- (/spicy is taken by the Spicy Side Quests addon)
 	SLASH_SPICYKILLSTREAKS1 = "/sks"
@@ -3375,21 +3428,13 @@ local function initialize()
 		elseif strmatch(command, "^preview") then
 			preview(strmatch(command, "^preview%s+(%a+)$") or "big")
 		elseif strmatch(command, "^snooze") then
-			local arg = strmatch(command, "^snooze%s+(%S+)$")
-			if arg == "off" then
-				db.global.snoozeUntil = 0
-				chat("Snooze off: sounds are back on.")
-			else
-				local minutes = tonumber(arg) or 30
-				minutes = math.min(math.max(1, math.floor(minutes)), 24 * 60)
-				db.global.snoozeUntil = time() + minutes * 60
-				chat("Sounds snoozed for " .. minutes .. " minutes (until " .. date("%H:%M", db.global.snoozeUntil)
-					.. "). /sks snooze off turns them back on.")
-				local untilTime = db.global.snoozeUntil
-				C_Timer.After(minutes * 60, function()
-					if db.global.snoozeUntil == untilTime then chat("Snooze over: sounds are back on.") end
-				end)
-			end
+			SPECIAL.snooze(strmatch(command, "^snooze%s+(%S+)$"))
+		elseif command == "classic" then
+			LibStub("AceConfigDialog-3.0"):Open(ADDON)
+		elseif command == "minimap" then
+			db.global.minimap.hide = not db.global.minimap.hide
+			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
+			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
 		elseif command == "recap" then
 			SPECIAL.dumpRecap(true)
 		elseif command == "score" then
@@ -3405,6 +3450,41 @@ local function initialize()
 		end
 	end
 end
+
+-- What UI.lua (the settings window, setup and minimap button) may use
+SPECIAL.ns.core = {
+	TITLE = TITLE, VERSION = VERSION, ADDON = ADDON, MEDIA = MEDIA,
+	db = function() return db end,
+	defaults = defaults,
+	special = SPECIAL,
+	chat = chat,
+	playSound = playSound,
+	preview = preview,
+	runTest = runTest,
+	versionCheck = versionCheck,
+	sendTestSync = sendTestSync,
+	sendReadyEmote = sendReadyEmote,
+	debugLog = DebugLog,
+	isDebugOn = function() return debugOn end,
+	unlock = setAnchorUnlocked,
+	placeAnchor = placeAnchor,
+	presets = FLARE_PRESETS,
+	emotes = EMOTES,
+	fonts = FONTS,
+	rankColors = RANK_COLORS,
+	openClassic = function() LibStub("AceConfigDialog-3.0"):Open(ADDON) end,
+	openStats = function()
+		local dialog = LibStub("AceConfigDialog-3.0")
+		dialog:Open(ADDON)
+		dialog:SelectGroup(ADDON, "stats")
+	end,
+	finishSetup = function(skipped)
+		db.global.setupDone, db.global.sharingShown = true, true
+		setAnchorUnlocked(false)
+		chat(skipped and "Setup skipped. Type /sks setup to run it again, or /sks for all options."
+			or "All set! Type /sks for all options.")
+	end,
+}
 
 frame:SetScript("OnEvent", function(_, event, ...)
 	if event == "ADDON_LOADED" then

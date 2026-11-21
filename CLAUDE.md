@@ -6,7 +6,8 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 
 | Path | What |
 |---|---|
-| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the whole addon; `libs/` is Ace3 (unchanged). |
+| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (AceGUI widgets in our own frames), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `libs/` is Ace3 (unchanged). |
+| `tests/ui_smoke.lua` | Headless smoke test: fake WoW API, the real addon and Ace3, drives every settings page, the setup and the minimap button. `lua5.1 tests/ui_smoke.lua SpicyKillStreaks` (CI runs it). |
 | `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README). |
 | `scripts/` | `check-release.sh`, `curseforge-upload.sh`. |
 | `tools/make_art.py` | Draws `docs/logo.png` and `docs/logo-400.png` (Pillow). Same tile and chilli as Spicy Side Quests. |
@@ -23,6 +24,8 @@ The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp
 - `.toc` files must be UTF-8 **without** a BOM.
 
 ## Rules that matter
+
+- **200 locals:** `SpicyKillStreaks.lua` is at Lua 5.1's limit of 200 locals in the main chunk. Put new helpers in the `SPECIAL` table (or a `do` block) instead of new top-level locals.
 
 - **Secret values:** never compare or do arithmetic on a value that may be secret; check `isSecret` first.
 - **Untrusted input:** everything from `CHAT_MSG_ADDON` goes through `safeText` / range checks before it is shown.

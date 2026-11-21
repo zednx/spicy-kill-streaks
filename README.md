@@ -40,6 +40,8 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks synctest` | Send a test kill to your party/guild |
 | `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze 60` for an hour, `/sks snooze off` to undo) |
 | `/sks recap` | Print what your last Death Recap tells addons (for troubleshooting) |
+| `/sks classic` | The old options window |
+| `/sks minimap` | Show or hide the minimap button |
 | `/sks debug` | Open the debug log: what the kill detection sees, ready to copy |
 
 ## How kills are detected

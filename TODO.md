@@ -45,7 +45,11 @@ which use the male voice.
 - [ ] Battleground: `/sks score` says your row was found
 - [ ] `/sks debug`: die to a player and get a kill in the open world and in a battleground,
       then Select all, Ctrl+C and paste the log to Claude (for exact Retribution matching)
-- [ ] Try a few of the new fonts (/sks > Effects > Font)
+- [ ] New settings window (`/sks`): click through every section, check the live preview with a few fonts
+      and voice packs, and that nothing overlaps or runs off the edge
+- [ ] New setup (`/sks setup`): all six steps, Skip and Done
+- [ ] Minimap button: left/right/Shift-click, drag it around, zZ while snoozed, hide and `/sks minimap`
+- [ ] Sound board: every sound plays
 - [ ] Guild board: with a guildmate on 0.7.0, check the login line and /sks > Guild board, and try Share
 
 ## Release
