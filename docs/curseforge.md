@@ -46,7 +46,7 @@ A rewrite of the classic **dG KillShot**, rebuilt for WoW Forever, which doesn't
 
 ## Features
 
-- **Kill streaks**: *Headshot* on your first kill, then six ranks from *Killing Spree* (3 kills) up to *Godlike* (13), each with its own sound, colour and big on-screen callout. On every kill, or Unreal Tournament style (every few kills).
+- **Kill streaks**: *Headshot* on your first kill, then a rank for every kill from *Killing Spree* (3 in a row) up to *Godlike* (8 and beyond), each with its own sound, colour and big on-screen callout. On every kill, or Unreal Tournament style (every few kills).
 - **Special callouts**: *First Blood* on your first kill of the day, *Retribution* when you kill someone who killed you in the last hour, and *Pancake* when you (or a friend) die from falling or drowning.
 - **Multikills**: kills within 30 seconds chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and beyond.
 - **Only your killing blows count**, not kills your group finishes.

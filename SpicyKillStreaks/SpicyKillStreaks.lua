@@ -537,11 +537,12 @@ local function playHumiliation()
 	playSound(SOUND_HUMILIATION, (voice and voice ~= "pack") and voice or nil)
 end
 
--- The streak ranks, fixed: Killing Spree at 3 kills, then every 2 kills, Godlike on top.
--- Values are indexes into RANK_NAMES / RANK_SOUNDS (unchanged, because sync messages send
--- them). Index 1, Ownage, is not a rank: it is a filler sound between ranks.
-SPECIAL.TIERS = { { rank = 2, kills = 3 }, { rank = 3, kills = 5 }, { rank = 4, kills = 7 },
-	{ rank = 5, kills = 9 }, { rank = 7, kills = 11 }, { rank = 6, kills = 13 } }
+-- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8; every kill
+-- after that is Godlike again. Values are indexes into RANK_NAMES / RANK_SOUNDS (unchanged,
+-- because sync messages send them). Index 1, Ownage, is not a rank: it is the 2nd kill's sound.
+SPECIAL.TIERS = { { rank = 2, kills = 3 }, { rank = 3, kills = 4 }, { rank = 4, kills = 5 },
+	{ rank = 5, kills = 6 }, { rank = 7, kills = 7 }, { rank = 6, kills = 8 } }
+SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
 -- Rank index -> how big it looks (colour, sparkles): Godlike (6) is the top tier, above Wicked Sick (7)
 SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 -- A hidden rank: its own sound and effects, no callout text
@@ -1166,7 +1167,6 @@ local function registerKill(victim, isDuel)
 
 	streak = streak + 1
 	deathstreak = 0
-	if streak == 1 then SPECIAL.fillers = 0 end -- a new streak: filler kills start again with Headshot
 	local newRecord = false
 	if streak > profile.maxstreak and not testing then
 		profile.maxstreak = streak
@@ -1225,25 +1225,15 @@ local function registerKill(victim, isDuel)
 		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
-		if rank and (rank == 1 or rank == lastRank) and profile.style ~= "ut" then
-			-- A kill between ranks: a rank's sound only plays when it is reached, so filler
-			-- kills alternate Ownage and Headshot. rank = nil: friends hear no repeat either.
-			SPECIAL.fillers = (SPECIAL.fillers or 0) + 1
-			local headshot = profile.doheadshot and SPECIAL.fillers % 2 == 0
-			playSound(headshot and SPECIAL.headshot or RANK_SOUNDS[1])
-			celebrate("kill", colorRank)
-			rank = nil
+		if rank then playSound(RANK_SOUNDS[rank]) end
+		-- A new rank gets its name on screen ("KILLING SPREE!"); Godlike says so on every kill
+		if rank and rank >= 2 and (rank ~= lastRank or rank == SPECIAL.TOP_RANK) then
+			announce(strupper(RANK_NAMES[rank]) .. "!", "rank", rank)
+			celebrate("rank", rank)
 		else
-			if rank then playSound(RANK_SOUNDS[rank]) end
-			-- Reaching a new rank gets its name on screen: "KILLING SPREE!"
-			if rank and rank >= 2 and rank ~= lastRank then
-				announce(strupper(RANK_NAMES[rank]) .. "!", "rank", rank)
-				celebrate("rank", rank)
-			else
-				celebrate("kill", colorRank)
-			end
-			if rank then lastRank = rank end
+			celebrate("kill", colorRank)
 		end
+		if rank then lastRank = rank end
 	end
 
 	if testing then return end
@@ -2804,9 +2794,9 @@ local function buildOptions()
 			ranks = {
 				type = "group", name = "Ranks", order = 3,
 				args = {
-					about = note("Kills in a row without dying: Killing Spree 3, Rampage 5, Dominating 7, Unstoppable 9, "
-						.. "Wicked Sick 11, Godlike 13. The first kill is Headshot (First Blood once a day); kills between "
-						.. "ranks alternate Ownage and Headshot. There's also a hidden one...", 0),
+					about = note("Kills in a row without dying: Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, "
+						.. "Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, Godlike 8 and every kill after. "
+						.. "There's also a hidden one...", 0),
 					utrank = {
 						type = "range", name = "Unreal Tournament style: kills between sounds", order = 20, width = "full",
 						min = 1, max = 10, step = 1,
