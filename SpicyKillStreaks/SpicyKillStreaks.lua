@@ -75,7 +75,6 @@ local defaults = {
 		dofirstblood = true,     -- "First Blood" on the first kill of the day instead
 		doretribution = true,    -- "Retribution" for killing someone who killed you in the last hour
 		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
-		ksrank = { 2, 3, 5, 7, 9, 11, 13 }, -- kills needed for each rank (0 = rank off)
 		dopve = false,
 		dozonechange = false,
 		-- sound
@@ -538,13 +537,23 @@ local function playHumiliation()
 	playSound(SOUND_HUMILIATION, (voice and voice ~= "pack") and voice or nil)
 end
 
--- The rank a streak has reached by the rank thresholds (1..7)
+-- The streak ranks, fixed: Killing Spree at 3 kills, then every 2 kills, Godlike on top.
+-- Values are indexes into RANK_NAMES / RANK_SOUNDS (unchanged, because sync messages send
+-- them). Index 1, Ownage, is not a rank: it is a filler sound between ranks.
+SPECIAL.TIERS = { { rank = 2, kills = 3 }, { rank = 3, kills = 5 }, { rank = 4, kills = 7 },
+	{ rank = 5, kills = 9 }, { rank = 7, kills = 11 }, { rank = 6, kills = 13 } }
+-- Rank index -> how big it looks (colour, sparkles): Godlike (6) is the top tier, above Wicked Sick (7)
+SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
+-- A hidden rank: its own sound and effects, no callout text
+SPECIAL.combo, SPECIAL.COMBO_KILLS = "combowhore.ogg", 20
+
+-- The rank a streak has reached (1 = none yet)
 local function rankForStreak(count)
-	for rank = #RANK_SOUNDS, 1, -1 do
-		local needed = db.profile.ksrank[rank] or 0
-		if needed > 0 and count >= needed then return rank end
+	local reached = 1
+	for _, tier in ipairs(SPECIAL.TIERS) do
+		if count >= tier.kills then reached = tier.rank end
 	end
-	return 1
+	return reached
 end
 
 -- The rank whose sound plays for this kill, or nil for no sound (Unreal Tournament style
@@ -554,7 +563,8 @@ local function soundRank(count)
 	if profile.style == "ut" then
 		if count == 1 then return 1 end
 		if count % profile.utrank ~= 0 then return nil end
-		return math.min(count / profile.utrank, #RANK_SOUNDS)
+		local step = math.min(count / profile.utrank, #SPECIAL.TIERS)
+		return SPECIAL.TIERS[step].rank
 	end
 	return rankForStreak(count)
 end
@@ -624,8 +634,8 @@ local RANK_COLORS = {
 	{ 1, 0.35, 0.1 },  -- Rampage: red-orange
 	{ 1, 0.12, 0.12 }, -- Dominating: red
 	{ 1, 0.25, 0.65 }, -- Unstoppable: pink
-	{ 0.75, 0.35, 1 }, -- Godlike: purple
-	{ 0.3, 0.9, 1 },   -- Wicked Sick: cyan
+	{ 0.75, 0.35, 1 }, -- level 6, Wicked Sick: purple
+	{ 0.3, 0.9, 1 },   -- level 7, Godlike (the top): cyan
 }
 local MULTI_COLOR = { 1, 0.85, 0.2 }
 local DEATH_COLOR = { 0.6, 0.65, 0.75 }
@@ -748,6 +758,7 @@ end
 
 local function fancyText(text, kind, level)
 	local style = TEXT_STYLES[kind] or TEXT_STYLES.kill
+	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "death" and DEATH_COLOR)
 		or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level or 1] or RANK_COLORS[1]
 	local size = style.size * fxConfig().scale
@@ -988,6 +999,7 @@ end
 local function celebrate(kind, level)
 	local cfg = fxConfig()
 	level = level or 1
+	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level] or RANK_COLORS[1]
 	if cfg.sparkles then
 		local factor
@@ -1074,7 +1086,7 @@ local function preview(what)
 		celebrate("multi", 3)
 	elseif what == "big" then
 		showText((playerName or "You") .. " killed Test-Victim!", "kill", 7)
-		showText(strupper(RANK_NAMES[7]) .. "!", "rank", 7)
+		showText(strupper(RANK_NAMES[6]) .. "!", "rank", 6)
 		showText(MULTI_TEXTS[#MULTI_TEXTS], "multi", #MULTI_TEXTS)
 		playSound(MULTI_SOUNDS[#MULTI_SOUNDS])
 		celebrate("multi", #MULTI_TEXTS)
@@ -1191,6 +1203,12 @@ local function registerKill(victim, isDuel)
 		playSound(SPECIAL.retribution)
 		celebrate("rank", 4)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
+	elseif streak == SPECIAL.COMBO_KILLS and not isDuel then
+		-- The hidden rank: its own sound and the big effects, but no callout text. It wins over a
+		-- multikill's sound (the multikill still shows its text).
+		playSound(SPECIAL.combo)
+		celebrate("rank", 6)
+		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif multi > 0 then
 		announce(MULTI_TEXTS[multi], "multi", multi)
 		playSound(MULTI_SOUNDS[multi])
@@ -1207,11 +1225,11 @@ local function registerKill(victim, isDuel)
 		celebrate("rank", 1)
 	else
 		rank = soundRank(streak)
-		if rank and rank == lastRank and profile.style ~= "ut" then
-			-- A kill between ranks: the rank's sound only plays when it is reached, so filler
-			-- kills alternate Headshot and Ownage. rank = nil: friends hear no repeat either.
+		if rank and (rank == 1 or rank == lastRank) and profile.style ~= "ut" then
+			-- A kill between ranks: a rank's sound only plays when it is reached, so filler
+			-- kills alternate Ownage and Headshot. rank = nil: friends hear no repeat either.
 			SPECIAL.fillers = (SPECIAL.fillers or 0) + 1
-			local headshot = profile.doheadshot and SPECIAL.fillers % 2 == 1
+			local headshot = profile.doheadshot and SPECIAL.fillers % 2 == 0
 			playSound(headshot and SPECIAL.headshot or RANK_SOUNDS[1])
 			celebrate("kill", colorRank)
 			rank = nil
@@ -2786,7 +2804,9 @@ local function buildOptions()
 			ranks = {
 				type = "group", name = "Ranks", order = 3,
 				args = {
-					about = note("Kills in a row needed for each streak sound (every-kill style). 0 switches a rank off.", 0),
+					about = note("Kills in a row without dying: Killing Spree 3, Rampage 5, Dominating 7, Unstoppable 9, "
+						.. "Wicked Sick 11, Godlike 13. The first kill is Headshot (First Blood once a day); kills between "
+						.. "ranks alternate Ownage and Headshot. There's also a hidden one...", 0),
 					utrank = {
 						type = "range", name = "Unreal Tournament style: kills between sounds", order = 20, width = "full",
 						min = 1, max = 10, step = 1,
@@ -2904,14 +2924,6 @@ local function buildOptions()
 			},
 		},
 	}
-	for rank = 1, #RANK_NAMES do
-		options.args.ranks.args["rank" .. rank] = {
-			type = "range", name = RANK_NAMES[rank], order = rank, width = "full",
-			min = (rank == 1) and 1 or 0, max = 50, step = 1,
-			get = function() return db.profile.ksrank[rank] end,
-			set = function(_, value) db.profile.ksrank[rank] = value end,
-		}
-	end
 	return options
 end
 

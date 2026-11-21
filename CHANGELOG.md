@@ -2,7 +2,9 @@
 
 ## v0.7.0
 
-- **Rank sounds play once:** a streak rank's sound now only plays when you reach it. Kills between ranks alternate Headshot and Ownage instead of repeating the rank (Headshot, Ownage, Killing Spree, Headshot, Rampage, Ownage, Dominating...).
+- **New rank ladder:** Killing Spree 3, Rampage 5, Dominating 7, Unstoppable 9, Wicked Sick 11, **Godlike 13** (now the top tier, with the biggest effects). The kill counts are fixed; the sliders are gone.
+- **Rank sounds play once:** a rank's sound only plays when you reach it. The first kill is Headshot (First Blood once a day); kills between ranks alternate Ownage and Headshot: Headshot, Ownage, Killing Spree, Headshot, Rampage, Ownage, Dominating... Ownage is no longer a rank.
+- Something special happens at 20 kills in a row.
 - **More fonts for the combat text:** eight bundled fonts (Bangers, Luckiest Guy, Anton, Bebas Neue, Russo One, Black Ops One, Permanent Marker, Teko), WoW's Narrow, and every font your other addons share through SharedMedia (ElvUI, Details...). Picking one shows a preview. The Fancy font is gone (it falls back to Classic). Restart the game after updating so WoW sees the new font files.
 - **Debug log window:** `/sks debug` (or the box under Tests > Troubleshooting) opens a small, movable, resizable window where the detection details are written, with timestamps and the client version at the top. The text can be selected: **Select all**, then Ctrl+C to copy it (addons can't write to the clipboard themselves). **Clear** empties it; closing the window turns debug off.
 - `/sks debug` now also shows who the Death Recap names when you die, how each kill's victim was found, and the Retribution check. `/sks recap` prints your last Death Recap.
