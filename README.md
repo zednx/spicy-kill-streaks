@@ -24,6 +24,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 - **Mute** in battlegrounds, dungeons or raids, or snooze for 30 minutes.
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings, with a button to post it to guild or party chat.
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills show in chat, as combat text, with sound, and whether their deaths show too. If a guildmate or party member has a newer version, it tells you in chat.
+- **Kudos** (opt-in): when a friend running the addon gets a kill, send them *Zug zug!*, *For the Horde!*, *Hell yeah!* or a thumbs up; when they die, *RIP* or *F*. It pops up on their screen only, or, if you choose, in party or guild chat too.
 - **Duels**: wins count, losses and fleeing get a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent log.
 - **Debug log** window you can copy from, for bug reports.
@@ -48,6 +49,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks score` | Check that your battleground scoreboard row is found |
 | `/sks recap` | Print what your last Death Recap tells addons (for troubleshooting) |
 | `/sks classic` | The old options window |
+| `/sks kudos` | Preview the Kudos popup and drag it into place (again to lock it) |
 | `/sks minimap` | Show or hide the minimap button |
 | `/sks debug` | Open the debug log: what the kill detection sees, ready to copy |
 

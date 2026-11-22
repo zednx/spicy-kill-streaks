@@ -14,7 +14,7 @@ jobs:
           persist-credentials: false
       - run: sudo apt-get update && sudo apt-get install -y lua5.1
       - name: Syntax check
-        run: luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua SpicyKillStreaks/UI.lua
+        run: luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua SpicyKillStreaks/UI.lua SpicyKillStreaks/Kudos.lua
       - name: UI smoke test (fake WoW API, real addon and Ace3)
         run: lua5.1 tests/ui_smoke.lua SpicyKillStreaks
       - name: Version strings agree

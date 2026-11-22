@@ -6,7 +6,7 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 
 | Path | What |
 |---|---|
-| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (AceGUI widgets in our own frames), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `libs/` is Ace3 (unchanged). |
+| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (our own flat controls), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `Kudos.lua` is the Kudos popup (reactions to friends' kills and deaths, the `R` addon message), hooked in through `SPECIAL.ownEvent` / `SPECIAL.allyEvent` and `ns.kudos.receive`; `libs/` is Ace3 (unchanged). |
 | `tests/ui_smoke.lua` | Headless smoke test: fake WoW API, the real addon and Ace3, drives every settings page, the setup and the minimap button. `lua5.1 tests/ui_smoke.lua SpicyKillStreaks` (CI runs it). |
 | `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README). |
 | `scripts/` | `check-release.sh`, `curseforge-upload.sh`. |

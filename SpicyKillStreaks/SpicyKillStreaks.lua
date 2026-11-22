@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.0.1"
+local VERSION = "1.1.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -143,6 +143,14 @@ local defaults = {
 			--   text: on-screen combat text       deaths: also show when they die
 			party = { feed = true, sound = true, text = true, deaths = false },
 			guild = { feed = true, sound = false, text = false, deaths = false },
+		},
+		-- Kudos (Kudos.lua): reactions to friends' kills and deaths
+		kudos = {
+			give = false,    -- a popup with reaction buttons when a party or guild member kills or dies
+			receive = true,  -- show the kudos friends send us (nothing arrives unless someone sends)
+			chat = false,    -- also post the reaction as a normal line in party or guild chat
+			x = 0, y = -160, -- where the popup sits, from the centre of the screen
+			got = 0,         -- kudos received in total (flair)
 		},
 		-- stats
 		maxstreak = 0,
@@ -1585,6 +1593,17 @@ local function broadcast(message)
 	end)
 end
 
+-- Kudos (Kudos.lua) hooks: our own kills and deaths (only those we share: kudos can only come
+-- back for those), and friends' kills and deaths
+function SPECIAL.ownEvent(kind, what)
+	local kudos = SPECIAL.ns.kudos
+	if kudos then kudos.ownEvent(kind, what) end
+end
+function SPECIAL.allyEvent(info)
+	local kudos = SPECIAL.ns.kudos
+	if kudos then kudos.allyEvent(info) end
+end
+
 -- Every kill and death message ends with the sender's GUID, so our own broadcast coming back is
 -- recognised exactly. (Names are not enough on WoW Forever: characters have a family name, and
 -- UnitName may return only the given name while the sender arrives with both.)
@@ -1593,12 +1612,14 @@ end
 -- Since 1.0.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
 -- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
 syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
+	SPECIAL.ownEvent("K", kind == "K" and (multi or 0) > 0 and ("m" .. multi) or (kind == "K" and (rank or 0) > 0 and ("r" .. rank)) or nil)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
 		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
 		gank and "G" or "-", playerGUID or "" }, "\t"))
 end
 
 syncSendDeath = function(killer, isDuel, ganked)
+	SPECIAL.ownEvent("D")
 	broadcast(table.concat({ "D", VERSION, cleanField(killer), isDuel and "1" or "0",
 		tostring(Levels.player() or 0), tostring(Levels.of(killer) or 0), ganked and "G" or "-", playerGUID or "" }, "\t"))
 end
@@ -1667,6 +1688,7 @@ local function sendTestSync()
 		return
 	end
 	local level = Levels.player() or 0
+	SPECIAL.ownEvent("K")
 	broadcast(table.concat({ "T", VERSION, "Test-Victim", "3", "0", "2", tostring(level), tostring(level + 2),
 		playerGUID or "" }, "\t"))
 	chat("Sent a test kill to your " .. ((toGroup and toGuild) and "group and guild" or (toGroup and "group" or "guild"))
@@ -1789,6 +1811,9 @@ local function onFeedMessage(kind, sender, channel, fields)
 
 	if kind == "D" then
 		if seenRecently(sender .. "|D|" .. name) then return end
+		SPECIAL.allyEvent({ kind = "D", sender = sender, channel = channel, who = who, other = name,
+			duel = fields[4] == "1", pancake = name == SPECIAL.UNKNOWN_KILLER, ganked = fields[7] == "G" and #fields >= 8,
+			guid = fields[#fields] })
 		if not source.deaths then return end
 		if name == SPECIAL.UNKNOWN_KILLER and fields[4] ~= "1" and db.profile.dopancake then
 			local line = whoShown .. " just PANCAKED from falling or drowning."
@@ -1829,6 +1854,8 @@ local function onFeedMessage(kind, sender, channel, fields)
 		if source.sound then playSound(SPECIAL.gank) end
 		return
 	end
+	SPECIAL.allyEvent({ kind = kind, sender = sender, channel = channel, who = who, other = name,
+		streak = streakCount, multi = multi, rank = rank, guid = fields[#fields] })
 
 	local rest
 	if kind == "U" then
@@ -2078,8 +2105,13 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" then
 		noticeVersion(sender, fields[2])
+	end
+	-- A kudos reaction (Kudos.lua checks it was meant for us and for something we just did)
+	if kind == "R" then
+		if SPECIAL.ns.kudos then SPECIAL.ns.kudos.receive(sender, channel, fields) end
+		return
 	end
 	if kind == "K" or kind == "U" or kind == "T" or kind == "D" then
 		-- Kills and deaths travel by party/raid/instance or guild only
@@ -3518,6 +3550,19 @@ local function initialize()
 			db.global.minimap.hide = not db.global.minimap.hide
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
 			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
+		elseif command == "kudos" then
+			-- Show sample rows and unlock the popup to drag it; again to lock it
+			local kudos = SPECIAL.ns.kudos
+			if kudos then
+				local on = not kudos.isUnlocked()
+				kudos.unlock(on)
+				if on then
+					kudos.preview()
+					chat("Drag the Kudos popup where you want it, then type /sks kudos again to lock it.")
+				else
+					chat("Kudos popup locked.")
+				end
+			end
 		elseif command == "recap" then
 			SPECIAL.dumpRecap(true)
 		elseif command == "score" then
@@ -3561,6 +3606,16 @@ SPECIAL.ns.core = {
 		dialog:Open(ADDON)
 		dialog:SelectGroup(ADDON, "stats")
 	end,
+	-- for Kudos.lua
+	sendAddonMessage = sendAddonMessage,
+	groupChannel = groupChannel,
+	inGuild = inGuild,
+	safeText = safeText,
+	shortName = shortName,
+	isGroupMember = isGroupMember,
+	showText = showText,
+	playerGUID = function() return playerGUID end,
+	rankNames = RANK_NAMES,
 	finishSetup = function(skipped)
 		db.global.setupDone, db.global.sharingShown, db.global.setup1Done = true, true, true
 		setAnchorUnlocked(false)

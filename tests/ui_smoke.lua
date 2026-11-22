@@ -240,6 +240,62 @@ step("guild board post: one line, top killers then most deaths", function()
   assert(#sent[1] <= 255 + #"GUILD: ")
 end)
 step("guild board page with deaths", function() ns.ui.open(); ns.ui.show("board") end)
+step("kudos: offer, send, chat post, receive", function()
+  local core, kudos, sp = ns.core, ns.kudos, ns.core.special
+  local P = core.db().profile
+  local PREFIX = "SpicyKS"
+  local addon, said = {}, {}
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) addon[#addon + 1] = channel .. ": " .. msg return true end
+  SendChatMessage = function(msg, channel) said[#said + 1] = channel .. ": " .. msg end
+  kudos.clear()
+  -- off by default: nothing offered
+  local bob = "Player-1-0002"
+  local kill = table.concat({ "K", "1.0.1", "Alice", "3", "0", "2", "60", "60", "-", bob }, "\t")
+  fire("CHAT_MSG_ADDON", PREFIX, kill, "GUILD", "Bob-Realm")
+  assert(#kudos.rows == 0, "offered while off")
+  P.kudos.give, P.kudos.chat, P.kudos.receive = true, true, true
+  P.sync.shareguild, P.sync.shareparty = true, true -- (the click-everything test above flips them)
+  fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "K", "1.0.1", "Carl", "4", "0", "3", "60", "60", "-", bob }, "\t"), "GUILD", "Bob-Realm")
+  assert(#kudos.rows == 1, "no kudos row for a friend's kill")
+  local row = kudos.rows[1]
+  assert(row.label:GetText():find("Rampage"), row.label:GetText())
+  assert(#row.buttons == 4, "expected 4 kill reactions, got " .. #row.buttons)
+  row.buttons[1].__scripts.OnClick(row.buttons[1])
+  assert(#addon == 1 and addon[1] == "GUILD: R\t" .. core.VERSION .. "\t" .. bob .. "\tzug\tK\tH\tPlayer-1-0001", addon[1])
+  assert(#said == 1 and said[1] == "GUILD: Zug zug! (to Bob for Rampage)", said[1])
+  row.buttons[2].__scripts.OnClick(row.buttons[2])
+  assert(#addon == 1, "a second reaction for the same kill")
+  -- a friend's death: RIP and F
+  fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "D", "1.0.1", "Orcbro", "0", "60", "60", "-", bob }, "\t"), "GUILD", "Bob-Realm")
+  local drow = kudos.rows[#kudos.rows]
+  assert(#drow.buttons == 2 and drow.label:GetText():find("killed by Orcbro"), drow.label:GetText())
+  drow.buttons[2].__scripts.OnClick(drow.buttons[2])
+  assert(addon[2]:find("\tf\tD\t"), addon[2])
+  assert(#said == 1, "chat cooldown ignored")
+  -- getting kudos: only for something we just did, once per player, only when meant for us
+  kudos.clear()
+  local before = tonumber(P.kudos.got) or 0
+  local function kudo(target, id, kind, from)
+    fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "R", "1.0.1", target, id, kind, "A", from or bob }, "\t"), "GUILD", "Bob-Realm")
+  end
+  kudo("Player-1-0001", "hell", "K")
+  assert(#kudos.rows == 0, "kudos accepted with no kill of ours")
+  sp.ownEvent("K", "r2")
+  kudo("Player-1-0009", "hell", "K")
+  assert(#kudos.rows == 0, "kudos for someone else shown")
+  kudo("Player-1-0001", "rip", "K")
+  assert(#kudos.rows == 0, "a death reaction for a kill shown")
+  kudo("Player-1-0001", "faction", "K")
+  assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("^|cffffd100Bob|r: For the Alliance!.*your Killing Spree"), kudos.rows[1] and kudos.rows[1].label:GetText())
+  kudo("Player-1-0001", "hell", "K")
+  assert(#kudos.rows == 1, "two kudos from one player for one kill")
+  assert(P.kudos.got == before + 1, "got not counted")
+  -- preview, move, lock
+  kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
+  SlashCmdList.SPICYKILLSTREAKS("kudos"); SlashCmdList.SPICYKILLSTREAKS("kudos")
+  kudos.clear()
+  P.kudos.give, P.kudos.chat = false, false
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

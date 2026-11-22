@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.0
+
+- **Kudos:** react to your friends' kills and deaths. When a party or guild member running the addon gets a kill, a small popup offers **Zug zug!**, **For the Horde!** (or Alliance, your own faction), **Hell yeah!** and **Thumbs up!**; when they die, **RIP** and **F**. One click sends it to them only, and it pops up on their screen with a running count ("+3"). Off by default: switch it on under Friends > Kudos. Getting kudos is on by default.
+- Kudos can also be posted as a normal line in party or guild chat ("Zug zug! (to Bob for Rampage)"), which everyone sees. Off by default, at most one post every 15 seconds.
+- Kudos follow your sharing settings: they go back the way the kill came (party or guild), only for kills and deaths from the last 30 seconds, one per kill or death, and only kudos for something you just did are shown.
+- `/sks kudos` (or Friends > Kudos > Preview and move) shows sample rows so you can drag the popup where you want it.
+
 ## v1.0.1
 
 - Ganking someone plays Headshot until it has its own sound (it was silent). Flamboyant keeps its own.

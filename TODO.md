@@ -56,36 +56,21 @@ which use the male voice.
 
 - [ ] `git pull && git tag v1.0.0 && git push origin v1.0.0` (check the latest tag first)
 
+## Kudos (built in 1.1.0, test in game)
+
+- [ ] With a friend on 1.1.0 (same party or guild, sharing on): switch on Friends > Kudos, then one of
+      you gets a kill (or uses Friends > Send a test kill): the other sees the popup, clicks a reaction,
+      and it pops up on the killer's screen
+- [ ] A death: RIP and F
+- [ ] "Also post my reactions in chat": the line appears in party/guild chat (no "interface action failed")
+- [ ] `/sks kudos`: drag the popup, `/sks kudos` again to lock; it stays there after /reload
+- [ ] In a battleground (the popup shouldn't get in the way; the reply goes through battleground chat)
+
+Built as planned, apart from: reactions travel on the channel the kill came from (party or guild),
+addressed to the friend's GUID, rather than as a whisper. That channel is known to work on WoW
+Forever; addon whispers aren't tested there yet.
+
 ## Next version
-
-### Kudos
-
-An optional little popup that appears for up to 30 seconds after an ally (party or guild member
-running the addon) gets a kill or dies:
-
-- **Kill:** send a thumbs-up / "Hell yeah!" that adds to their flair (they see it pop up on their
-  callout, e.g. "+3 hell yeahs").
-- **Death:** press **F** to pay respects to the fallen.
-- The player chooses where the popup sits (unlock and drag, like the combat text).
-- Off by default, with its own switch in Friends, and it follows the party/guild sharing settings.
-
-Notes for building it: the kudos travel as a new addon message type, whispered to the ally (so it
-only reaches them), limited to one per kill/death per player and rate-limited like the others.
-Older versions just ignore the new type.
-
-#### Kudos: more ideas
-
-- **Kill reactions** (the player picks one, or it rotates): "Zug zug!", "For the Horde!" / "For the
-  Alliance!" (the sender's own faction, read from their character so it's always right), "Hell yeah!",
-  thumbs up.
-- **Death reactions:** "RIP", "F" (pay respects).
-- **Where a reaction goes** (chosen in settings):
-  - **Private (default):** through the addon, so only the sender and receiver see it, as a popup on
-    the receiver's screen that adds to their flair.
-  - **Guild or party chat (opt-in):** a normal chat line everyone sees, e.g.
-    "Spicy: Zug zug! (to Bob for Killing Spree)".
-- To decide: public posting gets its own switch (no accidental guild spam), and a short cooldown on
-  chat posts. Chat posts must happen in the click itself (WoW Forever blocks delayed posts).
 
 ### Request aid on death
 

@@ -722,6 +722,27 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 		cards[#cards + 1] = c
 	end
 
+	c = newCard("Kudos")
+	local function ktoggle(key, label, desc)
+		return toggle(label, desc, function() return P().kudos[key] end, function(v) P().kudos[key] = v end)
+	end
+	c:add(ktoggle("give", "Kudos popup for friends' kills and deaths",
+		"Zug zug!, For the Horde!, Hell yeah!, thumbs up; RIP or F when they die"), 1)
+	c:add(ktoggle("receive", "Show kudos friends send me", nil), 0.5)
+	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 0.5)
+	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
+		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
+	c:add(button("Preview and move", function()
+		local kudos = ns.kudos
+		if not kudos then return end
+		local on = not kudos.isUnlocked()
+		kudos.unlock(on)
+		if on then kudos.preview() core().chat("Drag the Kudos popup, then press Lock.") end
+	end), 0.34)
+	c:add(button("Lock", function() if ns.kudos then ns.kudos.unlock(false) end end), 0.33)
+	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)
+	cards[#cards + 1] = c
+
 	c = newCard("Guild extras")
 	c:add(synctoggle({ "logincount" }, "At login, count guildmates using it", nil), 0.5)
 	c:add(synctoggle({ "loginboard" }, "At login, show the top 3 killers", nil), 0.5)
