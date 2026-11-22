@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.0.0"
+local VERSION = "1.0.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -50,7 +50,7 @@ SPECIAL.ns = select(2, ...)
 -- Sounds the voice packs don't ship (players add their own); played instead while missing
 -- A number is one of the game's own sound files (its file ID): nothing to ship
 --   558146  sound/creature/peon/peonpissed4.ogg, the Peon's "Me not that kind of orc!"
-local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg", ["ganked.ogg"] = 558146 }
+local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg", ["ganked.ogg"] = 558146, ["gank.ogg"] = "headshot.ogg" }
 local MULTIKILL_WINDOW = 30       -- seconds between kills that still chain into a multikill
 local LOG_LIMIT = 20
 local UNKNOWN_VICTIM = "an enemy" -- the scoreboard says that we killed, not whom
@@ -1280,7 +1280,7 @@ end
 -- Ganks. Both only fire when every fact is known; anything unclear plays the normal callouts.
 SPECIAL.GANK_LEVELS = 10   -- levels between killer and victim
 SPECIAL.GANK_WAIT = 1.5    -- seconds to wait for an honorable kill that would rule a gank out
-SPECIAL.gank = "gank.ogg"     -- not shipped yet: silent until added
+SPECIAL.gank = "gank.ogg"     -- Flamboyant has one; the other packs play Headshot until one is found (SOUND_STANDIN)
 SPECIAL.ganked = "ganked.ogg" -- Flamboyant has one; the other packs play the Peon (SOUND_STANDIN)
 SPECIAL.FLAIR = { "Bully!", "Pick on someone your own size!", "Big hero.", "Shameful.", "Their mum is on the way." }
 
@@ -3027,7 +3027,7 @@ function SPECIAL.soundBoard()
 		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
 		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
 		{ "Meat's back on the menu", "Your first kill after dying 3+ times in a row (a game sound)", SPECIAL.MEAT },
-		{ "Gank", "You kill a player 10+ levels below you (no sound yet except in Flamboyant)", SPECIAL.gank },
+		{ "Gank", "You kill a player 10+ levels below you (Headshot until it has its own sound, except in Flamboyant)", SPECIAL.gank },
 		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
 		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
 		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },

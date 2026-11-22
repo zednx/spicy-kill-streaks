@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.0.1
+
+- Ganking someone plays Headshot until it has its own sound (it was silent). Flamboyant keeps its own.
+
 ## v1.0.0
 
 - **New settings window** (`/sks`): sections on the left (Announcer, Sound, Screen, Friends, Guild board, Extras, Sound board, About), a **live preview** at the top that shows your font, size and voice pack's words, and buttons for Test a kill, Stats and the Debug log. The old options window is still there: `/sks classic`.

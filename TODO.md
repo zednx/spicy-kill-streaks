@@ -19,7 +19,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `monsterkill.ogg` | done | done | done | [ ] |
 
 Until a file is added: a pack without it plays the male one; with no male one either, `gank`
-stays silent. `ganked` plays the game's own Peon line ("Me not that kind of orc!", file ID 558146).
+plays Headshot. `ganked` plays the game's own Peon line ("Me not that kind of orc!", file ID 558146).
 
 The **Flamboyant** pack (`sounds\flamboyant\`) is complete apart from `combowhore` and `prepare`,
 which use the male voice.
