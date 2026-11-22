@@ -157,7 +157,18 @@ local function step(name, fn)
   io.write((ok and "ok   " or "FAIL ") .. name .. (ok and "" or (": " .. tostring(err))), "\n")
   if not ok then failed = true end
 end
+-- a player who set up an older version (before 1.0.0)
+SpicyKillStreaksDB = { global = { setupDone = true, sharingShown = true } }
 step("ADDON_LOADED", function() fire("ADDON_LOADED", "SpicyKillStreaks") end)
+step("older setup: the 1.0.0 setup opens once at login", function()
+  fire("PLAYER_ENTERING_WORLD", true, false)
+  runTimers()
+  local setup = rawget(_G, "SpicyKillStreaksSetup")
+  assert(setup and setup.__shown, "setup not shown")
+  ns.core.finishSetup(true)
+  setup:Hide()
+  assert(ns.core.db().global.setup1Done, "setup1Done not saved")
+end)
 step("core exported", function() assert(ns.core and ns.core.db(), "no core/db") end)
 step("minimap button made", function() assert(rawget(_G, "SpicyKillStreaksMinimapButton"), "no minimap button") end)
 step("/sks opens the new window", function() SlashCmdList.SPICYKILLSTREAKS(""); assert(rawget(_G, "SpicyKillStreaksWindow").__shown, "window not shown") end)
@@ -216,8 +227,8 @@ step("resize handle lays the page out again", function()
 end)
 step("guild board post: one line, top killers then most deaths", function()
   local sp = ns.core.special
-  sp.readStats("Panda", { "V!", "0.7.0", sp.monthKey(), "12", "40", "Spice Guild", "3" }, false)
-  sp.readStats("Bob", { "V!", "0.7.0", sp.monthKey(), "9", "15", "Spice Guild", "14" }, false)
+  sp.readStats("Panda", { "V!", "1.0.0", sp.monthKey(), "12", "40", "Spice Guild", "3" }, false)
+  sp.readStats("Bob", { "V!", "1.0.0", sp.monthKey(), "9", "15", "Spice Guild", "14" }, false)
   sp.noteMyKill(1); sp.noteMyDeath()
   local sent = {}
   SendChatMessage = function(msg, channel) sent[#sent + 1] = channel .. ": " .. msg end

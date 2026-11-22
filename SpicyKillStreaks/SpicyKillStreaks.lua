@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "0.7.0"
+local VERSION = "1.0.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -69,6 +69,7 @@ local defaults = {
 	global = {
 		setupDone = false, -- the first-run setup has been finished or skipped (account-wide)
 		sharingShown = false,
+		setup1Done = false, -- the 1.0.0 setup has been shown: everyone sees it once, even players who set up an older version
 		snoozeUntil = 0,  -- time() until which sounds are off (/sks snooze); survives /reload
 		debugWindow = {}, -- position and size of the debug log window
 		window = {},      -- position of the settings window
@@ -1589,7 +1590,7 @@ end
 -- UnitName may return only the given name while the sender arrives with both.)
 -- Since 0.1.1 the levels (ours, then the victim's or killer's; 0 = unknown, -1 = "??") come just
 -- before the GUID, so 0.1.0 readers, which take fields 3-6 and the last one, still work.
--- Since 0.7.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
+-- Since 1.0.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
 -- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
 syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
@@ -1963,7 +1964,7 @@ function SPECIAL.boardNote(name, best, kills, deaths)
 end
 
 -- "<month>\t<best>\t<kills>\t<guild>\t<deaths>": what we add to the who-runs-it question and answer
--- (deaths since 0.7.0, after the guild so older readers still find everything where they expect it)
+-- (deaths since 1.0.0, after the guild so older readers still find everything where they expect it)
 function SPECIAL.statsFields()
 	local m = SPECIAL.myMonth()
 	return table.concat({ SPECIAL.monthKey(), tostring(m.monthBest or 0), tostring(m.monthKills or 0),
@@ -2624,16 +2625,12 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	wipe(watched)
 	wipe(killedBy)
 	killedByCount = 0
-	-- First install: offer the setup once the loading screen is gone. Players who set up an older
-	-- version get its sharing screen once, since sharing is now on by default.
-	if not setupShownThisSession and (not db.global.setupDone or not db.global.sharingShown) then
+	-- First run of 1.0.0 (a new install, or an older version that was set up before): offer the
+	-- whole setup once the loading screen is gone, since 1.0.0 has a new setup with new options.
+	if not setupShownThisSession and not db.global.setup1Done then
 		setupShownThisSession = true
 		C_Timer.After(3, function()
-			if not db.global.setupDone then
-				openSetup()
-			elseif not db.global.sharingShown then
-				openSetup(true)
-			end
+			if not db.global.setup1Done then openSetup() end
 		end)
 	end
 end
@@ -2740,7 +2737,7 @@ local function makeCheck(parent, label, get, set)
 end
 
 local function finishSetup(skipped)
-	db.global.setupDone = true
+	db.global.setupDone, db.global.sharingShown, db.global.setup1Done = true, true, true
 	if setupFrame then setupFrame:Hide() end
 	setAnchorUnlocked(false)
 	if skipped then
@@ -3565,7 +3562,7 @@ SPECIAL.ns.core = {
 		dialog:SelectGroup(ADDON, "stats")
 	end,
 	finishSetup = function(skipped)
-		db.global.setupDone, db.global.sharingShown = true, true
+		db.global.setupDone, db.global.sharingShown, db.global.setup1Done = true, true, true
 		setAnchorUnlocked(false)
 		chat(skipped and "Setup skipped. Type /sks setup to run it again, or /sks for all options."
 			or "All set! Type /sks for all options.")

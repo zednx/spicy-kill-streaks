@@ -50,11 +50,11 @@ which use the male voice.
 - [ ] New setup (`/sks setup`): all six steps, Skip and Done
 - [ ] Minimap button: left/right/Shift-click, drag it around, zZ while snoozed, hide and `/sks minimap`
 - [ ] Sound board: every sound plays
-- [ ] Guild board: with a guildmate on 0.7.0, check the login line and /sks > Guild board, and try Share
+- [ ] Guild board: with a guildmate on 1.0.0, check the login line and /sks > Guild board, and try Share
 
 ## Release
 
-- [ ] `git pull && git tag v0.7.0 && git push origin v0.7.0` (check the latest tag first)
+- [ ] `git pull && git tag v1.0.0 && git push origin v1.0.0` (check the latest tag first)
 
 ## Next version
 
