@@ -80,6 +80,7 @@ UnitName = function() return "Tester" end
 RegionalUniqueNamesEnabled = function() return false end
 UnitNameUnmodified = function() return "Tester" end
 UnitFactionGroup = function() return "Horde", "Horde" end
+UnitSex = function() return 2 end
 GetRealmName = function() return "Realm" end
 UnitRace = function() return "Orc", "Orc" end
 UnitClass = function() return "Warrior", "WARRIOR" end
@@ -261,7 +262,7 @@ step("kudos: offer, send, chat post, receive", function()
   assert(row.label:GetText():find("Rampage"), row.label:GetText())
   assert(#row.buttons == 4, "expected 4 kill reactions, got " .. #row.buttons)
   row.buttons[1].__scripts.OnClick(row.buttons[1])
-  assert(#addon == 1 and addon[1] == "GUILD: R\t" .. core.VERSION .. "\t" .. bob .. "\tzug\tK\tH\tPlayer-1-0001", addon[1])
+  assert(#addon == 1 and addon[1] == "GUILD: R\t" .. core.VERSION .. "\t" .. bob .. "\tzug\tK\tH\tOrc\t2\tPlayer-1-0001", addon[1])
   assert(#said == 1 and said[1] == "GUILD: Zug zug! (to Bob for Rampage)", said[1])
   row.buttons[2].__scripts.OnClick(row.buttons[2])
   assert(#addon == 1, "a second reaction for the same kill")
@@ -276,7 +277,7 @@ step("kudos: offer, send, chat post, receive", function()
   kudos.clear()
   local before = tonumber(P.kudos.got) or 0
   local function kudo(target, id, kind, from)
-    fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "R", "1.0.1", target, id, kind, "A", from or bob }, "\t"), "GUILD", "Bob-Realm")
+    fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "R", "1.0.1", target, id, kind, "A", "Dwarf", "3", from or bob }, "\t"), "GUILD", "Bob-Realm")
   end
   kudo("Player-1-0001", "hell", "K")
   assert(#kudos.rows == 0, "kudos accepted with no kill of ours")
@@ -285,13 +286,19 @@ step("kudos: offer, send, chat post, receive", function()
   assert(#kudos.rows == 0, "kudos for someone else shown")
   kudo("Player-1-0001", "rip", "K")
   assert(#kudos.rows == 0, "a death reaction for a kill shown")
+  local played = {}
+  local oldPSF = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = f return true end
+  P.dosound, P.kudos.sound = true, true
   kudo("Player-1-0001", "faction", "K")
+  PlaySoundFile = oldPSF
+  assert(played[1] == 540014 or played[1] == 539977, "expected a female dwarf cheer, got " .. tostring(played[1]))
   assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("^|cffffd100Bob|r: For the Alliance!.*your Killing Spree"), kudos.rows[1] and kudos.rows[1].label:GetText())
   kudo("Player-1-0001", "hell", "K")
   assert(#kudos.rows == 1, "two kudos from one player for one kill")
   assert(P.kudos.got == before + 1, "got not counted")
   -- preview, move, lock
-  kudos.previewGot(); runTimers(); kudos.clear()
+  kudos.previewGot(); for _ = 1, 5 do runTimers() end; kudos.previewDeath(); kudos.clear()
   SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()
   kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
   SlashCmdList.SPICYKILLSTREAKS("kudos"); SlashCmdList.SPICYKILLSTREAKS("kudos")

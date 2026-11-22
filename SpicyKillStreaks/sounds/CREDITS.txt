@@ -53,5 +53,11 @@ A kill after dying 3+ times in a row (all packs)
   sound/creature/thebutcher/vo_60_ogreraid_butcher_victory.ogg (the Butcher's "Looks like meat's
   back on the menu, boys!", (c) Blizzard Entertainment) by its file ID.
 
+Kudos (all packs)
+  Not files in the addon: they play the game's own character /cheer voices
+  (sound/character/<race>/...cheer01/02.ogg), sound/interface/ui_legendary_item_toast.ogg,
+  sound/interface/ui_80_azeriteloot_toast.ogg and sound/spells/shadowwordpain_chest.ogg
+  ((c) Blizzard Entertainment) by their file IDs.
+
 custom\
   Your own files. Nothing ships there.

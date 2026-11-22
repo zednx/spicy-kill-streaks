@@ -6,7 +6,8 @@
 --
 -- Talks to SpicyKillStreaks.lua through ns.core, and borrows the drawing kit from UI.lua.
 --
--- Message: "R", version, target GUID, reaction id, "K"/"D", faction ("H"/"A"/"-"), sender GUID
+-- Message: "R", version, target GUID, reaction id, "K"/"D", faction ("H"/"A"/"-"), race token ("Orc",
+-- "Scourge" ... or "-"), sex ("2"/"3"/"-"), sender GUID
 local ADDON, ns = ...
 
 local kudos = {}
@@ -39,6 +40,50 @@ local KILL_ORDER = { "zug", "faction", "hell", "thumbs" }
 local DEATH_ORDER = { "rip", "f" }
 local FACTION_TEXT = { H = "For the Horde!", A = "For the Alliance!" }
 kudos.REACTIONS, kudos.KILL_ORDER, kudos.DEATH_ORDER = REACTIONS, KILL_ORDER, DEATH_ORDER
+
+-- Sounds, all the game's own files (by file ID):
+-- each kudos for a kill plays the sender's /cheer, for their race and sex (one of two at random)
+local CHEERS = {
+	Human = { [2] = { 540694, 540707 }, [3] = { 540628, 540610 } },
+	Orc = { [2] = { 541435, 541404 }, [3] = { 541328, 541320 } },
+	Dwarf = { [2] = { 540024, 540070 }, [3] = { 540014, 539977 } },
+	NightElf = { [2] = { 541138, 541126 }, [3] = { 541043, 541055 } },
+	Scourge = { [2] = { 542783, 542781 }, [3] = { 542697, 542691 } },
+	Tauren = { [2] = { 543078, 543025 }, [3] = { 542976, 542985 } },
+	Gnome = { [2] = { 540493, 540463 }, [3] = { 540434, 540445 } },
+	Troll = { [2] = { 543331, 543330 }, [3] = { 543253, 543277 } },
+	BloodElf = { [2] = { 539228, 539422 }, [3] = { 539322, 539232 } },
+	Draenei = { [2] = { 539735, 539639 }, [3] = { 539598, 539601 } },
+	Goblin = { [2] = { 541890, 542010 }, [3] = { 541792, 541848 } },
+	Worgen = { [2] = { 542207, 542194 }, [3] = { 542062, 542081 } },
+	Pandaren = { [2] = { 630064, 630066 }, [3] = { 636413, 636415 } },
+}
+-- the 3rd and 5th kudos for the same kill add a loot toast; RIP and F play Shadow Word: Pain
+local STACK_SOUNDS = { [3] = 1489461, [5] = 2174248 } -- legendary item toast, Azerite loot toast
+local DEATH_SOUND = 568353                             -- shadowwordpain_chest
+kudos.CHEERS, kudos.STACK_SOUNDS, kudos.DEATH_SOUND = CHEERS, STACK_SOUNDS, DEATH_SOUND
+
+-- Our own race (the game's English token, "Orc", "Scourge" ...) and sex (2 male, 3 female)
+local function myRaceAndSex()
+	local race, sex
+	if type(UnitRace) == "function" then
+		local ok, _, token = pcall(UnitRace, "player")
+		if ok and type(token) == "string" and CHEERS[token] then race = token end
+	end
+	if type(UnitSex) == "function" then
+		local ok, value = pcall(UnitSex, "player")
+		if ok and (value == 2 or value == 3) then sex = value end
+	end
+	return race, sex
+end
+
+-- A cheer for this race and sex, or nil (an unknown race, or one sent by a broken client)
+local function cheerFor(race, sex)
+	local voices = CHEERS[race]
+	local list = voices and voices[sex]
+	return list and list[math.random(#list)]
+end
+kudos.cheerFor = cheerFor
 
 local MULTI_NAMES = { "Double Kill", "Triple Kill", "Multi Kill", "Mega Kill", "Ultra Kill", "Monster Kill",
 	"Ludicrous Kill", "Holy Shit" }
@@ -201,8 +246,9 @@ local function send(row, info, id)
 			channel = core().groupChannel()
 		end
 		if channel then
+			local race, sex = myRaceAndSex()
 			core().sendAddonMessage(table.concat({ "R", core().VERSION, info.guid, id, info.kind == "D" and "D" or "K",
-				faction or "-", core().playerGUID() or "" }, "\t"), channel)
+				faction or "-", race or "-", sex and tostring(sex) or "-", core().playerGUID() or "" }, "\t"), channel)
 		end
 		-- A public line too, when switched on. This runs in the click itself: WoW Forever only lets
 		-- an addon post to chat from a click or key press.
@@ -322,11 +368,30 @@ function kudos.receive(sender, channel, fields)
 	event.count = event.count + 1
 	cfg().got = (tonumber(cfg().got) or 0) + 1
 	local who = (core().safeText(core().shortName(sender)) or "Someone"):gsub("%-.*$", "")
-	kudos.showGot(who, words, ownDeedText(kind, event.what), event.count)
+	-- The sender's race and sex pick their cheer (only names in CHEERS are used)
+	local race, sex = fields[7], tonumber(fields[8])
+	if #fields < 9 or not CHEERS[race] then race, sex = nil, nil end
+	kudos.showGot(who, words, ownDeedText(kind, event.what), event.count, { kind = kind, race = race, sex = sex })
 end
 
--- One kudos we got: "Bob: Hell yeah! (your Rampage) +3"
-function kudos.showGot(who, words, deed, count)
+-- The sounds for a kudos we got: their cheer (kill) or Shadow Word: Pain (death), plus a loot toast
+-- on the 3rd and 5th kudos for the same kill. forced: a preview, which plays even when muted.
+local function playKudosSound(sound, count, forced)
+	if not sound or not cfg().sound then return end
+	local play = forced and core().special.playForced or core().playSound
+	if sound.kind == "D" then
+		play(DEATH_SOUND)
+		return
+	end
+	local cheer = cheerFor(sound.race, sound.sex)
+	if cheer then play(cheer) end
+	if STACK_SOUNDS[count] then play(STACK_SOUNDS[count]) end
+end
+kudos.playKudosSound = playKudosSound
+
+-- One kudos we got: "Bob: Hell yeah! (your Rampage) +3". sound: { kind, race, sex } or nil
+function kudos.showGot(who, words, deed, count, sound, forced)
+	playKudosSound(sound, count, forced)
 	local row = newRow(30)
 	local tally = count > 1 and ("  |cffffd100+" .. count .. "|r") or ""
 	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. deed .. ")|r" .. tally)
@@ -388,15 +453,22 @@ end
 -- What getting kudos looks like: five friends reacting to a Rampage, each one stacking up
 function kudos.previewGot()
 	local sample = {
-		{ "Bob", "Zug zug!" },
-		{ "Panda", reactionText("faction", myFaction()) or "Hell yeah!" },
-		{ "Alice", "Thumbs up!" },
-		{ "Grug", "Zug zug!" },
-		{ "Mira", "Hell yeah!" },
+		{ "Bob", "Zug zug!", "Orc", 2 },
+		{ "Panda", reactionText("faction", myFaction()) or "Hell yeah!", "Pandaren", 3 },
+		{ "Alice", "Thumbs up!", "Human", 3 },
+		{ "Grug", "Zug zug!", "Tauren", 2 },
+		{ "Mira", "Hell yeah!", "Gnome", 3 },
 	}
 	for i, entry in ipairs(sample) do
-		C_Timer.After((i - 1) * 0.9, function() kudos.showGot(entry[1], entry[2], "Rampage", i) end)
+		C_Timer.After((i - 1) * 1.4, function()
+			kudos.showGot(entry[1], entry[2], "Rampage", i, { kind = "K", race = entry[3], sex = entry[4] }, true)
+		end)
 	end
+end
+
+-- A friend paying respects when we die
+function kudos.previewDeath()
+	kudos.showGot("Panda", "F", "death", 1, { kind = "D" }, true)
 end
 
 function kudos.clear()
