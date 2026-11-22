@@ -577,7 +577,7 @@ step("guild board sync: merge the highest, reply with only what's higher", funct
 end)
 step("secrets: 15 is the male voice only; five ganks in five minutes play the secret line", function()
   local sp, P = ns.core.special, ns.core.db().profile
-  P.soundpack = "male"; assert(sp.secretFor(15) == "secret15.ogg" and sp.secretFor(30) and sp.secretFor(40))
+  P.soundpack = "male"; assert(sp.secretFor(15) == "secret15.ogg" and sp.secretFor(25) and sp.secretFor(30) and sp.secretFor(40))
   P.soundpack = "female"; assert(sp.secretFor(15) == nil and sp.secretFor(30) == "secret30.ogg", "15 for another pack")
   P.soundpack = "male"
   local played = {}

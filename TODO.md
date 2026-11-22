@@ -27,7 +27,7 @@ which use the male voice.
 
 - [ ] Listen to the HKSounds / MegaKill packs Claude sent ("Announcer sounds to review.zip"); MegaKill's
       Unreal pack has a `triple_kill.wav`
-- Secrets: 10 holyshit, 15 secret15 (male only), 20 secret20, 30 secret30 (GLaDOS, also 5 ganks in 5 min), 40 secret40
+- Secrets: 10 holyshit, 15 secret15 (male only), 20 secret20, 25 secret25, 30 secret30 (GLaDOS, also 5 ganks in 5 min), 40 secret40
 - [ ] Tell Claude where `headshot`, `firstblood`, `pancake` and `gank` ("Pint sized") came from, for `sounds/CREDITS.txt`
 
 ### Where the current sounds came from

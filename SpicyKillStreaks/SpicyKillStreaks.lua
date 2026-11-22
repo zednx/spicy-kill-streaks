@@ -615,7 +615,7 @@ SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
 -- Rank index -> how big it looks (colour, sparkles): Wicked Sick 6, Godlike 7 (the top)
 SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 -- Secret ranks: kills in a row -> their own sound and the big effects, no callout text
-SPECIAL.SECRETS = { [10] = "holyshit.ogg", [15] = "secret15.ogg", [20] = "secret20.ogg", [30] = "secret30.ogg",
+SPECIAL.SECRETS = { [10] = "holyshit.ogg", [15] = "secret15.ogg", [20] = "secret20.ogg", [25] = "secret25.ogg", [30] = "secret30.ogg",
 	[40] = "secret40.ogg" }
 -- Secrets only some voice packs have (the others play the normal rank there)
 SPECIAL.SECRET_PACKS = { [15] = { male = true } }
