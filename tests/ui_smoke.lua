@@ -416,6 +416,21 @@ step("battlegrounds: nothing is sent", function()
   assert(core.sendAddonMessage("D\ttest", "GUILD") and #sent == 1, "not sent outside")
   C_ChatInfo.SendAddonMessage, IsInInstance = old, oldInst
 end)
+step("friends' sounds play the quiet copies, ours the normal ones", function()
+  local P = ns.core.db().profile
+  local played = {}
+  local old = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  P.dosound, P.soundpack, P.sync.shareguild, P.sync.guild.sound = true, "female", true, true
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "K", "1.2.0", "Alice", "3", "0", "2", "60", "60", "-", "Player-1-0003" }, "\t"), "GUILD", "Carl-Realm")
+  assert(played[1] and played[1]:find("sounds\\quiet\\female\\killingspree%.ogg$"), "friend: " .. tostring(played[1]))
+  played = {}
+  ns.core.playSound("killingspree.ogg")
+  assert(played[1]:find("sounds\\female\\killingspree%.ogg$"), "own: " .. tostring(played[1]))
+  assert(not ns.core.special.quiet, "quiet left on")
+  PlaySoundFile = old
+  P.soundpack, P.sync.guild.sound = "male", false
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

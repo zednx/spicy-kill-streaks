@@ -2,6 +2,7 @@
 
 ## v1.2.0
 
+- **Friends' sounds are a little quieter:** sounds for party and guild members' kills and deaths play at about 75% of the volume of your own, so yours stand out.
 - **Battlegrounds and arenas are just for you:** nothing is shared from them any more (WoW Forever blocks addon messages there for the whole match anyway, and it was spammy), Kudos included, and kills and deaths there don't count on the guild board. Your own announcer works as before.
 - Elsewhere, a message the game refuses because of a short lock is held and sent when it lifts (for up to a minute). The debug log says why a message was refused.
 - A kill with an unknown victim ("an enemy") can no longer set off Retribution.

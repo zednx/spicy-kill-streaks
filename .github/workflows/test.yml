@@ -24,3 +24,12 @@ jobs:
           if head -c3 SpicyKillStreaks/SpicyKillStreaks.toc | grep -q $'\xEF\xBB\xBF'; then
             echo "::error::SpicyKillStreaks.toc starts with a UTF-8 BOM"; exit 1
           fi
+      - name: Every sound has its quiet copy (tools/make_quiet.sh)
+        run: |
+          cd SpicyKillStreaks/sounds
+          missing=0
+          while read -r f; do
+            q="quiet/${f#./}"; q="${q%.*}.ogg"
+            if [ ! -f "$q" ]; then echo "::error::no quiet copy of $f (run tools/make_quiet.sh)"; missing=1; fi
+          done < <(find . \( -path ./quiet -o -path ./custom \) -prune -o -type f \( -name '*.ogg' -o -name '*.mp3' \) -print)
+          exit $missing

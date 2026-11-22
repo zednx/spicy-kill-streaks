@@ -8,7 +8,7 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 |---|---|
 | `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (our own flat controls), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `Kudos.lua` is the Kudos popup (reactions to friends' kills and deaths, the `R` addon message), hooked in through `SPECIAL.ownEvent` / `SPECIAL.allyEvent` and `ns.kudos.receive`; `libs/` is Ace3 (unchanged). |
 | `tests/ui_smoke.lua` | Headless smoke test: fake WoW API, the real addon and Ace3, drives every settings page, the setup and the minimap button. `lua5.1 tests/ui_smoke.lua SpicyKillStreaks` (CI runs it). |
-| `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README). |
+| `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`, `flamboyant/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README), and `quiet/`: 75% copies of all of them for friends' kills and deaths. **After adding or changing a sound, run `tools/make_quiet.sh`** (CI checks every sound has its quiet copy). |
 | `scripts/` | `check-release.sh`, `curseforge-upload.sh`. |
 | `tools/make_art.py` | Draws `docs/logo.png` and `docs/logo-400.png` (Pillow). Same tile and chilli as Spicy Side Quests. |
 | `docs/curseforge.md` | CurseForge project settings, upload setup and the listing description. |

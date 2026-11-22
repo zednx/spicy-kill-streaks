@@ -4,7 +4,7 @@ Not shipped (only the `SpicyKillStreaks/` folder goes into the release).
 
 ## Sounds to add
 
-Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the others, or send WAVs to Claude to convert.
+Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the others, or send WAVs to Claude to convert. After adding one, run `tools/make_quiet.sh` (friends' 75% copies).
 
 | File | Male `sounds\` | Female `sounds\female\` | Sexy `sounds\sexy\` | Baby `sounds\baby\` |
 |---|---|---|---|---|

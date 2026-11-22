@@ -550,8 +550,8 @@ function playSound(file, pack)
 		-- The game's own files are mixed quieter than ours: two copies at once are about twice as loud
 		local channel = db.profile.soundchannel or "Master"
 		local ok, played = pcall(PlaySoundFile, file, channel)
-		-- (SPECIAL.soundOnce: just one copy, for quieter moments such as kudos)
-		if ok and played and not SPECIAL.soundOnce then pcall(PlaySoundFile, file, channel) end
+		-- (SPECIAL.soundOnce: just one copy, for quieter moments such as kudos; friends' sounds too)
+		if ok and played and not SPECIAL.soundOnce and not SPECIAL.quiet then pcall(PlaySoundFile, file, channel) end
 		return ok and played
 	end
 	pack = pack or db.profile.soundpack
@@ -559,6 +559,15 @@ function playSound(file, pack)
 	local missing = PACK_MISSING[pack]
 	if missing and missing[file] then folder = "" end
 	local channel = db.profile.soundchannel or "Master"
+	-- Friends' kills and deaths (SPECIAL.quiet) play the copies at 75% volume in sounds\quiet\
+	-- (tools/make_quiet.sh); a sound without one (custom files) plays as usual
+	if SPECIAL.quiet and folder ~= PACK_FOLDER.custom then
+		local quiet = SOUND_ROOT .. "quiet\\"
+		local name = file:gsub("%.mp3$", ".ogg")
+		if PlaySoundFile(quiet .. folder .. name, channel) or (folder ~= "" and PlaySoundFile(quiet .. name, channel)) then
+			return true
+		end
+	end
 	local willPlay = PlaySoundFile(SOUND_ROOT .. folder .. file, channel)
 	-- A sound may be MP3 as well as Ogg (the default humiliation, custom ones)
 	if not willPlay and folder ~= "" then
@@ -2211,7 +2220,13 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	end
 	if kind == "K" or kind == "U" or kind == "T" or kind == "D" then
 		-- Kills and deaths travel by party/raid/instance or guild only
-		if channel ~= "WHISPER" then onFeedMessage(kind, sender, channel, fields) end
+		if channel ~= "WHISPER" then
+			-- Friends' sounds play a little quieter than our own
+			SPECIAL.quiet = true
+			local ok, err = pcall(onFeedMessage, kind, sender, channel, fields)
+			SPECIAL.quiet = false
+			if not ok then error(err, 0) end
+		end
 		-- A guildmate's kill streak, live: their best this month is at least this
 		if kind == "K" and channel == "GUILD" and syncConfig().shareguild then
 			SPECIAL.boardNote(safeText(shortName(sender)), fields[4], nil)

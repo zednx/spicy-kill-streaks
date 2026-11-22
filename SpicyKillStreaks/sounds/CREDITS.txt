@@ -59,5 +59,9 @@ Kudos (all packs)
   sound/interface/ui_80_azeriteloot_toast.ogg and sound/spells/shadowwordpain_chest.ogg
   ((c) Blizzard Entertainment) by their file IDs.
 
+quiet\
+  The same recordings as above at 75% volume (made by tools/make_quiet.sh), played for friends'
+  kills and deaths. Same sources and owners as the originals.
+
 custom\
   Your own files. Nothing ships there.
