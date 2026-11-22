@@ -71,4 +71,4 @@ Sharing is on by default, and the first-run setup says so with a box to untick. 
 ### Sounds and fonts
 
 - **Announcer voices are not covered by the GPL.** They belong to their owners (the Unreal Tournament announcers are © Epic Games) and are included as they were in dG KillShot. Where each sound comes from: [sounds/CREDITS.txt](SpicyKillStreaks/sounds/CREDITS.txt). Rights holders can ask for removal through GitHub Issues.
-- **Fonts** are from Google Fonts: Anton, Bangers, Bebas Neue, Black Ops One, Russo One and Teko under the SIL Open Font License 1.1; Luckiest Guy and Permanent Marker under the Apache License 2.0. Licences: [Media/Fonts](SpicyKillStreaks/Media/Fonts).
+- **Fonts** are from Google Fonts: Anton, Bangers, Bebas Neue, Black Ops One, Russo One and Teko under the SIL Open Font License 1.1; Luckiest Guy and Permanent Marker under the Apache License 2.0. Grandstander, Orbitron and Press Start 2P are also OFL 1.1. Expressway is not shipped: it's offered when Daylight UI (which includes it) is installed. Licences: [Media/Fonts](SpicyKillStreaks/Media/Fonts).

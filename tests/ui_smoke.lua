@@ -110,7 +110,14 @@ do
     return xp(function() return f(unpack(args, 1, n)) end, handler)
   end
 end
-C_Timer = { After = function() end, NewTicker = function() return stub("ticker") end }
+-- Timers queue up; runTimers() runs the ones waiting (new ones wait for the next call)
+local timerQueue = {}
+C_Timer = { After = function(_, fn) timerQueue[#timerQueue + 1] = fn end, NewTicker = function() return stub("ticker") end }
+local function runTimers()
+  local due = timerQueue
+  timerQueue = {}
+  for _, fn in ipairs(due) do fn() end
+end
 C_ChatInfo = { RegisterAddonMessagePrefix = function() return true end, SendAddonMessage = function() return true end }
 Settings = nil
 SlashCmdList = {}
@@ -200,6 +207,13 @@ for _, id in ipairs({ "announcer", "sound", "screen", "friends", "board", "extra
     ns.ui.open()
   end)
 end
+step("resize handle lays the page out again", function()
+  local win = rawget(_G, "SpicyKillStreaksWindow")
+  local grip
+  for _, f in ipairs(ALLFRAMES) do if f.__parent == win and f.__scripts.OnMouseUp then grip = f end end
+  assert(grip, "no resize handle")
+  grip.__scripts.OnMouseDown(grip); grip.__scripts.OnMouseUp(grip)
+end)
 step("guild board post: title, one line per killer, most deaths", function()
   local sp = ns.core.special
   sp.readStats("Panda", { "V!", "0.7.0", sp.monthKey(), "12", "40", "Spice Guild", "3" }, false)
@@ -208,6 +222,7 @@ step("guild board post: title, one line per killer, most deaths", function()
   local sent = {}
   SendChatMessage = function(msg, channel) sent[#sent + 1] = channel .. ": " .. msg end
   sp.shareBoard("GUILD")
+  runTimers()
   assert(sent[1]:find("{skull} Spicy Kill Streaks: top killers of"), sent[1])
   assert(sent[2] == "GUILD: 1. Panda - 12 kill streak", sent[2])
   assert(sent[3] == "GUILD: 2. Bob - 9 kill streak", sent[3])

@@ -670,6 +670,12 @@ local FONTS = {
 	blackops = { name = "Black Ops One", path = MEDIA .. "Fonts\\BlackOpsOne.ttf" },
 	marker = { name = "Permanent Marker", path = MEDIA .. "Fonts\\PermanentMarker.ttf" },
 	teko = { name = "Teko", path = MEDIA .. "Fonts\\Teko.ttf" },
+	grandstander = { name = "Grandstander", path = MEDIA .. "Fonts\\Grandstander.ttf" },
+	orbitron = { name = "Orbitron", path = MEDIA .. "Fonts\\Orbitron.ttf" },
+	pressstart = { name = "Press Start 2P", path = MEDIA .. "Fonts\\PressStart2P.ttf" },
+	-- Not ours to ship: offered when Daylight UI is installed (it includes Expressway)
+	expressway = { name = "Expressway (Daylight UI)", path = "Interface\\AddOns\\DaylightUI\\Media\\fonts\\ExpresswayFree.ttf",
+		needs = "DaylightUI" },
 }
 local FONT_NAMES = {}
 for key, font in pairs(FONTS) do FONT_NAMES[key] = font.name end
@@ -678,7 +684,9 @@ for key, font in pairs(FONTS) do FONT_NAMES[key] = font.name end
 -- LibSharedMedia (SharedMedia, ElvUI, Details...), keyed "lsm:<name>". None is bundled.
 function SPECIAL.fontChoices()
 	local choices = {}
-	for key, name in pairs(FONT_NAMES) do choices[key] = name end
+	for key, name in pairs(FONT_NAMES) do
+		if SPECIAL.fontAvailable(key) then choices[key] = name end
+	end
 	local lsm = LibStub and LibStub("LibSharedMedia-3.0", true)
 	if lsm then
 		local ok, names = pcall(lsm.List, lsm, "font")
@@ -691,9 +699,18 @@ function SPECIAL.fontChoices()
 	return choices
 end
 
+-- A font that comes from another addon is only there while that addon is installed
+function SPECIAL.fontAvailable(key)
+	local f = FONTS[key]
+	if not f or not f.needs then return f ~= nil end
+	local loaded = (C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded)
+	local ok, result = pcall(loaded, f.needs)
+	return ok and result and true or false
+end
+
 -- The file for a font key, or nil (unknown, or its addon is gone: the standard font stays)
 function SPECIAL.fontPath(key)
-	if FONTS[key] then return FONTS[key].path end
+	if FONTS[key] then return SPECIAL.fontAvailable(key) and FONTS[key].path or nil end
 	local name = type(key) == "string" and strmatch(key, "^lsm:(.+)$")
 	local lsm = name and LibStub and LibStub("LibSharedMedia-3.0", true)
 	if not lsm then return nil end
@@ -2042,8 +2059,16 @@ function SPECIAL.shareBoard(channel)
 		channel = groupChannel()
 		if not channel then chat("You are not in a group.") return end
 	end
-	for _, line in ipairs(lines) do
-		if not pcall(SendChatMessage, line, channel) then chat("Could not post to chat.") return end
+	-- One line at a time: sent all at once, chat can show them out of order
+	local failed = false
+	for i, line in ipairs(lines) do
+		C_Timer.After((i - 1) * 0.35, function()
+			if failed then return end
+			if not pcall(SendChatMessage, line, channel) then
+				failed = true
+				chat("Could not post to chat.")
+			end
+		end)
 	end
 end
 
@@ -3378,7 +3403,7 @@ local function buildOptions()
 					bio = note(TITLE .. " " .. VERSION .. " is made by |cffff7733Spicy Bubbletea|r (Horde, WoW Forever PvP).\n\n"
 						.. "Feedback, ideas or something not working? Send Spicy Bubbletea a message in game, or open an issue "
 						.. "on GitHub (zednx/spicy-kill-streaks). A /sks debug log helps a lot with bugs.", 1),
-					credits = note("Based on dG KillShot by Lance Inman. The announcer voices came with dG KillShot; "
+					credits = note("Inspired by dG KillShot by Lance Inman. The announcer voices came with dG KillShot; "
 						.. "fonts are from Google Fonts (licences in Media\\Fonts). Libraries: Ace3.", 2),
 				},
 			},

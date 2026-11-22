@@ -9,3 +9,6 @@ Luckiest Guy     Apache License 2.0           Copyright 2010 Brian J. Bonislawsk
 Permanent Marker Apache License 2.0           Copyright 2010 Font Diner, Inc.
 Russo One        SIL Open Font License 1.1    Copyright 2011-2012 Jovanny Lemonad, Reserved Font Name "Russo"
 Teko (SemiBold)  SIL Open Font License 1.1    Copyright 2023 The Teko Project Authors
+Grandstander     SIL Open Font License 1.1    Copyright 2020 The Grandstander Project Authors
+Orbitron         SIL Open Font License 1.1    Copyright 2018 The Orbitron Project Authors
+Press Start 2P   SIL Open Font License 1.1    Copyright 2012 The Press Start 2P Project Authors

@@ -101,14 +101,44 @@ ui.kit = { paint = paint, makeButton = makeButton, makeClose = makeClose, COLORS
 -- ---------------------------------------------------------------------------------------------
 local changed = function() end
 
+-- A round texture (a circle mask over a flat colour); square where the client has no masks
+local CIRCLE = "Interface\\CHARACTERFRAME\\TempPortraitAlphaMask"
+local function circle(parent, size, layer)
+	local t = parent:CreateTexture(nil, layer or "ARTWORK")
+	t:SetSize(size, size)
+	t:SetColorTexture(1, 1, 1, 1)
+	if parent.CreateMaskTexture then
+		pcall(function()
+			local mask = parent:CreateMaskTexture()
+			mask:SetTexture(CIRCLE, "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
+			mask:SetAllPoints(t)
+			t:AddMaskTexture(mask)
+		end)
+	end
+	return t
+end
+
+-- A pill-shaped track: two round ends and a bar between them, all one colour
+local function pill(parent, width, height)
+	local p = { parts = {} }
+	local left = circle(parent, height)
+	left:SetPoint("TOPLEFT", 0, -2)
+	local right = circle(parent, height)
+	right:SetPoint("TOPLEFT", width - height, -2)
+	local mid = parent:CreateTexture(nil, "ARTWORK")
+	mid:SetPoint("TOPLEFT", height / 2, -2)
+	mid:SetSize(width - height, height)
+	p.parts = { left, right, mid }
+	function p:SetColor(r, g, b) for _, t in ipairs(self.parts) do t:SetColorTexture(r, g, b, 1) end end
+	p.anchor = left
+	return p
+end
+
 -- A switch with a label and an optional line of description
 local function toggle(label, desc, get, set)
 	local f = CreateFrame("Button", nil, UIParent)
-	local track = f:CreateTexture(nil, "ARTWORK")
-	track:SetSize(34, 18)
-	track:SetPoint("TOPLEFT", 0, -2)
-	local knob = f:CreateTexture(nil, "OVERLAY")
-	knob:SetSize(14, 14)
+	local track = pill(f, 34, 18)
+	local knob = circle(f, 14, "OVERLAY")
 	local title = text(f, 13)
 	title:SetPoint("TOPLEFT", 46, -3)
 	title:SetText(label)
@@ -121,16 +151,14 @@ local function toggle(label, desc, get, set)
 	local function refresh()
 		local on = get() and true or false
 		if on then
-			track:SetColorTexture(0.76, 0.27, 0.12, 1)
+			track:SetColor(0.76, 0.27, 0.12)
 			knob:SetColorTexture(1, 1, 1, 1)
-			knob:SetPoint("TOPLEFT", track, "TOPLEFT", 18, -2)
 		else
-			track:SetColorTexture(0.23, 0.19, 0.16, 1)
+			track:SetColor(0.23, 0.19, 0.16)
 			knob:SetColorTexture(0.75, 0.70, 0.65, 1)
-			knob:SetPoint("TOPLEFT", track, "TOPLEFT", 2, -2)
 		end
 		knob:ClearAllPoints()
-		knob:SetPoint("TOPLEFT", track, "TOPLEFT", on and 18 or 2, -2)
+		knob:SetPoint("TOPLEFT", track.anchor, "TOPLEFT", on and 18 or 2, -2)
 	end
 	f:SetScript("OnClick", function()
 		set(not get())
@@ -446,11 +474,12 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Settings window
 -- ---------------------------------------------------------------------------------------------
-local WIN_W, WIN_H = 940, 700
+local WIN_W, WIN_H = 940, 700   -- default size (it can be resized; the scale makes it a bit smaller)
+local WIN_SCALE = 0.85
 local NAV_W = 200
 local HEADER_H = 58
 local CONTENT_X = NAV_W + 24
-local CONTENT_W = WIN_W - CONTENT_X - 28
+local CONTENT_RIGHT = 28        -- space right of the content
 local PREVIEW_H = 132
 
 local win, scroll, navButtons, current
@@ -519,7 +548,8 @@ end
 local function buildPreview(parent)
 	local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 	box:SetPoint("TOPLEFT", parent, "TOPLEFT", CONTENT_X, -(HEADER_H + 14))
-	box:SetSize(CONTENT_W - 186, PREVIEW_H)
+	box:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -(CONTENT_RIGHT + 186), -(HEADER_H + 14))
+	box:SetHeight(PREVIEW_H)
 	paint(box, { 0.05, 0.065, 0.06 }, 1)
 	local tag = text(box, 11, COLORS.muted)
 	tag:SetPoint("TOPLEFT", 10, -8)
@@ -839,7 +869,7 @@ sections[#sections + 1] = { id = "about", label = "About", hint = "Who made it, 
 
 	c = newCard("Credits")
 	for _, line in ipairs({
-		{ "Original addon", "dG KillShot by Lance Inman" },
+		{ "Inspired by", "dG KillShot by Lance Inman" },
 		{ "Voices", "Unreal Tournament (Epic Games), Heroes of Newerth Flamboyant (S2 Games / Frostburn) and a few of WoW's own lines (Blizzard). Details in sounds\\CREDITS.txt" },
 		{ "Fonts", "Google Fonts, under the SIL Open Font License and Apache 2.0 (Media\\Fonts)" },
 		{ "Licence", "GNU GPL v2" },
@@ -878,8 +908,9 @@ local function styleNav(b, selected)
 end
 
 local function buildPage(section)
+	local width = math.floor(scroll:GetWidth() - 14)
 	local content = CreateFrame("Frame", nil, scroll)
-	content:SetWidth(CONTENT_W - 14)
+	content:SetWidth(width)
 	local y = 0
 	local ok, cards = pcall(section.build)
 	if not ok then
@@ -891,8 +922,8 @@ local function buildPage(section)
 		local f = CreateFrame("Frame", nil, content, "BackdropTemplate")
 		paint(f, COLORS.panel, 1)
 		f:SetPoint("TOPLEFT", 0, -y)
-		local h = layoutCard(f, card, CONTENT_W - 14)
-		f:SetSize(CONTENT_W - 14, h)
+		local h = layoutCard(f, card, width)
+		f:SetSize(width, h)
 		y = y + h + 14
 	end
 	content:SetHeight(math.max(y, 10))
@@ -934,7 +965,11 @@ end
 local function buildWindow()
 	local saved = db().global.window
 	win = CreateFrame("Frame", "SpicyKillStreaksWindow", UIParent, "BackdropTemplate")
-	win:SetSize(WIN_W, WIN_H)
+	win:SetSize(saved.width or WIN_W, saved.height or WIN_H)
+	win:SetScale(WIN_SCALE)
+	win:SetResizable(true)
+	if win.SetResizeBounds then win:SetResizeBounds(780, 560, 1600, 1200)
+	elseif win.SetMinResize then win:SetMinResize(780, 560) end
 	if saved.point then win:SetPoint(saved.point, UIParent, saved.point, saved.x or 0, saved.y or 0) else win:SetPoint("CENTER") end
 	win:SetFrameStrata("HIGH")
 	win:SetToplevel(true)
@@ -1026,7 +1061,7 @@ local function buildWindow()
 	local top = HEADER_H + 14 + PREVIEW_H + 16
 	scroll = CreateFrame("ScrollFrame", nil, win)
 	scroll:SetPoint("TOPLEFT", win, "TOPLEFT", CONTENT_X, -top)
-	scroll:SetSize(CONTENT_W - 6, WIN_H - top - 16)
+	scroll:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -(CONTENT_RIGHT + 6), 16)
 	scroll:EnableMouseWheel(true)
 	scroll:SetScript("OnMouseWheel", function(self, delta)
 		local range = self:GetVerticalScrollRange() or 0
@@ -1037,6 +1072,23 @@ local function buildWindow()
 	scroll.thumb = win:CreateTexture(nil, "OVERLAY")
 	scroll.thumb:SetWidth(4)
 	scroll.thumb:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 0.7)
+
+	-- Resize handle: drag the bottom-right corner; the page is laid out again for the new width
+	local grip = CreateFrame("Button", nil, win)
+	grip:SetSize(18, 18)
+	grip:SetPoint("BOTTOMRIGHT", -3, 3)
+	grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+	grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+	grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+	grip:SetScript("OnMouseDown", function() closePopup() win:StartSizing("BOTTOMRIGHT") end)
+	grip:SetScript("OnMouseUp", function()
+		win:StopMovingOrSizing()
+		saved.width, saved.height = win:GetSize()
+		local point, _, _, x, y = win:GetPoint()
+		saved.point, saved.x, saved.y = point, x, y
+		for id, page in pairs(pages) do page:Hide() pages[id] = nil end
+		ui.show(current or "announcer", true)
+	end)
 
 	win:SetScript("OnShow", function()
 		local t = S().snoozedUntil()
@@ -1091,6 +1143,8 @@ end
 -- info = { title, desc, sample = text, sampleFont = path, sampleColor = { r, g, b }, badge = text }
 local function setCard(b, info, selected)
 	b.title:SetText(info.title or "")
+	b.title:SetWidth(b:GetWidth() - 12)
+	b.title:SetWordWrap(false)
 	b.desc:SetWidth(b:GetWidth() - 24)
 	b.desc:SetText(info.desc or "")
 	if info.sample then
@@ -1200,7 +1254,12 @@ STEPS[2] = {
 	end,
 }
 
-local FONT_CARDS = { "impact", "bangers", "luckiest", "anton", "russo", "bebas" }
+local FONT_ROWS = {
+	{ "impact", "bangers", "luckiest", "anton", "russo", "bebas" },
+	{ "blackops", "expressway", "grandstander", "orbitron", "pressstart", "marker" },
+}
+-- Some fonts are wider or taller than others: their sample size on the cards
+local FONT_SAMPLE_SIZE = { pressstart = 11, orbitron = 16, blackops = 18, russo = 18, luckiest = 18, grandstander = 18 }
 STEPS[3] = {
 	title = "How much flair?",
 	subtitle = "What shows on screen when you get a kill, and in which font. Each click shows it in game.",
@@ -1208,8 +1267,20 @@ STEPS[3] = {
 	hint = "Drag the text somewhere else later with /sks unlock.",
 	build = function(page)
 		local presets = core().presets
-		local presetCards = cardRow(page, #presets, 0, 120, 200)
-		local fontCards = cardRow(page, #FONT_CARDS, 136, 110, 140)
+		local presetCards = cardRow(page, #presets, 0, 90, 200)
+		-- Two rows of fonts (Expressway only when Daylight UI is installed)
+		local fontKeys, fontCards = {}, {}
+		for r, row in ipairs(FONT_ROWS) do
+			local keys = {}
+			for _, key in ipairs(row) do
+				if core().fonts[key] and S().fontAvailable(key) then keys[#keys + 1] = key end
+			end
+			local cards = cardRow(page, #keys, 102 + (r - 1) * 100, 90, 140)
+			for i, b in ipairs(cards) do
+				fontKeys[#fontKeys + 1] = keys[i]
+				fontCards[#fontCards + 1] = b
+			end
+		end
 		return function()
 			local p = P()
 			for i, b in ipairs(presetCards) do
@@ -1227,10 +1298,12 @@ STEPS[3] = {
 				end)
 			end
 			for i, b in ipairs(fontCards) do
-				local key = FONT_CARDS[i]
+				local key = fontKeys[i]
 				local f = core().fonts[key]
-				setCard(b, { title = f and f.name or key, sample = "GODLIKE!", sampleFont = f and f.path,
-					sampleSize = 24, sampleColor = { 0.34, 0.89, 1 } }, p.fx.font == key)
+				local name = f and f.name:gsub(" %(.*%)", "") or key
+				setCard(b, { title = name, sample = "GODLIKE!", sampleFont = f and f.path,
+					sampleSize = FONT_SAMPLE_SIZE[key] or 22, sampleColor = { 0.34, 0.89, 1 } }, p.fx.font == key)
+				b.sample:SetPoint("TOP", 0, -18)
 				b:SetScript("OnClick", function()
 					p.fx.font = key
 					core().preview("big")
