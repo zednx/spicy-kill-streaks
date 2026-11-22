@@ -22,7 +22,8 @@ local GOT_FOR = 6          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 3       -- cards on screen at once (the oldest goes)
-local ROW_W = 220        -- narrow: the nine emoji go in two rows (5 + 4)
+local ROW_W = 220        -- the default card width: the nine emoji go in two rows (5 + 4)
+local ROW_W_MIN, ROW_W_MAX = 180, 380
 local CHIPS_PER_LINE = 5
 local PAD = 12          -- inside the card
 local TEXT_X = 34       -- the title, right of the icon
@@ -177,6 +178,11 @@ kudos.rows = rows -- (for the smoke test)
 -- newest card sits at the anchor and pushes the older ones up
 local function growsUp() return cfg().growup and true or false end
 
+-- The card width the player chose (Friends > Kudos > Card width)
+local function rowW()
+	return math.min(math.max(tonumber(cfg().width) or ROW_W, ROW_W_MIN), ROW_W_MAX)
+end
+
 local function place()
 	if not holder then return end
 	holder:ClearAllPoints()
@@ -237,7 +243,7 @@ end
 local function ensureHolder()
 	if holder then return holder end
 	holder = CreateFrame("Frame", "SpicyKillStreaksKudos", UIParent)
-	holder:SetSize(ROW_W, 1)
+	holder:SetSize(rowW(), 1)
 	holder:SetFrameStrata("MEDIUM")
 	holder:SetClampedToScreen(true)
 	holder:SetMovable(true)
@@ -269,7 +275,8 @@ end
 local function newRow(height, tone)
 	ensureHolder()
 	local row = CreateFrame("Frame", nil, holder, "BackdropTemplate")
-	row:SetSize(ROW_W, height)
+	row.w = rowW()
+	row:SetSize(row.w, height)
 	row:EnableMouse(true)
 	row.height = height
 	row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
@@ -358,7 +365,7 @@ local function expireAfter(row, seconds, bar)
 		if self.left < FADE then alpha = math.max(self.left / FADE, 0) end
 		self:SetAlpha(alpha)
 		if self.bar:IsShown() then
-			self.bar:SetWidth(math.max(1, (ROW_W - 6) * math.max(self.left, 0) / self.total))
+			self.bar:SetWidth(math.max(1, ((self.w or ROW_W) - 6) * math.max(self.left, 0) / self.total))
 		end
 		if self.left <= 0 then removeRow(self) end
 	end)
@@ -455,7 +462,7 @@ local function offer(info)
 	local x, line = PAD, 0
 	for i, id in ipairs(ORDER) do
 		local b = makeChip(row, id, function() send(row, info, id) end)
-		if i > 1 and ((i - 1) % CHIPS_PER_LINE == 0 or x + CHIP_W > ROW_W - PAD) then
+		if i > 1 and ((i - 1) % CHIPS_PER_LINE == 0 or x + CHIP_W > row.w - PAD) then
 			x, line = PAD, line + 1
 		end
 		b:SetPoint("TOPLEFT", x, -31 - line * (CHIP_H + CHIP_GAP))
@@ -579,7 +586,7 @@ function kudos.unlock(on)
 	ensureHolder()
 	if not mover then
 		mover = CreateFrame("Frame", nil, holder, "BackdropTemplate")
-		mover:SetSize(ROW_W, 24)
+		mover:SetSize(rowW(), 24)
 		mover:SetFrameLevel((holder:GetFrameLevel() or 1) + 20)
 		local k = kit()
 		if k then k.paint(mover, k.COLORS.accent, 0.35, k.COLORS.accent) end
@@ -623,7 +630,7 @@ end
 function kudos.makeGrip()
 	if kudos.grip or not holder then return end
 	local grip = CreateFrame("Frame", "SpicyKillStreaksKudosHandle", holder, "BackdropTemplate")
-	grip:SetSize(ROW_W, 14)
+	grip:SetSize(rowW(), 14)
 	grip:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
 	grip:SetBackdropColor(0.95, 0.55, 0.3, 0.35)
 	local dots = grip:CreateFontString(nil, "OVERLAY")
@@ -648,6 +655,15 @@ end
 -- At login (UI.lua): make the popup and its handle, so the handle is there before any card
 function kudos.init()
 	ensureHolder()
+end
+
+-- The card width (new cards use it; the handle and the drag bar follow at once)
+function kudos.setWidth(value)
+	cfg().width = math.min(math.max(math.floor(tonumber(value) or ROW_W), ROW_W_MIN), ROW_W_MAX)
+	if holder then holder:SetWidth(rowW()) end
+	if kudos.grip then kudos.grip:SetWidth(rowW()) end
+	if mover then mover:SetWidth(rowW()) end
+	place()
 end
 
 -- The popup's size (a scale, 0.6 to 1.2)
@@ -706,5 +722,5 @@ end
 -- The card stack for Aid.lua (help requests share the popup)
 kudos.cards = {
 	newRow = newRow, setTone = setTone, expireAfter = expireAfter, layout = layout, removeRow = removeRow,
-	fontString = fontString, ROW_W = ROW_W, PAD = PAD, TEXT_X = TEXT_X,
+	fontString = fontString, PAD = PAD, TEXT_X = TEXT_X,
 }

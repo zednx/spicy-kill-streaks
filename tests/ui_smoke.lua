@@ -313,6 +313,8 @@ step("kudos: offer, send, chat post, receive", function()
   grip.__scripts.OnEnter(grip); grip.__scripts.OnDragStart(grip); grip.__scripts.OnDragStop(grip); grip.__scripts.OnLeave(grip)
   assert(P.kudos.lx and P.kudos.ly, "position not saved"); kudos.resetPosition(); kudos.clear()
   -- growing upwards: lay out, drag, and back
+  kudos.setWidth(300); assert(P.kudos.width == 300); kudos.preview(); assert(kudos.rows[1].w == 300, "new cards not wider")
+  kudos.setWidth(9999); assert(P.kudos.width == 380, "width not capped"); kudos.setWidth(220); kudos.clear()
   kudos.setGrowUp(true); assert(P.kudos.growup)
   kudos.preview(); kudos.unlock(true)
   for _, f in ipairs(ALLFRAMES) do if f.__scripts.OnDragStop and f.__parent == rawget(_G, "SpicyKillStreaksKudos") then f.__scripts.OnDragStart(f); f.__scripts.OnDragStop(f) end end

@@ -741,7 +741,9 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
 		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
 	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.85 end,
-		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 1)
+		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 0.5)
+	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 220 end,
+		function(v) if ns.kudos then ns.kudos.setWidth(v) else P().kudos.width = v end end), 0.5)
 	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
 		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 1)
 	c:add(button("Preview friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.34)
@@ -1763,16 +1765,25 @@ end
 -- ---------------------------------------------------------------------------------------------
 local summary
 
-local function statBox(parent, label)
+local SUMMARY_W = 360
+local SUMMARY_PAD = 18
+
+-- A stat tile: a coloured strip on top, a big number, a small label
+local function statBox(parent, label, accent)
 	local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
 	paint(box, COLORS.field, 1)
-	box:SetSize(150, 74)
-	box.value = text(box, 30, { 1, 1, 1 })
-	font(box.value, 30, "OUTLINE", fontInfo("bangers"))
-	box.value:SetPoint("TOP", 0, -10)
+	box:SetSize((SUMMARY_W - SUMMARY_PAD * 2 - 12) / 2, 84)
+	local strip = box:CreateTexture(nil, "ARTWORK")
+	strip:SetPoint("TOPLEFT", 1, -1)
+	strip:SetPoint("TOPRIGHT", -1, -1)
+	strip:SetHeight(3)
+	strip:SetColorTexture(accent[1], accent[2], accent[3], 1)
+	box.value = text(box, 36, { 1, 1, 1 })
+	font(box.value, 36, "OUTLINE", fontInfo("bangers"))
+	box.value:SetPoint("TOP", 0, -14)
 	box.value:SetJustifyH("CENTER")
 	box.label = text(box, 11, COLORS.muted)
-	box.label:SetPoint("BOTTOM", 0, 9)
+	box.label:SetPoint("BOTTOM", 0, 10)
 	box.label:SetJustifyH("CENTER")
 	box.label:SetText(label)
 	return box
@@ -1780,7 +1791,7 @@ end
 
 local function buildSummary()
 	local f = CreateFrame("Frame", "SpicyKillStreaksMatchSummary", UIParent, "BackdropTemplate")
-	f:SetSize(340, 218)
+	f:SetSize(SUMMARY_W, 260)
 	f:SetPoint("TOP", UIParent, "TOP", 0, -140)
 	f:SetFrameStrata("DIALOG")
 	f:SetClampedToScreen(true)
@@ -1789,50 +1800,84 @@ local function buildSummary()
 	f:RegisterForDrag("LeftButton")
 	f:SetScript("OnDragStart", f.StartMoving)
 	f:SetScript("OnDragStop", f.StopMovingOrSizing)
-	paint(f, COLORS.bg, 0.96)
+	paint(f, COLORS.bg, 0.97)
+	-- Header: the setup's gradient, the chilli, the map in Bangers, a subtitle
 	local band = f:CreateTexture(nil, "BORDER")
 	band:SetPoint("TOPLEFT", 1, -1)
 	band:SetPoint("TOPRIGHT", -1, -1)
-	band:SetHeight(46)
+	band:SetHeight(58)
 	gradient(band, 0.20, 0.07, 0.05, 0.13, 0.06, 0.16)
-	f.title = text(f, 20, COLORS.gold)
-	font(f.title, 20, "OUTLINE", fontInfo("bangers"))
-	f.title:SetPoint("TOPLEFT", 16, -9)
+	local line = f:CreateTexture(nil, "ARTWORK")
+	line:SetPoint("TOPLEFT", band, "BOTTOMLEFT")
+	line:SetPoint("TOPRIGHT", band, "BOTTOMRIGHT")
+	line:SetHeight(1)
+	line:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 0.6)
+	local chilli = f:CreateTexture(nil, "ARTWORK")
+	chilli:SetTexture(core().MEDIA .. "Chilli")
+	chilli:SetSize(30, 30)
+	chilli:SetPoint("TOPLEFT", SUMMARY_PAD - 4, -14)
+	f.title = text(f, 22, COLORS.gold)
+	font(f.title, 22, "OUTLINE", fontInfo("bangers"))
+	f.title:SetPoint("TOPLEFT", SUMMARY_PAD + 32, -10)
+	f.title:SetPoint("RIGHT", -40, 0)
+	f.title:SetWordWrap(false)
 	f.sub = text(f, 11, COLORS.muted)
-	f.sub:SetPoint("TOPLEFT", 16, -30)
-	f.sub:SetText("Match summary")
+	f.sub:SetPoint("TOPLEFT", SUMMARY_PAD + 32, -36)
 	local close = makeClose(f, function() f:Hide() end)
-	close:SetPoint("TOPRIGHT", -6, -8)
-	f.kills = statBox(f, "Killing blows")
-	f.kills:SetPoint("TOPLEFT", 16, -58)
-	f.best = statBox(f, "Best kill streak")
-	f.best:SetPoint("TOPRIGHT", -16, -58)
+	close:SetPoint("TOPRIGHT", -8, -14)
+	-- Stats
+	f.kills = statBox(f, "Killing blows", COLORS.accent)
+	f.kills:SetPoint("TOPLEFT", SUMMARY_PAD, -74)
+	f.best = statBox(f, "Best kill streak", COLORS.gold)
+	f.best:SetPoint("TOPRIGHT", -SUMMARY_PAD, -74)
 	f.note = text(f, 10, COLORS.muted)
-	f.note:SetPoint("TOPLEFT", 16, -138)
-	f.note:SetPoint("RIGHT", -16, 0)
-	f.note:SetText("As counted by Spicy Kill Streaks (battlegrounds hide killing blows, so it's a best guess).")
+	f.note:SetPoint("TOP", 0, -168)
+	f.note:SetWidth(SUMMARY_W - SUMMARY_PAD * 2)
+	f.note:SetJustifyH("CENTER")
 	f.note:SetWordWrap(true)
+	-- Footer: a divider, the status on the left, the share buttons on the right
+	f.divider = f:CreateTexture(nil, "ARTWORK")
+	f.divider:SetHeight(1)
+	f.divider:SetColorTexture(COLORS.border[1], COLORS.border[2], COLORS.border[3], 1)
 	f.status = text(f, 11, COLORS.on)
-	f.status:SetPoint("BOTTOMLEFT", 16, 18)
 	local function share(channel)
 		if not f.match or not channel then return end
-		local line, hidden = S().matchLine(f.match)
+		local shared, hidden = S().matchLine(f.match)
 		-- Posted in the click itself: WoW Forever only lets an addon post to chat from a click.
 		-- A hidden scoreboard number may not be allowed in chat: then without it.
-		if pcall(SendChatMessage, line, channel) then
-			f.status:SetText("Shared.")
+		if pcall(SendChatMessage, shared, channel) then
+			f.status:SetText("Shared!")
 		elseif hidden and pcall(SendChatMessage, S().matchLine(f.match, true), channel) then
-			f.status:SetText("Shared (the game wouldn't let the killing blows into chat).")
+			f.status:SetText("Shared (without the killing blows).")
 		else
 			f.status:SetText("Could not post to chat.")
 		end
 	end
-	f.shareGroup = makeButton(f, "Share to battleground", function() share(f.groupChannel) end, "primary", 150, 28)
-	f.shareGroup:SetPoint("BOTTOMLEFT", 16, 40)
-	f.shareGuild = makeButton(f, "Share to guild", function() share("GUILD") end, "secondary", 150, 28)
-	f.shareGuild:SetPoint("BOTTOMRIGHT", -16, 40)
+	f.shareGroup = makeButton(f, "Share to battleground", function() share(f.groupChannel) end, "primary", nil, 28)
+	f.shareGuild = makeButton(f, "Share to guild", function() share("GUILD") end, "secondary", nil, 28)
 	tinsert(UISpecialFrames, "SpicyKillStreaksMatchSummary") -- Escape closes it
 	return f
+end
+
+-- Place the note, divider and buttons under the stats, and fit the card's height to them
+local function layoutSummary(f)
+	local noteH = math.max(12, f.note:GetStringHeight() or 12)
+	local footerY = 168 + noteH + 14
+	f.divider:ClearAllPoints()
+	f.divider:SetPoint("TOPLEFT", SUMMARY_PAD, -footerY)
+	f.divider:SetPoint("TOPRIGHT", -SUMMARY_PAD, -footerY)
+	-- buttons packed from the right
+	local x = -SUMMARY_PAD
+	for _, b in ipairs({ f.shareGuild, f.shareGroup }) do
+		b:ClearAllPoints()
+		if b:IsShown() then
+			b:SetPoint("TOPRIGHT", x, -(footerY + 12))
+			x = x - b:GetWidth() - 8
+		end
+	end
+	f.status:ClearAllPoints()
+	f.status:SetPoint("TOPLEFT", SUMMARY_PAD, -(footerY + 20))
+	f:SetHeight(footerY + 12 + 28 + 16)
 end
 
 function ui.matchSummary(match)
@@ -1846,7 +1891,7 @@ function ui.matchSummary(match)
 	local fromScoreboard = match.scoreKB ~= nil and pcall(summary.kills.value.SetText, summary.kills.value, match.scoreKB)
 	if not fromScoreboard then summary.kills.value:SetText(tostring(match.kills)) end
 	summary.note:SetText(fromScoreboard and "Killing blows from the scoreboard."
-		or "Killing blows as counted by Spicy Kill Streaks (battlegrounds hide them, so it may miss a few).")
+		or "Killing blows counted by Spicy Kill Streaks: a best guess, as battlegrounds hide them.")
 	summary.best.value:SetText(tostring(match.best))
 	summary.status:SetText("")
 	-- Battleground chat only while we are still in the match's group
@@ -1854,7 +1899,9 @@ function ui.matchSummary(match)
 	summary.shareGroup:SetShown(summary.groupChannel ~= nil)
 	summary.shareGroup:SetLabel(summary.groupChannel == "INSTANCE_CHAT" and "Share to battleground"
 		or (summary.groupChannel == "RAID" and "Share to raid" or "Share to party"))
+	summary.shareGroup:SetWidth(math.max(90, (summary.shareGroup.text:GetStringWidth() or 60) + 32))
 	summary.shareGuild:SetShown(core().inGuild())
+	layoutSummary(summary)
 	summary:Show()
 end
 

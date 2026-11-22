@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.6.1"
+local VERSION = "1.7.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -163,6 +163,7 @@ local defaults = {
 			sound = true,    -- kudos we get: the sender's /cheer, loot toasts as they stack, Shadow Word: Pain for a death
 			lx = 150, ly = 120, -- where the popup sits: from the left edge of the screen and its middle (left side by default)
 			scale = 0.85,    -- the popup's size
+			width = 220,     -- the cards' width (wider fits longer names and text)
 			growup = false,  -- new cards stack downwards from that point (true: upwards)
 			got = 0,         -- kudos received in total (flair)
 		},

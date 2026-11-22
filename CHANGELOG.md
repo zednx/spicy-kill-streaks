@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.7.0
+
+- **Kudos card width:** a **Card width** slider under Friends > Kudos makes the cards wider (or narrower), so longer names and text fit.
+- **A nicer battleground summary:** a proper header with the chilli, bigger numbers in tiles with a coloured strip, the note under them, and the share buttons in a footer (no more text running into a button).
+
 ## v1.6.1
 
 - **Ganks in a group:** killing a player 10+ levels below you now counts as a gank when you're in a group too. Before, a lower-level party member earning honor from the kill made it count as a normal kill.
