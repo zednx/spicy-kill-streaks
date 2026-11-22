@@ -599,7 +599,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("doheadshot", "Headshot", "Your first kill of a streak"), 0.5)
 	c:add(ptoggle("dofirstblood", "First Blood", "Your first kill of the day"), 0.5)
 	c:add(ptoggle("doretribution", "Retribution", "Kill someone who killed you in the last hour"), 0.5)
-	c:add(ptoggle("docomeback", "Meat's back on the menu", "Your first kill after dying 3+ times in a row"), 0.5)
+	c:add(ptoggle("docomeback", "Comeback", "A surprise for your first kill after dying 3+ times in a row"), 0.5)
 	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
@@ -1366,7 +1366,7 @@ STEPS[3] = {
 local CALLOUTS = {
 	{ key = "doheadshot", title = "Headshot", desc = "Your first kill of a streak (First Blood once a day)" },
 	{ key = "doretribution", title = "Retribution", desc = "Kill someone who killed you in the last hour" },
-	{ key = "docomeback", title = "Comeback", desc = "\"Meat's back on the menu\" after dying 3+ times" },
+	{ key = "docomeback", title = "Comeback", desc = "A surprise for your first kill after dying 3+ times" },
 	{ key = "dogank", title = "Shame ganks", desc = "You kill a player 10+ levels below you" },
 	{ key = "doganked", title = "Got ganked", desc = "A player 10+ levels above you kills you" },
 	{ key = "dopancake", title = "Pancake", desc = "Falling or drowning, yours or a friend's" },

@@ -2,6 +2,7 @@
 
 ## v1.6.0
 
+- **More surprises:** the comeback, the 20-kill secret and the gank sound are no longer named or playable on the Sound board or in the settings (their switches stay, with neutral names), so you find out what they are in game.
 - **The guild board stays in sync:** at login your board goes to the guild, and guildmates merge it, keeping the highest best streak, kills and deaths seen for each player (they only ever rise within a month, so the highest is the latest). They answer with just the entries where they know more, so everyone ends up with the same board, including players you were never online with. Your own numbers always come from you. Needs guild sharing on; nothing is sent from battlegrounds. Guildmates need 1.6.0 to take part.
 
 ## v1.5.0

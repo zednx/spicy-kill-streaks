@@ -13,7 +13,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 - **Special callouts**, only when the addon is sure (otherwise you get the normal callout):
   - *First Blood* on your first kill of the day
   - *Retribution* when you kill someone who killed you in the last hour (one in three is the Candle King: "You no take candle!")
-  - *Comeback*: your first kill after dying 3+ times in a row gets the Butcher's "meat's back on the menu"
+  - *Comeback*: your first kill after dying 3+ times in a row gets a surprise
   - *Pancake* when you (or a friend) die from falling or drowning
   - **Ganks**: kill a player 10+ levels below you and get shamed instead of a callout (it doesn't count towards your streak); die to one 10+ levels above you and hear "You got ganked"
 - **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer, with rainbow callouts). Pick a separate voice for *Humiliation*, or add your own sound files.

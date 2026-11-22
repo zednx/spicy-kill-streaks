@@ -13,13 +13,13 @@ Voice packs: male (this folder), female\, sexy\, baby\, humiliation\
 headshot.ogg, firstblood.ogg, pancake.ogg
   Added for Spicy Kill Streaks 0.6.0 from files supplied by the author. Source: to be confirmed.
 
-gank.ogg ("Pint sized!")
+gank.ogg
   Added for Spicy Kill Streaks 1.1.0 from a file supplied by the author. The file's metadata
   names sound designer Jamey Scott (2003). Source: to be confirmed.
 
-combowhore.ogg
-  Added for Spicy Kill Streaks 0.7.0 from a file supplied by the author. "Combo Whore" is an
-  Unreal Tournament 2004 announcer line ((c) Epic Games).
+secret20.ogg
+  Added for Spicy Kill Streaks 0.7.0 from a file supplied by the author. An Unreal Tournament
+  2004 announcer line ((c) Epic Games). (What it says is a surprise.)
 
 retribution.ogg
   Added for Spicy Kill Streaks 0.6.0. The file was encoded by Unreal Engine 3, so it comes from
@@ -49,9 +49,8 @@ Retribution, now and then (all packs)
   (c) Blizzard Entertainment) by its file ID.
 
 A kill after dying 3+ times in a row (all packs)
-  Not a file in the addon: it plays the game's own
-  sound/creature/thebutcher/vo_60_ogreraid_butcher_victory.ogg (the Butcher's "Looks like meat's
-  back on the menu, boys!", (c) Blizzard Entertainment) by its file ID.
+  Not a file in the addon: it plays one of the game's own creature voice lines (file ID 995083,
+  (c) Blizzard Entertainment). (What it says is a surprise.)
 
 Kudos (all packs)
   Not files in the addon: they play the game's own character /cheer voices
