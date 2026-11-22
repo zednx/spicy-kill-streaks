@@ -101,6 +101,13 @@ Sync with characters on your friends list who run the addon, not only party and 
   connected one) and faction: check `C_BattleNet.GetFriendAccountInfo` → `gameAccountInfo`
   (`isOnline`, `clientProgram == "WoW"`, `wowProjectID`, `realmID`/`realmName`, `factionName`).
 
+- **Per-friend choice:** a Friends list page. When it opens (and at login) the addon asks each
+  online friend "do you run it?"; they answer with their version and whether they share with
+  friends. One row per online friend: name (Battle.net or character), status ("SKS 1.8 - sharing",
+  "not sharing", "no SKS"), and two switches: **Share with them** and **Show their kills** (mute).
+  Muted names form an ignore list that could cover party and guild members too (mute a noisy
+  guildmate). Saved per character name/GUID.
+
 Research (Nov 2026, not yet tested on WoW Forever):
 - Addon **whispers** (`SendAddonMessage(..., "WHISPER", name)`) are documented to work outside
   instances, unthrottled there, but only to players on the same or a connected realm. An offline
