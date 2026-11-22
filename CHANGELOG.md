@@ -1,8 +1,11 @@
 # Changelog
 
-## v1.1.0
+## v1.1.1
 
 - Debug log: in battlegrounds it also writes what the game still lets addons read when the killing blows are hidden (your scoreboard row, honor, the hidden killing-blow event). `/sks note <text>` adds a marker to the log.
+
+## v1.1.0
+
 - **Ganks have a sound:** killing a player 10+ levels below you plays "Pint sized!", at most once a minute. Ganks in between play Headshot and Ownage in turn. Flamboyant keeps its own gank line.
 - **Kudos:** react to your friends' kills and deaths. When a party or guild member running the addon gets a kill, a small popup offers **Zug zug!**, **For the Horde!** (or Alliance, your own faction), **Hell yeah!** and **Thumbs up!**; when they die, **RIP** and **F**. One click sends it to them only: it pops up on their screen with a running count ("+3"), and flashes in their combat text too (smaller and calmer than a kill). Kudos stack: each one after the first for the same kill comes in a bit bigger and warmer, with a small sparkle burst that grows too.
 - **Kudos sounds** (the game's own): each kudos plays the sender's own `/cheer` (their race and sex), the 3rd for the same kill adds the legendary loot toast and the 5th the Azerite loot toast. RIP and F play Shadow Word: Pain. Switch them off under Friends > Kudos; **Preview kudos I get** and **Preview RIP / F** play them. Off by default: switch it on under Friends > Kudos. Getting kudos is on by default.
