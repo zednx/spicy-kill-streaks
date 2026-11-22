@@ -321,6 +321,20 @@ step("gank line at most once a minute, Headshot and Ownage in between", function
   assert(played[1]:find("gank%.ogg$"), played[1])
   assert(played[2]:find("headshot%.ogg$") and played[3]:find("ownage%.ogg$"), table.concat(played, " "))
 end)
+step("battleground probes write to the debug log", function()
+  local sp = ns.core.special
+  ns.core.debugLog.setEnabled(true)
+  GetNumBattlefieldScores = function() return 2 end
+  C_PvP.GetScoreInfo = function(i) return { name = i == 1 and "Tester" or "Other", killingBlows = 3, deaths = 1, honorableKills = 5, stats = { { pvpStatID = 1, name = "Flags", pvpStatValue = 0 } } } end
+  sp.probeScore(); sp.probeHonor(); sp.probePartyKill("Player-1-0001", "Player-1-0002")
+  fire("PARTY_KILL", nil, nil)
+  fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Someone dies, honorable kill")
+  SlashCmdList.SPICYKILLSTREAKS("note mine")
+  local text = ns.core.debugLog.text()
+  assert(text:find("probe: our score row:.*honorableKills=5"), "no score row probe")
+  assert(text:find("NOTE: mine"), "no note")
+  ns.core.debugLog.setEnabled(false)
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

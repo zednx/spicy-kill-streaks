@@ -2373,8 +2373,92 @@ local function deadEnemyTargetName()
 	return nil
 end
 
+-- Battleground probe, debug log only: what this client still lets an addon read when the
+-- killing blows on the scoreboard and PARTY_KILL's GUIDs are hidden. Reads, never compares
+-- a hidden value.
+local function shown(value)
+	if isSecret(value) then return "<secret>" end
+	return tostring(value)
+end
+SPECIAL.shown = shown
+
+-- Every field of our scoreboard row, and its extra stats
+function SPECIAL.probeScore()
+	if not debugOn or not (C_PvP and C_PvP.GetScoreInfo) then return end
+	local count = type(GetNumBattlefieldScores) == "function" and GetNumBattlefieldScores() or 0
+	if not usableNumber(count) then return end
+	local mineNames, firstNames = ownNames(), ownFirstNames()
+	for i = 1, count do
+		local ok, info = pcall(C_PvP.GetScoreInfo, i)
+		local name = ok and type(info) == "table" and info.name
+		if usableString(name) and (mineNames[name] or mineNames[(strsplit("-", name))] or isOurFamilyName(name, firstNames)) then
+			local parts = {}
+			for key, value in pairs(info) do
+				if type(key) == "string" and type(value) ~= "table" then parts[#parts + 1] = key .. "=" .. shown(value) end
+			end
+			table.sort(parts)
+			debugPrint("probe: our score row:", table.concat(parts, " "))
+			if type(info.stats) == "table" then
+				for _, stat in ipairs(info.stats) do
+					if type(stat) == "table" then
+						debugPrint("probe: stat", shown(stat.pvpStatID), shown(stat.name), "=", shown(stat.pvpStatValue))
+					end
+				end
+			end
+			return
+		end
+	end
+end
+
+-- Our honor and honorable kills, as far as they are readable
+function SPECIAL.probeHonor()
+	if not debugOn then return end
+	local parts = {}
+	for _, api in ipairs({ "GetPVPSessionStats", "GetPVPLifetimeStats" }) do
+		local fn = _G[api]
+		if type(fn) == "function" then
+			local ok, a, b, c = pcall(fn)
+			parts[#parts + 1] = api .. "=" .. (ok and (shown(a) .. "," .. shown(b) .. "," .. shown(c)) or "error")
+		end
+	end
+	if type(UnitHonor) == "function" then
+		local ok, honor = pcall(UnitHonor, "player")
+		parts[#parts + 1] = "UnitHonor=" .. (ok and shown(honor) or "error")
+	end
+	debugPrint("probe: honor", table.concat(parts, " "))
+end
+
+-- Hidden PARTY_KILL GUIDs: can the game still tell us whose they are, without our comparing them?
+function SPECIAL.probePartyKill(attackerGUID, targetGUID)
+	if not debugOn then return end
+	local function tokenOf(guid)
+		if type(UnitTokenFromGUID) ~= "function" then return "no API" end
+		local ok, token = pcall(UnitTokenFromGUID, guid)
+		if not ok then return "error" end
+		local isMe = "?"
+		if token ~= nil and type(UnitIsUnit) == "function" then
+			local ok2, same = pcall(UnitIsUnit, token, "player")
+			isMe = ok2 and shown(same) or "error"
+		end
+		return shown(token) .. " (is us: " .. isMe .. ")"
+	end
+	debugPrint("probe: PARTY_KILL attacker token", tokenOf(attackerGUID), "- target token", tokenOf(targetGUID))
+	if type(GetPlayerInfoByGUID) == "function" then
+		local ok, _, _, _, _, _, name = pcall(GetPlayerInfoByGUID, targetGUID)
+		debugPrint("probe: PARTY_KILL target name", ok and shown(name) or "error")
+	end
+end
+
+function events.CHAT_MSG_COMBAT_HONOR_GAIN(text)
+	debugPrint("CHAT_MSG_COMBAT_HONOR_GAIN", text)
+end
+
 function events.PLAYER_PVP_KILLS_CHANGED(unit)
 	debugPrint("PLAYER_PVP_KILLS_CHANGED", unit)
+	if unit == "player" and not isSecret(unit) then
+		SPECIAL.probeNext = true
+		SPECIAL.probeHonor()
+	end
 	-- Also fires for our raid unit ("raid9") and for other players; only "player" is counted
 	if isSecret(unit) or (unit ~= nil and unit ~= "player") then return end
 	-- An honorable kill: whatever we are waiting on was not a gank
@@ -2391,6 +2475,10 @@ function events.PLAYER_PVP_KILLS_CHANGED(unit)
 end
 
 function events.UPDATE_BATTLEFIELD_SCORE()
+	if SPECIAL.probeNext then
+		SPECIAL.probeNext = false
+		SPECIAL.probeScore()
+	end
 	local kb, deathsByEnemy
 	if testScore then
 		kb, deathsByEnemy = testScore.kb, testScore.deaths
@@ -2480,6 +2568,7 @@ function events.PARTY_KILL(attackerGUID, targetGUID)
 	-- Hidden (secret) GUIDs cannot even be compared: check before anything else
 	if not usableString(attackerGUID) or not usableString(targetGUID) then
 		debugPrint("PARTY_KILL with hidden or missing GUIDs:", attackerGUID, targetGUID)
+		SPECIAL.probePartyKill(attackerGUID, targetGUID)
 		return
 	end
 	debugPrint("PARTY_KILL attacker", attackerGUID, isOurs(attackerGUID) and "(us)" or "(someone else)", "target", targetGUID)
@@ -3603,6 +3692,9 @@ local function initialize()
 					chat("Kudos popup locked.")
 				end
 			end
+		elseif strmatch(command, "^note%s") then
+			-- A marker in the debug log, e.g. "/sks note mine" right after your own killing blow
+			if debugOn then debugPrint("NOTE:", strtrim(strsub(command, 5))) else chat("Turn the debug log on first: /sks debug") end
 		elseif command == "recap" then
 			SPECIAL.dumpRecap(true)
 		elseif command == "score" then
