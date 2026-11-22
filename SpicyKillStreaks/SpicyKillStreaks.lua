@@ -2037,8 +2037,8 @@ function SPECIAL.boardLine()
 	local top = SPECIAL.top(3)
 	if #top == 0 then return nil end
 	local parts = {}
-	for i, entry in ipairs(top) do parts[i] = i .. ". " .. entry.name .. " - " .. entry.best .. " kill streak" end
-	local line = "{skull} Top killers of " .. date("%B") .. ": " .. table.concat(parts, ", ")
+	for i, entry in ipairs(top) do parts[i] = i .. ". " .. entry.name .. " (" .. entry.best .. ")" end
+	local line = "{skull} Top kill streaks of " .. date("%B") .. ": " .. table.concat(parts, ", ")
 	local deaths = SPECIAL.topDeaths(3)
 	if #deaths > 0 then
 		local d = {}
