@@ -729,36 +729,6 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 		cards[#cards + 1] = c
 	end
 
-	c = newCard("Kudos")
-	local function ktoggle(key, label, desc)
-		return toggle(label, desc, function() return P().kudos[key] end, function(v) P().kudos[key] = v end)
-	end
-	c:add(ktoggle("give", "Kudos popup for friends' kills and deaths",
-		"Nine emoji to pick from, for kills and deaths alike"), 1)
-	c:add(ktoggle("receive", "Show kudos friends send me", nil), 0.5)
-	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 0.5)
-	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; Shadow Word: Pain for kudos on a death"), 1)
-	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
-		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
-	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.85 end,
-		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 0.5)
-	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 220 end,
-		function(v) if ns.kudos then ns.kudos.setWidth(v) else P().kudos.width = v end end), 0.5)
-	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
-		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 1)
-	c:add(button("Preview friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.34)
-	c:add(button("Preview kudos I get", function() if ns.kudos then ns.kudos.previewGot() end end), 0.33)
-	c:add(button("Preview a death", function() if ns.kudos then ns.kudos.previewDeath() end end), 0.33)
-	c:add(button("Unlock to move", function()
-		if not ns.kudos then return end
-		ns.kudos.unlock(true)
-		ns.kudos.preview()
-		core().chat("Drag the Kudos popup (any card, or the bar) where you want it, then press Lock.")
-	end), 0.34)
-	c:add(button("Lock", function() if ns.kudos then ns.kudos.unlock(false) end end), 0.33)
-	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)
-	cards[#cards + 1] = c
-
 	c = newCard("Request help")
 	local function atoggle(key, label, desc)
 		return toggle(label, desc, function() return P().aid[key] end, function(v) P().aid[key] = v end)
@@ -782,6 +752,53 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	cards[#cards + 1] = c
 	return cards
 end }
+
+sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to friends' kills", build = function()
+	local cards = {}
+	local function ktoggle(key, label, desc)
+		return toggle(label, desc, function() return P().kudos[key] end, function(v) P().kudos[key] = v end)
+	end
+	local sync = P().sync
+	local c = newCard(nil)
+	c:add(para("Kudos need sharing with your party or guild switched on (Friends page)."
+		.. ((sync.shareparty or sync.shareguild) and "" or "  |cffff7733Both are off right now.|r"), 13), 1)
+	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
+		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
+	cards[#cards + 1] = c
+
+	c = newCard("Kudos")
+	c:add(ktoggle("give", "Kudos popup for friends' kills and deaths",
+		"Nine emoji to pick from, for kills and deaths alike"), 1)
+	c:add(ktoggle("receive", "Show kudos friends send me", nil), 0.5)
+	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; a death has its own"), 0.5)
+	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 1)
+	cards[#cards + 1] = c
+
+	c = newCard("Popup")
+	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.85 end,
+		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 0.5)
+	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 220 end,
+		function(v) if ns.kudos then ns.kudos.setWidth(v) else P().kudos.width = v end end), 0.5)
+	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
+		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 1)
+	c:add(para("Move it any time: mouse over the spot where cards appear and drag the handle.", 12, COLORS.muted), 1)
+	c:add(button("Unlock to move", function()
+		if not ns.kudos then return end
+		ns.kudos.unlock(true)
+		ns.kudos.preview()
+		core().chat("Drag the Kudos popup by its bar where you want it, then press Lock.")
+	end), 0.34)
+	c:add(button("Lock", function() if ns.kudos then ns.kudos.unlock(false) end end), 0.33)
+	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)
+	cards[#cards + 1] = c
+
+	c = newCard("Preview")
+	c:add(button("Friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.34)
+	c:add(button("Kudos I get", function() if ns.kudos then ns.kudos.previewGot() end end), 0.33)
+	c:add(button("A death", function() if ns.kudos then ns.kudos.previewDeath() end end), 0.33)
+	cards[#cards + 1] = c
+	return cards
+end, dynamic = true }
 
 sections[#sections + 1] = { id = "board", label = "Guild board", hint = "This month's top killers", build = function()
 	local cards = {}

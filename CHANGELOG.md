@@ -2,7 +2,8 @@
 
 ## v1.7.0
 
-- **Kudos card width:** a **Card width** slider under Friends > Kudos makes the cards wider (or narrower), so longer names and text fit.
+- **Kudos has its own settings page** (between Friends and Guild board), with a note at the top that it needs party or guild sharing on.
+- **Kudos card width:** a **Card width** slider on the Kudos page makes the cards wider (or narrower), so longer names and text fit.
 - **A nicer battleground summary:** a proper header with the chilli, bigger numbers in tiles with a coloured strip, the note under them, and the share buttons in a footer (no more text running into a button).
 
 ## v1.6.1

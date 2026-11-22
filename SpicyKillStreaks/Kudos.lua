@@ -178,7 +178,7 @@ kudos.rows = rows -- (for the smoke test)
 -- newest card sits at the anchor and pushes the older ones up
 local function growsUp() return cfg().growup and true or false end
 
--- The card width the player chose (Friends > Kudos > Card width)
+-- The card width the player chose (the Kudos settings page)
 local function rowW()
 	return math.min(math.max(tonumber(cfg().width) or ROW_W, ROW_W_MIN), ROW_W_MAX)
 end

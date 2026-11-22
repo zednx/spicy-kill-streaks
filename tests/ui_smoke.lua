@@ -173,7 +173,7 @@ end)
 step("core exported", function() assert(ns.core and ns.core.db(), "no core/db") end)
 step("minimap button made", function() assert(rawget(_G, "SpicyKillStreaksMinimapButton"), "no minimap button") end)
 step("/sks opens the new window", function() SlashCmdList.SPICYKILLSTREAKS(""); assert(rawget(_G, "SpicyKillStreaksWindow").__shown, "window not shown") end)
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "board", "extras", "soundboard", "about" }) do
   step("section " .. id, function() ns.ui.show(id) end)
 end
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
@@ -195,7 +195,7 @@ ns.core.openClassic = function() end
 ns.core.openStats = function() end
 -- Click every control on every page: switches, dropdowns (and the rows of their lists), sliders,
 -- text boxes and buttons
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "board", "extras", "soundboard", "about" }) do
   step("every control on " .. id, function()
     ns.ui.open()
     local before = #ALLFRAMES
