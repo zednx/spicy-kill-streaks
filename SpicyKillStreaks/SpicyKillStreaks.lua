@@ -397,6 +397,8 @@ end
 
 -- True (once) when victim killed us within the window
 function SPECIAL.takeRetribution(victim)
+	-- An unnamed victim ("an enemy": battleground best guess, scoreboard) is never a match
+	if victim == UNKNOWN_VICTIM then return false end
 	local key = SPECIAL.key(victim)
 	local list = db.char.recentKillers
 	if debugOn then

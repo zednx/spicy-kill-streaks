@@ -395,6 +395,13 @@ step("messages refused by the lockdown are held and sent after combat", function
   C_ChatInfo.SendAddonMessage = old
   sp.retryScheduled = false
 end)
+step("an unnamed victim is never a Retribution", function()
+  local sp = ns.core.special
+  ns.core.db().char.recentKillers = ns.core.db().char.recentKillers or {}
+  ns.core.db().char.recentKillers["an"] = time()
+  assert(sp.takeRetribution("an enemy") == false, "\"an enemy\" matched a killer named An")
+  ns.core.db().char.recentKillers["an"] = nil
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end
