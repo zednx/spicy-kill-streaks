@@ -29,7 +29,7 @@ local function stub(name)
     if k == "GetNumPoints" then return function() return 0 end end
     if k == "GetPoint" then return function() return "CENTER", nil, "CENTER", 0, 0 end end
     if k == "GetFrameLevel" then return function() return 1 end end
-    if k == "GetStringWidth" or k == "GetStringHeight" then return function() return 10 end end
+    if k == "GetStringWidth" or k == "GetStringHeight" or k == "GetTextWidth" then return function() return 10 end end
     if k == "IsMouseOver" then return function() return false end end
     if k == "GetFont" then return function() return "Fonts\\FRIZQT__.TTF", 12, "" end end
     if k == "GetObjectType" then return function() return "Frame" end end
@@ -67,6 +67,7 @@ STANDARD_TEXT_FONT = "Fonts\\FRIZQT__.TTF"
 table.wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 UISpecialFrames = {}; tinsert = table.insert; tremove = table.remove; wipe = function(t) for k in pairs(t) do t[k] = nil end return t end
 strsplit = function(sep, s, n) local out = {} for part in (s .. sep):gmatch("(.-)" .. sep:gsub("%p", "%%%0")) do out[#out + 1] = part end return unpack(out) end
+string.split = function(sep, s) return strsplit(sep, s) end
 strtrim = function(s) return (s:gsub("^%s+", ""):gsub("%s+$", "")) end
 strlower, strupper, strsub, strmatch, strfind, strlen, strrep, format, gsub = string.lower, string.upper, string.sub, string.match, string.find, string.len, string.rep, string.format, string.gsub
 floor, ceil, abs, min, max, sqrt = math.floor, math.ceil, math.abs, math.min, math.max, math.sqrt
@@ -169,6 +170,36 @@ step("minimap drag", function() mini.__scripts.OnDragStart(mini); mini.__scripts
 step("snooze + badge", function() ns.core.special.snooze(30); ns.ui.updateMinimap(); assert(ns.core.special.snoozedUntil()) end)
 step("menu with snooze", function() mini.__scripts.OnClick(mini, "RightButton"); mini.__scripts.OnClick(mini, "RightButton") end)
 step("sound board plays", function() for _, e in ipairs(ns.core.special.soundBoard()) do if not e.section then ns.core.special.playForced(e[3]) end end end)
+-- (The classic AceConfig window needs WoW's own templates, which the fake API lacks; it is
+-- unchanged library code, so these buttons are left out here.)
+ns.core.openClassic = function() end
+ns.core.openStats = function() end
+-- Click every control on every page: switches, dropdowns (and the rows of their lists), sliders,
+-- text boxes and buttons
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "board", "extras", "soundboard", "about" }) do
+  step("every control on " .. id, function()
+    ns.ui.open()
+    local before = #ALLFRAMES
+    ns.ui.show(id, true)
+    local made = {}
+    for i = before + 1, #ALLFRAMES do made[#made + 1] = ALLFRAMES[i] end
+    for _, f in ipairs(made) do
+      local sc = f.__scripts
+      if sc.OnClick then
+        sc.OnClick(f, "LeftButton")
+        -- a dropdown's list: pick its first row
+        local list = rawget(_G, "SpicyKillStreaksDropdown")
+        if list and list.__shown then
+          for _, row in ipairs(list.rows) do if row.__scripts.OnClick then row.__scripts.OnClick(row) break end end
+        end
+      end
+      if sc.OnValueChanged then sc.OnValueChanged(f, 1) end
+      if sc.OnEnterPressed then sc.OnEnterPressed(f) end
+      if sc.OnMouseWheel then sc.OnMouseWheel(f, -1) end
+    end
+    ns.ui.open()
+  end)
+end
 step("guild board post: title, one line per killer, most deaths", function()
   local sp = ns.core.special
   sp.readStats("Panda", { "V!", "0.7.0", sp.monthKey(), "12", "40", "Spice Guild", "3" }, false)
@@ -183,7 +214,8 @@ step("guild board post: title, one line per killer, most deaths", function()
   assert(sent[#sent]:find("{cross} Most deaths: Bob %(14%), Panda %(3%)"), sent[#sent])
 end)
 step("guild board page with deaths", function() ns.ui.open(); ns.ui.show("board") end)
-step("/sks minimap hides", function() SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
+step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
+step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end
 for _, l in ipairs(printed) do if l:find("failed") or l:find("Could not") then io.write("chat: ", l, "\n") end end
 os.exit(failed and 1 or 0)

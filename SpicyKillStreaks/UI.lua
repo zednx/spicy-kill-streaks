@@ -1,10 +1,9 @@
 -- Spicy Kill Streaks: the settings window, the first-run setup and the minimap button.
 --
 -- Everything here talks to SpicyKillStreaks.lua through ns.core (see the bottom of that file).
--- The controls are AceGUI widgets (bundled in libs\) inside our own window frames; the old
--- AceConfig options stay available as a fallback (/sks classic).
+-- All controls are drawn here (switches, dropdowns, sliders, text boxes, buttons) in the same
+-- dark style as the setup; the old AceConfig options stay available as a fallback (/sks classic).
 local ADDON, ns = ...
-local AceGUI = LibStub("AceGUI-3.0")
 
 local ui = {}
 ns.ui = ui
@@ -18,201 +17,387 @@ local WHITE = "Interface\\Buttons\\WHITE8X8"
 local COLORS = {
 	bg = { 0.086, 0.071, 0.059 },
 	panel = { 0.125, 0.10, 0.085 },
+	field = { 0.07, 0.06, 0.05 },
 	border = { 0.29, 0.24, 0.20 },
 	accent = { 0.91, 0.33, 0.16 },
 	gold = { 0.95, 0.76, 0.31 },
+	text = { 0.93, 0.90, 0.87 },
 	muted = { 0.66, 0.61, 0.56 },
+	on = { 0.35, 1, 0.48 },
 }
 
 -- ---------------------------------------------------------------------------------------------
--- Frames
+-- Drawing helpers
 -- ---------------------------------------------------------------------------------------------
-local function paint(frame, color, alpha)
+local function paint(frame, color, alpha, border)
 	frame:SetBackdrop({ bgFile = WHITE, edgeFile = WHITE, edgeSize = 1 })
 	frame:SetBackdropColor(color[1], color[2], color[3], alpha or 0.97)
-	frame:SetBackdropBorderColor(COLORS.border[1], COLORS.border[2], COLORS.border[3], 1)
+	local b = border or COLORS.border
+	frame:SetBackdropBorderColor(b[1], b[2], b[3], 1)
 end
 
--- A movable dark window with a title bar, a chilli and a close button
-local function makeWindow(name, width, height, title, saved)
-	local w = CreateFrame("Frame", name, UIParent, "BackdropTemplate")
-	w:SetSize(width, height)
-	if saved and saved.point then
-		w:SetPoint(saved.point, UIParent, saved.point, saved.x or 0, saved.y or 0)
-	else
-		w:SetPoint("CENTER")
+local function font(fs, size, flags, path)
+	fs:SetFont(path or STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, flags or "")
+end
+
+local function text(parent, size, color, layer)
+	local fs = parent:CreateFontString(nil, layer or "OVERLAY")
+	font(fs, size)
+	local c = color or COLORS.text
+	fs:SetTextColor(c[1], c[2], c[3])
+	fs:SetJustifyH("LEFT")
+	return fs
+end
+
+local function gradient(tex, r1, g1, b1, r2, g2, b2)
+	tex:SetColorTexture(1, 1, 1, 1)
+	local ok = CreateColor and pcall(tex.SetGradient, tex, "HORIZONTAL", CreateColor(r1, g1, b1, 1), CreateColor(r2, g2, b2, 1))
+	if not ok then ok = pcall(tex.SetGradient, tex, "HORIZONTAL", r1, g1, b1, r2, g2, b2) end
+	if not ok then tex:SetColorTexture(r1, g1, b1, 1) end
+end
+
+-- A flat button. kind: "primary" (orange), "secondary" (dark, bordered) or "ghost" (text only)
+local function makeButton(parent, label, onClick, kind, width, height)
+	local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
+	kind = kind or "secondary"
+	b.text = text(b, 13, kind == "ghost" and COLORS.gold or COLORS.text)
+	b.text:SetPoint("CENTER")
+	b.text:SetJustifyH("CENTER")
+	b.text:SetText(label)
+	if kind == "primary" then
+		paint(b, { 0.76, 0.27, 0.12 }, 1, COLORS.accent)
+	elseif kind == "secondary" then
+		paint(b, { 0.17, 0.135, 0.115 }, 1, { 0.38, 0.31, 0.26 })
 	end
-	w:SetFrameStrata("HIGH")
-	w:SetToplevel(true)
-	w:SetClampedToScreen(true)
-	w:SetMovable(true)
-	w:EnableMouse(true)
-	w:RegisterForDrag("LeftButton")
-	w:SetScript("OnDragStart", w.StartMoving)
-	w:SetScript("OnDragStop", function()
-		w:StopMovingOrSizing()
-		if saved then
-			local point, _, _, x, y = w:GetPoint()
-			saved.point, saved.x, saved.y = point, x, y
-		end
-	end)
-	paint(w, COLORS.bg)
-	tinsert(UISpecialFrames, name) -- Esc closes it
-
-	local bar = w:CreateTexture(nil, "BORDER")
-	bar:SetColorTexture(0.12, 0.10, 0.08, 1)
-	bar:SetPoint("TOPLEFT", 1, -1)
-	bar:SetPoint("TOPRIGHT", -1, -1)
-	bar:SetHeight(44)
-
-	local icon = w:CreateTexture(nil, "ARTWORK")
-	icon:SetTexture(core().MEDIA .. "Chilli")
-	icon:SetSize(28, 28)
-	icon:SetPoint("TOPLEFT", 12, -8)
-
-	w.title = w:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-	w.title:SetPoint("LEFT", icon, "RIGHT", 8, 0)
-	w.title:SetTextColor(COLORS.gold[1], COLORS.gold[2], COLORS.gold[3])
-	w.title:SetText(title)
-
-	local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
-	close:SetPoint("TOPRIGHT", -4, -6)
-	w.close = close
-	w:Hide()
-	return w
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetPoint("TOPLEFT", 1, -1)
+	hl:SetPoint("BOTTOMRIGHT", -1, 1)
+	hl:SetColorTexture(1, 1, 1, kind == "ghost" and 0.04 or 0.08)
+	b:SetSize(width or math.max(90, (b.text:GetStringWidth() or 60) + 32), height or 30)
+	b:SetScript("OnClick", onClick)
+	function b:SetLabel(t) self.text:SetText(t) end
+	return b
 end
 
-local function headerButton(parent, text, width, onClick)
-	local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	b:SetSize(width, 24)
-	b:SetText(text)
+-- A small "x" close button
+local function makeClose(parent, onClick)
+	local b = CreateFrame("Button", nil, parent)
+	b:SetSize(28, 28)
+	b.text = text(b, 18, COLORS.muted)
+	b.text:SetPoint("CENTER", 0, 1)
+	b.text:SetText("x")
+	b:SetScript("OnEnter", function() b.text:SetTextColor(1, 1, 1) end)
+	b:SetScript("OnLeave", function() b.text:SetTextColor(COLORS.muted[1], COLORS.muted[2], COLORS.muted[3]) end)
 	b:SetScript("OnClick", onClick)
 	return b
 end
 
--- An AceGUI container living in one of our frames, at a fixed size
-local function hostContainer(kind, parent, x, y, width, height)
-	local c = AceGUI:Create(kind)
-	c:SetLayout("List")
-	c.frame:SetParent(parent)
-	c.frame:ClearAllPoints()
-	c.frame:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-	c:SetWidth(width)
-	c:SetHeight(height)
-	c.frame:Show()
-	return c
-end
+-- For the debug log window in SpicyKillStreaks.lua
+ui.kit = { paint = paint, makeButton = makeButton, makeClose = makeClose, COLORS = COLORS }
 
 -- ---------------------------------------------------------------------------------------------
--- Widgets (AceGUI)
+-- Controls. Each returns an item for a card: { frame, height = n or fit = function(width) }.
+-- `changed` runs after any change (the live preview listens).
 -- ---------------------------------------------------------------------------------------------
-local refreshPreview -- defined with the preview below
+local changed = function() end
 
-local function add(parent, widget, width)
-	if width then
-		if width <= 1 then widget:SetRelativeWidth(width) else widget:SetWidth(width) end
+-- A switch with a label and an optional line of description
+local function toggle(label, desc, get, set)
+	local f = CreateFrame("Button", nil, UIParent)
+	local track = f:CreateTexture(nil, "ARTWORK")
+	track:SetSize(34, 18)
+	track:SetPoint("TOPLEFT", 0, -2)
+	local knob = f:CreateTexture(nil, "OVERLAY")
+	knob:SetSize(14, 14)
+	local title = text(f, 13)
+	title:SetPoint("TOPLEFT", 46, -3)
+	title:SetText(label)
+	local sub
+	if desc then
+		sub = text(f, 11, COLORS.muted)
+		sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -4)
+		sub:SetText(desc)
 	end
-	parent:AddChild(widget)
-	return widget
+	local function refresh()
+		local on = get() and true or false
+		if on then
+			track:SetColorTexture(0.76, 0.27, 0.12, 1)
+			knob:SetColorTexture(1, 1, 1, 1)
+			knob:SetPoint("TOPLEFT", track, "TOPLEFT", 18, -2)
+		else
+			track:SetColorTexture(0.23, 0.19, 0.16, 1)
+			knob:SetColorTexture(0.75, 0.70, 0.65, 1)
+			knob:SetPoint("TOPLEFT", track, "TOPLEFT", 2, -2)
+		end
+		knob:ClearAllPoints()
+		knob:SetPoint("TOPLEFT", track, "TOPLEFT", on and 18 or 2, -2)
+	end
+	f:SetScript("OnClick", function()
+		set(not get())
+		refresh()
+		changed()
+	end)
+	refresh()
+	return {
+		frame = f, refresh = refresh,
+		fit = function(width)
+			title:SetWidth(width - 50)
+			if sub then sub:SetWidth(width - 50) end
+			return sub and (24 + (sub:GetStringHeight() or 12)) or 24
+		end,
+	}
 end
 
-local function card(parent, title)
-	local g = AceGUI:Create("InlineGroup")
-	g:SetTitle(title)
-	g:SetLayout("Flow")
-	g:SetFullWidth(true)
-	parent:AddChild(g)
-	return g
+-- The shared popup list for dropdowns, and an invisible layer that closes it on outside clicks
+local popup, catcher
+local POPUP_ROWS = 12
+local function closePopup()
+	if popup then popup:Hide() end
+	if catcher then catcher:Hide() end
 end
 
-local function label(parent, text, width, font)
-	local l = AceGUI:Create("Label")
-	l:SetText(text)
-	if font then l:SetFontObject(font) end
-	if width then add(parent, l, width) else l:SetFullWidth(true); parent:AddChild(l) end
+local function openPopup(anchor, list, order, current, onPick)
+	if not popup then
+		catcher = CreateFrame("Button", nil, UIParent)
+		catcher:SetAllPoints(UIParent)
+		catcher:SetFrameStrata("FULLSCREEN")
+		catcher:SetScript("OnClick", closePopup)
+		catcher:Hide()
+		popup = CreateFrame("Frame", "SpicyKillStreaksDropdown", UIParent, "BackdropTemplate")
+		popup:SetFrameStrata("FULLSCREEN_DIALOG")
+		paint(popup, { 0.06, 0.05, 0.04 }, 1)
+		popup:EnableMouse(true)
+		popup:EnableMouseWheel(true)
+		popup.rows = {}
+		for i = 1, POPUP_ROWS do
+			local row = CreateFrame("Button", nil, popup)
+			row:SetHeight(24)
+			row:SetPoint("TOPLEFT", 4, -4 - (i - 1) * 24)
+			row:SetPoint("TOPRIGHT", -4, -4 - (i - 1) * 24)
+			row.text = text(row, 13)
+			row.text:SetPoint("LEFT", 10, 0)
+			row.mark = row:CreateTexture(nil, "BACKGROUND")
+			row.mark:SetAllPoints()
+			row.mark:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 0.25)
+			local hl = row:CreateTexture(nil, "HIGHLIGHT")
+			hl:SetAllPoints()
+			hl:SetColorTexture(1, 1, 1, 0.08)
+			popup.rows[i] = row
+		end
+		tinsert(UISpecialFrames, "SpicyKillStreaksDropdown")
+		popup:SetScript("OnHide", function() if catcher then catcher:Hide() end end)
+	end
+	popup.offset = 0
+	local function render()
+		for i, row in ipairs(popup.rows) do
+			local key = order[popup.offset + i]
+			if key then
+				row.text:SetText(list[key])
+				row.mark:SetShown(key == current)
+				row:SetScript("OnClick", function()
+					closePopup()
+					onPick(key)
+				end)
+				row:Show()
+			else
+				row:Hide()
+			end
+		end
+	end
+	popup:SetScript("OnMouseWheel", function(_, delta)
+		popup.offset = math.max(0, math.min(#order - POPUP_ROWS, popup.offset - delta))
+		render()
+	end)
+	-- Start scrolled to the current choice
+	for i, key in ipairs(order) do
+		if key == current then popup.offset = math.max(0, math.min(#order - POPUP_ROWS, i - 3)) end
+	end
+	render()
+	popup:SetSize(math.max(anchor:GetWidth(), 180), math.min(#order, POPUP_ROWS) * 24 + 8)
+	popup:ClearAllPoints()
+	popup:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, -2)
+	catcher:Show()
+	popup:Show()
+end
+
+local function fieldLabel(f, label)
+	local l = text(f, 11, COLORS.muted)
+	l:SetPoint("TOPLEFT", 0, 0)
+	l:SetText(label)
 	return l
 end
 
-local function check(parent, text, desc, get, set, width)
-	local c = AceGUI:Create("CheckBox")
-	c:SetLabel(text)
-	if desc then c:SetDescription(desc) end
-	c:SetValue(get() and true or false)
-	c:SetCallback("OnValueChanged", function(_, _, value)
-		set(value and true or false)
-		if refreshPreview then refreshPreview() end
+-- A dropdown: a label, then a field showing the choice; click for the list
+local function dropdown(label, list, order, get, set)
+	local f = CreateFrame("Frame", nil, UIParent)
+	fieldLabel(f, label)
+	local b = CreateFrame("Button", nil, f, "BackdropTemplate")
+	paint(b, COLORS.field, 1)
+	b:SetPoint("TOPLEFT", 0, -16)
+	b:SetPoint("TOPRIGHT", 0, -16)
+	b:SetHeight(30)
+	local value = text(b, 13)
+	value:SetPoint("LEFT", 10, 0)
+	value:SetPoint("RIGHT", -28, 0)
+	value:SetWordWrap(false)
+	local arrow = b:CreateTexture(nil, "OVERLAY")
+	arrow:SetTexture("Interface\\ChatFrame\\ChatFrameExpandArrow")
+	arrow:SetSize(14, 14)
+	arrow:SetPoint("RIGHT", -8, 0)
+	pcall(arrow.SetRotation, arrow, -math.pi / 2)
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.05)
+	local function refresh() value:SetText(list[get()] or tostring(get() or "")) end
+	b:SetScript("OnClick", function()
+		if popup and popup:IsShown() then closePopup() return end
+		openPopup(b, list, order, get(), function(key)
+			set(key)
+			refresh()
+			changed()
+		end)
 	end)
-	return add(parent, c, width or 0.5)
+	refresh()
+	return { frame = f, height = 48, refresh = refresh }
 end
 
-local function ptoggle(parent, key, text, desc, width)
-	return check(parent, text, desc, function() return P()[key] end, function(v) P()[key] = v end, width)
-end
-
-local function fxtoggle(parent, key, text, desc, width)
-	return check(parent, text, desc, function() return P().fx[key] end, function(v) P().fx[key] = v end, width)
-end
-
--- path: { "shareparty" } or { "party", "feed" } inside profile.sync
-local function synctoggle(parent, path, text, desc, width)
-	local function tbl()
-		local t = P().sync
-		for i = 1, #path - 1 do t = t[path[i]] end
-		return t
+-- A slider with its value on the right
+local function slider(label, min, max, step, get, set, isPercent)
+	local f = CreateFrame("Frame", nil, UIParent)
+	fieldLabel(f, label)
+	local shown = text(f, 11, COLORS.gold)
+	shown:SetPoint("TOPRIGHT", 0, 0)
+	shown:SetJustifyH("RIGHT")
+	local s = CreateFrame("Slider", nil, f, "BackdropTemplate")
+	s:SetOrientation("HORIZONTAL")
+	s:SetPoint("TOPLEFT", 0, -22)
+	s:SetPoint("TOPRIGHT", 0, -22)
+	s:SetHeight(8)
+	paint(s, COLORS.field, 1)
+	s:SetThumbTexture(WHITE)
+	local thumb = s:GetThumbTexture()
+	if thumb then
+		thumb:SetSize(10, 18)
+		thumb:SetVertexColor(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 1)
 	end
-	return check(parent, text, desc, function() return tbl()[path[#path]] end,
-		function(v) tbl()[path[#path]] = v end, width)
+	s:SetMinMaxValues(min, max)
+	s:SetValueStep(step)
+	if s.SetObeyStepOnDrag then s:SetObeyStepOnDrag(true) end
+	local function show(v)
+		shown:SetText(isPercent and (math.floor(v * 100 + 0.5) .. "%") or tostring(v))
+	end
+	local quiet = false
+	s:SetScript("OnValueChanged", function(_, v)
+		v = math.floor(v / step + 0.5) * step
+		show(v)
+		if quiet then return end
+		set(v)
+		changed()
+	end)
+	s:EnableMouseWheel(true)
+	s:SetScript("OnMouseWheel", function(self, delta) self:SetValue(self:GetValue() + delta * step) end)
+	local function refresh()
+		quiet = true
+		s:SetValue(get())
+		show(get())
+		quiet = false
+	end
+	refresh()
+	return { frame = f, height = 40, refresh = refresh }
 end
 
-local function dropdown(parent, text, list, order, get, set, width)
-	local d = AceGUI:Create("Dropdown")
-	d:SetLabel(text)
-	d:SetList(list, order)
-	d:SetValue(get())
-	d:SetCallback("OnValueChanged", function(_, _, key)
-		set(key)
-		if refreshPreview then
-			refreshPreview()
-			-- A font file used for the first time can take a moment to load: draw again shortly
-			C_Timer.After(0.1, refreshPreview)
-			C_Timer.After(0.5, refreshPreview)
+-- A one-line text box; saves on Enter or when it loses focus
+local function edit(label, get, set)
+	local f = CreateFrame("Frame", nil, UIParent)
+	fieldLabel(f, label)
+	local e = CreateFrame("EditBox", nil, f, "BackdropTemplate")
+	paint(e, COLORS.field, 1)
+	e:SetPoint("TOPLEFT", 0, -16)
+	e:SetPoint("TOPRIGHT", 0, -16)
+	e:SetHeight(30)
+	e:SetAutoFocus(false)
+	font(e, 13)
+	e:SetTextColor(COLORS.text[1], COLORS.text[2], COLORS.text[3])
+	e:SetTextInsets(10, 10, 0, 0)
+	local function save()
+		set(e:GetText())
+		changed()
+	end
+	e:SetScript("OnEnterPressed", function(self) save() self:ClearFocus() end)
+	e:SetScript("OnEditFocusLost", save)
+	e:SetScript("OnEscapePressed", function(self) self:SetText(get() or "") self:ClearFocus() end)
+	local function refresh() e:SetText(get() or "") end
+	refresh()
+	return { frame = f, height = 48, refresh = refresh }
+end
+
+local function button(label, onClick, kind)
+	local b = makeButton(UIParent, label, onClick, kind)
+	return { frame = b, height = 30, stretch = true }
+end
+
+-- Text that wraps to the card's width
+local function para(str, size, color)
+	local f = CreateFrame("Frame", nil, UIParent)
+	local fs = text(f, size or 13, color)
+	fs:SetPoint("TOPLEFT")
+	fs:SetText(str)
+	return {
+		frame = f, fs = fs,
+		fit = function(width)
+			fs:SetWidth(width)
+			return math.max(size or 13, fs:GetStringHeight() or 13) + 2
+		end,
+	}
+end
+
+local function gap(height) return { frame = CreateFrame("Frame", nil, UIParent), height = height or 6 } end
+
+-- ---------------------------------------------------------------------------------------------
+-- Cards and pages
+-- ---------------------------------------------------------------------------------------------
+local CARD_PAD, ITEM_GAP_X, ITEM_GAP_Y = 18, 18, 12
+
+-- A card holds items laid out left to right in rows; `width` is a share of the row (default 1)
+local function newCard(title)
+	local card = { title = title, items = {} }
+	function card:add(item, width)
+		item.width = width or 1
+		self.items[#self.items + 1] = item
+		return item
+	end
+	return card
+end
+
+-- Place a card's items inside `frame` at `width`; returns the card's height
+local function layoutCard(frame, card, width)
+	local inner = width - CARD_PAD * 2
+	local y = CARD_PAD
+	if card.title then
+		local t = text(frame, 15, COLORS.gold)
+		t:SetPoint("TOPLEFT", CARD_PAD, -CARD_PAD + 2)
+		t:SetText(card.title)
+		y = y + 28
+	end
+	local x, rowHeight, used = 0, 0, 0
+	for _, item in ipairs(card.items) do
+		local w = math.floor(inner * item.width - (item.width < 1 and ITEM_GAP_X * (1 - item.width) or 0))
+		if used + item.width > 1.001 then
+			y = y + rowHeight + ITEM_GAP_Y
+			x, rowHeight, used = 0, 0, 0
 		end
-	end)
-	return add(parent, d, width or 0.5)
-end
-
-local function slider(parent, text, min, max, step, get, set, isPercent, width)
-	local s = AceGUI:Create("Slider")
-	s:SetLabel(text)
-	s:SetSliderValues(min, max, step)
-	if isPercent then s:SetIsPercent(true) end
-	s:SetValue(get())
-	s:SetCallback("OnValueChanged", function(_, _, value)
-		set(value)
-		if refreshPreview then refreshPreview() end
-	end)
-	return add(parent, s, width or 0.5)
-end
-
-local function edit(parent, text, get, set, width)
-	local e = AceGUI:Create("EditBox")
-	e:SetLabel(text)
-	e:SetText(get() or "")
-	e:SetCallback("OnEnterPressed", function(_, _, value) set(value) end)
-	return add(parent, e, width or 1)
-end
-
-local function button(parent, text, onClick, width)
-	local b = AceGUI:Create("Button")
-	b:SetText(text)
-	b:SetCallback("OnClick", onClick)
-	return add(parent, b, width or 0.33)
-end
-
-local function space(parent, width)
-	local l = AceGUI:Create("Label")
-	l:SetText(" ")
-	return add(parent, l, width or 1)
+		local f = item.frame
+		f:SetParent(frame)
+		f:ClearAllPoints()
+		f:SetPoint("TOPLEFT", frame, "TOPLEFT", CARD_PAD + x, -y)
+		local h = item.fit and item.fit(w) or item.height or 24
+		f:SetSize(w, h)
+		f:Show()
+		x = x + w + ITEM_GAP_X
+		used = used + item.width
+		rowHeight = math.max(rowHeight, h)
+	end
+	return y + rowHeight + CARD_PAD
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -241,14 +426,32 @@ end
 
 local function sample(file) return function() S().playForced(file) end end
 
+-- Shortcuts for settings in the saved profile
+local function ptoggle(key, label, desc)
+	return toggle(label, desc, function() return P()[key] end, function(v) P()[key] = v end)
+end
+local function fxtoggle(key, label, desc)
+	return toggle(label, desc, function() return P().fx[key] end, function(v) P().fx[key] = v end)
+end
+-- path: { "shareparty" } or { "party", "feed" } inside profile.sync
+local function synctoggle(path, label, desc)
+	local function tbl()
+		local t = P().sync
+		for i = 1, #path - 1 do t = t[path[i]] end
+		return t
+	end
+	return toggle(label, desc, function() return tbl()[path[#path]] end, function(v) tbl()[path[#path]] = v end)
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Settings window
 -- ---------------------------------------------------------------------------------------------
-local WIN_W, WIN_H = 900, 660
-local NAV_W = 190
-local CONTENT_X = NAV_W + 16
-local CONTENT_W = WIN_W - CONTENT_X - 16
-local PREVIEW_H = 128
+local WIN_W, WIN_H = 940, 700
+local NAV_W = 200
+local HEADER_H = 58
+local CONTENT_X = NAV_W + 24
+local CONTENT_W = WIN_W - CONTENT_X - 28
+local PREVIEW_H = 132
 
 local win, scroll, navButtons, current
 local preview = {}
@@ -265,396 +468,534 @@ local SAMPLES = {
 	{ key = "gank", label = "Gank", text = "Bully!", small = "You ganked a level 12 Gnome.", grey = true, sound = "gank.ogg" },
 }
 
-refreshPreview = function()
+local function refreshPreview()
 	if not preview.big or not win or not win:IsShown() then return end
 	local p = P()
 	local s = SAMPLES[preview.index or 2]
 	local path = S().fontPath(p.fx.font) or STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
 	local scale = p.fx.scale or 1
-	local ok = pcall(preview.big.SetFont, preview.big, path, math.floor(30 * scale + 0.5), "THICKOUTLINE")
-	if not ok then preview.big:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 30, "THICKOUTLINE") end
-	pcall(preview.small.SetFont, preview.small, path, 14, "OUTLINE")
+	local ok = pcall(preview.big.SetFont, preview.big, path, math.floor(32 * scale + 0.5), "THICKOUTLINE")
+	if not ok then font(preview.big, 32, "THICKOUTLINE") end
+	pcall(preview.small.SetFont, preview.small, path, 15, "OUTLINE")
 	-- A font string only redraws in a new font when its text changes: clear it first
 	preview.big:SetText("")
 	preview.small:SetText("")
+	for i, b in ipairs(preview.buttons) do
+		b:SetBackdropBorderColor(unpack(i == (preview.index or 2) and COLORS.accent or { 0.38, 0.31, 0.26 }))
+	end
 
-	local text = s.text
 	local packText = S().PACK_TEXT[p.soundpack]
 	if not p.doscreen then
-		preview.big:SetText("(nothing on screen: \"Show kills on screen\" is off)")
-		preview.big:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 13, "")
+		font(preview.big, 14)
+		preview.big:SetText("Nothing shows on screen: \"Big callouts on screen\" is off (Screen)")
 		preview.big:SetTextColor(0.5, 0.5, 0.5)
-		preview.small:SetText("")
 		return
 	end
-	if packText and not s.grey then
-		preview.big:SetText(S().rainbow(packText[text] or text))
+	if not p.fx.fancytext then
+		-- Plain mode: simple red lines, like the original addon
+		font(preview.big, 20, "OUTLINE")
+		preview.big:SetText(s.text)
+		preview.big:SetTextColor(1, 0.2, 0.2)
+	elseif packText and not s.grey then
+		preview.big:SetText(S().rainbow(packText[s.text] or s.text))
 		preview.big:SetTextColor(1, 1, 1)
 	else
-		preview.big:SetText(text)
+		preview.big:SetText(s.text)
 		local c = s.grey and { 0.7, 0.7, 0.7 } or (s.multi and { 1, 0.85, 0.2 })
 			or core().rankColors[S().LEVEL[s.level] or s.level] or { 1, 1, 1 }
 		preview.big:SetTextColor(c[1], c[2], c[3])
 	end
-	if not p.fx.fancytext then
-		-- Plain mode: simple red lines, like the original addon
-		preview.big:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 20, "OUTLINE")
-		preview.big:SetText(s.text)
-		preview.big:SetTextColor(1, 0.2, 0.2)
-	end
 	preview.small:SetText(s.small)
+end
+
+-- Any change redraws the preview, and once more shortly after (a font used for the first time
+-- can take a moment to load)
+changed = function()
+	refreshPreview()
+	C_Timer.After(0.15, refreshPreview)
+	C_Timer.After(0.6, refreshPreview)
 end
 
 local function buildPreview(parent)
 	local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-	box:SetPoint("TOPLEFT", parent, "TOPLEFT", CONTENT_X, -56)
-	box:SetSize(CONTENT_W - 170, PREVIEW_H)
-	paint(box, { 0.06, 0.075, 0.068 }, 1)
-	local tag = box:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	tag:SetPoint("TOPLEFT", 8, -6)
-	tag:SetText("Live preview")
+	box:SetPoint("TOPLEFT", parent, "TOPLEFT", CONTENT_X, -(HEADER_H + 14))
+	box:SetSize(CONTENT_W - 186, PREVIEW_H)
+	paint(box, { 0.05, 0.065, 0.06 }, 1)
+	local tag = text(box, 11, COLORS.muted)
+	tag:SetPoint("TOPLEFT", 10, -8)
+	tag:SetText("LIVE PREVIEW")
 	preview.big = box:CreateFontString(nil, "OVERLAY")
 	preview.big:SetPoint("CENTER", 0, 10)
-	preview.big:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 30, "THICKOUTLINE")
+	font(preview.big, 32, "THICKOUTLINE")
 	preview.small = box:CreateFontString(nil, "OVERLAY")
 	preview.small:SetPoint("TOP", preview.big, "BOTTOM", 0, -6)
-	preview.small:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 14, "OUTLINE")
+	font(preview.small, 15, "OUTLINE")
 	preview.small:SetTextColor(1, 0.91, 0.84)
 
 	-- Sample buttons: show that moment, and play its sound
+	preview.buttons = {}
 	for i, s in ipairs(SAMPLES) do
-		local b = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-		b:SetSize(76, 22)
-		b:SetText(s.label)
-		b:SetPoint("TOPLEFT", box, "TOPRIGHT", 8 + ((i - 1) % 2) * 80, -((math.floor((i - 1) / 2)) * 26))
-		b:SetScript("OnClick", function()
+		local b = makeButton(parent, s.label, function()
 			preview.index = i
 			refreshPreview()
 			S().playForced(s.sound)
-		end)
+		end, "secondary", 84, 28)
+		b:SetPoint("TOPLEFT", box, "TOPRIGHT", 14 + ((i - 1) % 2) * 90, -((math.floor((i - 1) / 2)) * 34))
+		preview.buttons[i] = b
 	end
-	local real = CreateFrame("Button", nil, parent, "UIPanelButtonTemplate")
-	real:SetSize(156, 22)
-	real:SetText("Show in game")
-	real:SetPoint("TOPLEFT", box, "TOPRIGHT", 8, -82)
-	real:SetScript("OnClick", function() core().preview(preview.index == 5 and "big" or (preview.index == 3 and "multi" or "rank")) end)
+	local real = makeButton(parent, "Show in game", function()
+		core().preview(preview.index == 5 and "big" or (preview.index == 3 and "multi" or "rank"))
+	end, "primary", 174, 28)
+	real:SetPoint("TOPLEFT", box, "TOPRIGHT", 14, -104)
 	preview.index = 2
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Sections
+-- Sections: each returns a list of cards
 -- ---------------------------------------------------------------------------------------------
-sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callouts and streaks", build = function(c)
-	local g = card(c, "When to call it")
-	dropdown(g, "Kill sounds", STYLES, { "dota", "ut" }, function() return P().style end, function(v)
+sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callouts and streaks", build = function()
+	local cards = {}
+	local c = newCard("When to call it")
+	c:add(dropdown("Kill sounds", STYLES, { "dota", "ut" }, function() return P().style end, function(v)
 		P().style = v
-		ui.show("announcer")
-	end, 0.6)
+		C_Timer.After(0, function() ui.show("announcer", true) end)
+	end), P().style == "ut" and 0.6 or 1)
 	if P().style == "ut" then
-		slider(g, "Unreal style: kills between sounds", 1, 10, 1, function() return P().utrank end,
-			function(v) P().utrank = v end, false, 0.4)
+		c:add(slider("Kills between sounds", 1, 10, 1, function() return P().utrank end, function(v) P().utrank = v end), 0.4)
 	end
+	cards[#cards + 1] = c
 
-	g = card(c, "Callouts")
-	ptoggle(g, "doheadshot", "Headshot", "Your first kill of a streak")
-	ptoggle(g, "dofirstblood", "First Blood", "Your first kill of the day")
-	ptoggle(g, "doretribution", "Retribution", "Kill someone who killed you in the last hour")
-	ptoggle(g, "docomeback", "Meat's back on the menu", "Your first kill after dying 3+ times in a row")
-	ptoggle(g, "dopancake", "Pancake", "You or a friend die from falling or drowning")
-	ptoggle(g, "dogank", "Shame ganks", "You kill a player 10+ levels below you: no streak, a bit of shame")
-	ptoggle(g, "doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you")
-	ptoggle(g, "dopve", "Count NPC kills", "Spammy, handy for trying it out")
-	ptoggle(g, "dozonechange", "Reset streaks when changing zone", nil)
+	c = newCard("Callouts")
+	c:add(ptoggle("doheadshot", "Headshot", "Your first kill of a streak"), 0.5)
+	c:add(ptoggle("dofirstblood", "First Blood", "Your first kill of the day"), 0.5)
+	c:add(ptoggle("doretribution", "Retribution", "Kill someone who killed you in the last hour"), 0.5)
+	c:add(ptoggle("docomeback", "Meat's back on the menu", "Your first kill after dying 3+ times in a row"), 0.5)
+	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
+	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
+	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
+	c:add(ptoggle("dopve", "Count NPC kills", "Spammy, handy for trying it out"), 0.5)
+	c:add(ptoggle("dozonechange", "Reset streaks when changing zone", nil), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Streak ladder")
+	c = newCard("Streak ladder")
 	local ladder = {
-		{ "Headshot", "1", "ffd95a" }, { "Ownage", "2", "ffd95a" }, { "Killing\nSpree", "3", "ff9a26" },
+		{ "Headshot", "1", "ffd95a" }, { "Ownage", "2", "ffd95a" }, { "Killing Spree", "3", "ff9a26" },
 		{ "Rampage", "4", "ff5a1a" }, { "Dominating", "5", "ff3d3d" }, { "Unstoppable", "6", "ff5fa8" },
-		{ "Wicked\nSick", "7", "c07bff" }, { "Godlike", "8+", "57e3ff" },
+		{ "Wicked Sick", "7", "c07bff" }, { "Godlike", "8+", "57e3ff" },
 	}
-	local cell = 1 / #ladder - 0.001
 	for _, step in ipairs(ladder) do
-		local name = label(g, "|cff" .. step[3] .. step[1] .. "|r", cell, GameFontNormal)
+		local f = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+		paint(f, COLORS.field, 1)
+		local count = text(f, 24, { 1, 1, 1 })
+		count:SetPoint("TOP", 0, -10)
+		count:SetJustifyH("CENTER")
+		count:SetText(step[2])
+		local name = text(f, 11)
+		name:SetPoint("BOTTOM", 0, 8)
 		name:SetJustifyH("CENTER")
-		name:SetJustifyV("BOTTOM")
-		name:SetHeight(30)
+		name:SetText("|cff" .. step[3] .. step[1] .. "|r")
+		c:add({ frame = f, height = 66, fit = function(w) name:SetWidth(w - 4) return 66 end }, 1 / #ladder)
 	end
-	for _, step in ipairs(ladder) do
-		local kills = label(g, step[2], cell, GameFontHighlightHuge or GameFontNormalHuge)
-		kills:SetJustifyH("CENTER")
-	end
-	space(g, 1)
-	label(g, "Kills in a row without dying. Godlike plays on every kill from 8 on. There are a couple of secrets too.", 1,
-		GameFontDisableSmall)
+	c:add(para("Kills in a row without dying. Godlike plays on every kill from 8 on. There are a couple of secrets too.",
+		12, COLORS.muted), 1)
+	cards[#cards + 1] = c
+	return cards
 end }
 
-sections[#sections + 1] = { id = "sound", label = "Sound", hint = "Voice, muting, snooze", build = function(c)
-	local g = card(c, "Voice")
-	ptoggle(g, "dosound", "Play sounds", nil, 1)
-	dropdown(g, "Voice pack", PACKS, PACK_ORDER, function() return P().soundpack end, function(v)
+sections[#sections + 1] = { id = "sound", label = "Sound", hint = "Voice, muting, snooze", build = function()
+	local cards = {}
+	local c = newCard("Voice")
+	c:add(ptoggle("dosound", "Play sounds", nil), 1)
+	c:add(dropdown("Voice pack", PACKS, PACK_ORDER, function() return P().soundpack end, function(v)
 		P().soundpack = v
 		S().playForced("killingspree.ogg")
-	end, 0.5)
-	button(g, "Play a sample", sample("killingspree.ogg"), 0.25)
-	space(g, 0.2)
-	dropdown(g, "When you die, play", HUMILIATION, HUMILIATION_ORDER, function() return P().humiliationvoice end,
+	end), 0.7)
+	c:add(button("Play a sample", sample("killingspree.ogg")), 0.3)
+	c:add(dropdown("When you die, play", HUMILIATION, HUMILIATION_ORDER, function() return P().humiliationvoice end,
 		function(v)
 			P().humiliationvoice = v
 			S().playForced("humiliation")
-		end, 0.5)
-	button(g, "Play it", sample("humiliation"), 0.25)
-	space(g, 0.2)
-	dropdown(g, "Sound channel", CHANNELS, CHANNEL_ORDER, function() return P().soundchannel end,
-		function(v) P().soundchannel = v end, 0.5)
-	space(g, 0.45)
-	ptoggle(g, "dodeathsound", "Humiliation when you die")
-	ptoggle(g, "doprepare", "\"Prepare\" before a battleground or duel")
+		end), 0.7)
+	c:add(button("Play it", sample("humiliation")), 0.3)
+	c:add(dropdown("Sound channel", CHANNELS, CHANNEL_ORDER, function() return P().soundchannel end,
+		function(v) P().soundchannel = v end), 0.7)
+	c:add(gap(1), 0.3)
+	c:add(ptoggle("dodeathsound", "Humiliation when you die", nil), 0.5)
+	c:add(ptoggle("doprepare", "\"Prepare\" before a battleground or duel", nil), 0.5)
+	cards[#cards + 1] = c
 
-	g = card(c, "Quiet time")
-	label(g, "Mute sounds in:", 1, GameFontNormal)
-	ptoggle(g, "mutebg", "Battlegrounds & arenas", nil, 0.33)
-	ptoggle(g, "mutedungeon", "Dungeons", nil, 0.33)
-	ptoggle(g, "muteraid", "Raids", nil, 0.33)
-	local status = label(g, "", 1, GameFontHighlight)
-	local function update()
-		local t = S().snoozedUntil()
-		status:SetText(t and ("|cffffd100Snoozed|r until " .. date("%H:%M", t) .. ". Text and effects still show.")
-			or "Snooze all sounds for a while:")
-	end
-	update()
-	button(g, "30 minutes", function() S().snooze(30) update() end, 0.25)
-	button(g, "1 hour", function() S().snooze(60) update() end, 0.25)
-	button(g, "Wake up", function() S().snooze("off") update() end, 0.25)
+	c = newCard("Quiet time")
+	c:add(para("Mute sounds in", 12, COLORS.muted), 1)
+	c:add(ptoggle("mutebg", "Battlegrounds & arenas", nil), 0.34)
+	c:add(ptoggle("mutedungeon", "Dungeons", nil), 0.33)
+	c:add(ptoggle("muteraid", "Raids", nil), 0.33)
+	local t = S().snoozedUntil()
+	c:add(para(t and ("|cffffd100Snoozed|r until " .. date("%H:%M", t) .. ". Text and effects still show.")
+		or "Snooze all sounds for a while:", 13), 1)
+	local function snooze(arg) return function() S().snooze(arg) ui.show("sound", true) end end
+	c:add(button("30 minutes", snooze(30)), 0.25)
+	c:add(button("1 hour", snooze(60)), 0.25)
+	c:add(button("Wake up", snooze("off"), "primary"), 0.25)
+	cards[#cards + 1] = c
+	return cards
 end }
 
-sections[#sections + 1] = { id = "screen", label = "Screen", hint = "Text, effects, position", build = function(c)
-	local g = card(c, "Where kills show")
-	ptoggle(g, "doscreen", "Big callouts on screen")
-	ptoggle(g, "dochat", "A line in chat")
-	edit(g, "Kill text ($k you, $v victim, $s streak; press Enter)", function() return P().kstext end,
-		function(v) P().kstext = v end, 1)
+sections[#sections + 1] = { id = "screen", label = "Screen", hint = "Text, effects, position", build = function()
+	local cards = {}
+	local c = newCard("Where kills show")
+	c:add(ptoggle("doscreen", "Big callouts on screen", nil), 0.5)
+	c:add(ptoggle("dochat", "A line in chat", nil), 0.5)
+	c:add(edit("Kill text  ($k you, $v victim, $s streak)", function() return P().kstext end,
+		function(v) P().kstext = v end), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Effects")
-	fxtoggle(g, "fancytext", "Animated text", "Off: simple red lines, like the original addon")
+	c = newCard("Effects")
+	c:add(fxtoggle("fancytext", "Animated text", "Off: simple red lines, like the original addon"), 1)
 	local choices = S().fontChoices()
-	dropdown(g, "Font", choices, sortedKeys(choices, "impact"), function() return P().fx.font end,
-		function(v) P().fx.font = v end, 0.5)
-	slider(g, "Text size", 0.5, 2, 0.05, function() return P().fx.scale end, function(v) P().fx.scale = v end, true, 0.5)
-	fxtoggle(g, "sparkles", "Sparkle burst", "Bigger for new ranks and multikills", 0.5)
-	dropdown(g, "Sparkles", SPARKLES, SPARKLE_ORDER, function() return P().fx.sparklestyle end,
-		function(v) P().fx.sparklestyle = v end, 0.25)
-	slider(g, "How many", 5, 80, 1, function() return P().fx.sparklecount end,
-		function(v) P().fx.sparklecount = v end, false, 0.25)
-	fxtoggle(g, "flash", "Screen-edge flash", "On multikills and big streaks", 1)
+	c:add(dropdown("Font", choices, sortedKeys(choices, "impact"), function() return P().fx.font end,
+		function(v) P().fx.font = v end), 0.5)
+	c:add(slider("Text size", 0.5, 2, 0.05, function() return P().fx.scale end, function(v) P().fx.scale = v end, true), 0.5)
+	c:add(fxtoggle("sparkles", "Sparkle burst", "Bigger for new ranks and multikills"), 1)
+	c:add(dropdown("Sparkles", SPARKLES, SPARKLE_ORDER, function() return P().fx.sparklestyle end,
+		function(v) P().fx.sparklestyle = v end), 0.5)
+	c:add(slider("How many", 5, 80, 1, function() return P().fx.sparklecount end,
+		function(v) P().fx.sparklecount = v end), 0.5)
+	c:add(fxtoggle("flash", "Screen-edge flash", "On multikills and big streaks"), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Position")
-	button(g, "Unlock to move", function() core().unlock(true) core().chat("Drag the orange box, then press Lock.") end, 0.25)
-	button(g, "Lock", function() core().unlock(false) end, 0.25)
-	button(g, "Reset position", function()
+	c = newCard("Position")
+	c:add(button("Unlock to move", function() core().unlock(true) core().chat("Drag the orange box, then press Lock.") end), 0.25)
+	c:add(button("Lock", function() core().unlock(false) end), 0.25)
+	c:add(button("Reset position", function()
 		P().fx.x, P().fx.y = core().defaults.profile.fx.x, core().defaults.profile.fx.y
 		core().placeAnchor()
-	end, 0.25)
-	button(g, "Show in game", function() core().preview("big") end, 0.25)
+	end), 0.25)
+	c:add(button("Show in game", function() core().preview("big") end, "primary"), 0.25)
+	cards[#cards + 1] = c
+	return cards
 end }
 
-sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and guild sharing", build = function(c)
-	local g = card(c, "Share my kills and deaths with")
-	synctoggle(g, { "shareparty" }, "My party", "Also raids, battlegrounds and arenas")
-	synctoggle(g, { "shareguild" }, "My guild", nil)
-	label(g, "Only players running Spicy Kill Streaks see anything. Untick both to share nothing.", 1, GameFontDisableSmall)
+sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and guild sharing", build = function()
+	local cards = {}
+	local c = newCard("Share my kills and deaths with")
+	c:add(synctoggle({ "shareparty" }, "My party", "Also raids, battlegrounds and arenas"), 0.5)
+	c:add(synctoggle({ "shareguild" }, "My guild", "And join this month's guild board"), 0.5)
+	c:add(para("Only players running Spicy Kill Streaks see anything. Switch both off to share nothing.", 12, COLORS.muted), 1)
+	cards[#cards + 1] = c
 
 	for _, who in ipairs({ { "party", "Party members' kills" }, { "guild", "Guild members' kills" } }) do
-		g = card(c, who[2])
-		synctoggle(g, { who[1], "feed" }, "In the chat feed", nil, 0.25)
-		synctoggle(g, { who[1], "text" }, "As combat text", nil, 0.25)
-		synctoggle(g, { who[1], "sound" }, "With sounds", nil, 0.25)
-		synctoggle(g, { who[1], "deaths" }, "Their deaths too", nil, 0.25)
+		c = newCard(who[2])
+		c:add(synctoggle({ who[1], "feed" }, "Chat feed", nil), 0.25)
+		c:add(synctoggle({ who[1], "text" }, "Combat text", nil), 0.25)
+		c:add(synctoggle({ who[1], "sound" }, "Sounds", nil), 0.25)
+		c:add(synctoggle({ who[1], "deaths" }, "Their deaths", nil), 0.25)
+		cards[#cards + 1] = c
 	end
 
-	g = card(c, "Guild extras")
-	synctoggle(g, { "logincount" }, "At login, count guildmates using it", nil)
-	synctoggle(g, { "loginboard" }, "At login, show the top 3 killers this month", nil)
-	synctoggle(g, { "updatenotice" }, "Tell me when a newer version is out", nil)
-	space(g, 0.5)
-	button(g, "Send a test kill", function() core().sendTestSync() end, 0.33)
-	button(g, "Who runs it?", function() core().versionCheck() end, 0.33)
+	c = newCard("Guild extras")
+	c:add(synctoggle({ "logincount" }, "At login, count guildmates using it", nil), 0.5)
+	c:add(synctoggle({ "loginboard" }, "At login, show the top 3 killers", nil), 0.5)
+	c:add(synctoggle({ "updatenotice" }, "Tell me when a newer version is out", nil), 1)
+	c:add(button("Send a test kill", function() core().sendTestSync() end), 0.3)
+	c:add(button("Who runs it?", function() core().versionCheck() end), 0.3)
+	cards[#cards + 1] = c
+	return cards
 end }
 
-sections[#sections + 1] = { id = "board", label = "Guild board", hint = "This month's top killers", build = function(c)
-	local g = card(c, "Guild board, " .. date("%B"))
+sections[#sections + 1] = { id = "board", label = "Guild board", hint = "This month's top killers", build = function()
+	local cards = {}
+	local c = newCard("Guild board, " .. date("%B"))
 	if not S().guildName() then
-		label(g, "You are not in a guild.", 1, GameFontHighlight)
-		return
+		c:add(para("You are not in a guild.", 14), 1)
+		return { c }
 	end
 	local list = S().top(10)
 	if #list == 0 then
-		label(g, "Nobody has a kill streak this month yet. Get out there!", 1, GameFontHighlight)
+		c:add(para("Nobody has a kill streak this month yet. Get out there!", 14), 1)
 	else
-		label(g, "|cffa89c90Player|r", 0.4, GameFontNormalSmall)
-		label(g, "|cffa89c90Best streak|r", 0.2, GameFontNormalSmall)
-		label(g, "|cffa89c90Kills|r", 0.2, GameFontNormalSmall)
-		label(g, "|cffa89c90Deaths|r", 0.2, GameFontNormalSmall)
+		local head = function(str) return para("|cffa89c90" .. str .. "|r", 11) end
+		c:add(head("PLAYER"), 0.46)
+		c:add(head("BEST STREAK"), 0.18)
+		c:add(head("KILLS"), 0.18)
+		c:add(head("DEATHS"), 0.18)
 		for i, entry in ipairs(list) do
-			local medal = (i == 1 and "|cffffd100") or (i == 2 and "|cffc0c0c0") or (i == 3 and "|cffcd7f32") or "|cffffffff"
-			label(g, medal .. i .. ".|r  " .. entry.name, 0.4, GameFontHighlight)
-			label(g, "|cff57e3ff" .. entry.best .. "|r", 0.2, GameFontHighlight)
-			label(g, tostring(entry.kills), 0.2, GameFontHighlight)
-			label(g, tostring(entry.deaths or 0), 0.2, GameFontHighlight)
+			local medal = (i == 1 and "ffd100") or (i == 2 and "c0c0c0") or (i == 3 and "cd7f32") or "ffffff"
+			c:add(para("|cff" .. medal .. i .. ".|r   " .. entry.name, 14), 0.46)
+			c:add(para("|cff57e3ff" .. entry.best .. "|r", 14), 0.18)
+			c:add(para(tostring(entry.kills), 14), 0.18)
+			c:add(para(tostring(entry.deaths or 0), 14), 0.18)
 		end
 	end
 	local deaths = S().topDeaths(3)
 	if #deaths > 0 then
 		local parts = {}
 		for i, entry in ipairs(deaths) do parts[i] = entry.name .. " (" .. entry.deaths .. ")" end
-		space(g, 1)
-		label(g, "|cffff5555Most deaths:|r " .. table.concat(parts, ", "), 1, GameFontHighlight)
+		c:add(gap(4), 1)
+		c:add(para("|cffff5555Most deaths:|r " .. table.concat(parts, ", "), 13), 1)
 	end
-	label(g, "Best kill streak this month, from guildmates who run the addon and share with the guild. "
-		.. "It starts again on the 1st.", 1, GameFontDisableSmall)
-	button(g, "Post to guild chat", function() S().shareBoard("GUILD") end, 0.33)
-	button(g, "Post to party chat", function() S().shareBoard("PARTY") end, 0.33)
-	button(g, "Ask guildmates now", function()
+	c:add(gap(4), 1)
+	c:add(para("Best kill streak this month, from guildmates who run the addon and share with the guild. "
+		.. "It starts again on the 1st.", 12, COLORS.muted), 1)
+	c:add(button("Post to guild chat", function() S().shareBoard("GUILD") end, "primary"), 0.33)
+	c:add(button("Post to party chat", function() S().shareBoard("PARTY") end), 0.33)
+	c:add(button("Ask guildmates now", function()
 		core().versionCheck()
-		C_Timer.After(6, function() if current == "board" then ui.show("board") end end)
-	end, 0.33)
-end }
+		C_Timer.After(6, function() if current == "board" then ui.show("board", true) end end)
+	end), 0.33)
+	cards[#cards + 1] = c
+	return cards
+end, dynamic = true }
 
-sections[#sections + 1] = { id = "extras", label = "Extras", hint = "Emotes, duels, screenshots", build = function(c)
+sections[#sections + 1] = { id = "extras", label = "Extras", hint = "Emotes, duels, screenshots", build = function()
+	local cards = {}
 	local emotes = core().emotes
 	local emoteOrder = sortedKeys(emotes, "none")
-	local g = card(c, "Emotes after a kill")
-	dropdown(g, "Emote", emotes, emoteOrder, function() return P().doemote end, function(v) P().doemote = v end, 0.5)
-	ptoggle(g, "dotxtemote", "Send a custom emote message", nil, 0.5)
-	edit(g, "Custom message ($v victim, $s streak; press Enter)", function() return P().ksemote end,
-		function(v) P().ksemote = v end, 1)
-	label(g, "WoW Forever only lets a custom message go out from a key press: put /sks emote in a macro.", 1,
-		GameFontDisableSmall)
+	local c = newCard("Emotes after a kill")
+	c:add(dropdown("Emote", emotes, emoteOrder, function() return P().doemote end, function(v) P().doemote = v end), 0.5)
+	c:add(ptoggle("dotxtemote", "Send a custom emote message", nil), 0.5)
+	c:add(edit("Custom message  ($v victim, $s streak)", function() return P().ksemote end,
+		function(v) P().ksemote = v end), 1)
+	c:add(para("WoW Forever only lets a custom message go out from a key press: put /sks emote in a macro.", 12,
+		COLORS.muted), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Duels")
-	edit(g, "Duel win text ($k you, $v opponent; press Enter)", function() return P().dueltext end,
-		function(v) P().dueltext = v end, 1)
-	dropdown(g, "Emote after a win", emotes, emoteOrder, function() return P().duelemotewin end,
-		function(v) P().duelemotewin = v end, 0.5)
-	dropdown(g, "Emote after a loss", emotes, emoteOrder, function() return P().duelemoteloss end,
-		function(v) P().duelemoteloss = v end, 0.5)
-	ptoggle(g, "duelhumiliation", "Humiliation when you flee a duel", nil, 1)
+	c = newCard("Duels")
+	c:add(edit("Duel win text  ($k you, $v opponent)", function() return P().dueltext end,
+		function(v) P().dueltext = v end), 1)
+	c:add(dropdown("Emote after a win", emotes, emoteOrder, function() return P().duelemotewin end,
+		function(v) P().duelemotewin = v end), 0.5)
+	c:add(dropdown("Emote after a loss", emotes, emoteOrder, function() return P().duelemoteloss end,
+		function(v) P().duelemoteloss = v end), 0.5)
+	c:add(ptoggle("duelhumiliation", "Humiliation when you flee a duel", nil), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Screenshots")
-	ptoggle(g, "shotkill", "Every kill", nil, 0.33)
-	ptoggle(g, "shotstreak", "New best streak", nil, 0.33)
-	ptoggle(g, "shotmultikill", "Multikill", nil, 0.33)
-	ptoggle(g, "shotduelwin", "Duel win", nil, 0.33)
-	ptoggle(g, "shotduelloss", "Duel loss", nil, 0.33)
-	ptoggle(g, "shotdeath", "Death", nil, 0.33)
+	c = newCard("Screenshots")
+	c:add(ptoggle("shotkill", "Every kill", nil), 0.34)
+	c:add(ptoggle("shotstreak", "New best streak", nil), 0.33)
+	c:add(ptoggle("shotmultikill", "Multikill", nil), 0.33)
+	c:add(ptoggle("shotduelwin", "Duel win", nil), 0.34)
+	c:add(ptoggle("shotduelloss", "Duel loss", nil), 0.33)
+	c:add(ptoggle("shotdeath", "Death", nil), 0.33)
+	cards[#cards + 1] = c
+	return cards
 end }
 
-sections[#sections + 1] = { id = "soundboard", label = "Sound board", hint = "Hear every sound", build = function(c)
-	label(c, "Click a sound to hear it in your voice pack (" .. (PACKS[P().soundpack] or P().soundpack)
-		.. "). It plays even with sounds off, muted or snoozed.", nil, GameFontHighlight)
-	local g
+sections[#sections + 1] = { id = "soundboard", label = "Sound board", hint = "Hear every sound", build = function()
+	local cards = {}
+	local c = newCard(nil)
+	c:add(para("Click a sound to hear it in your voice pack (" .. (PACKS[P().soundpack] or P().soundpack)
+		.. "). It plays even with sounds off, muted or snoozed.", 13), 1)
+	cards[#cards + 1] = c
 	for _, entry in ipairs(S().soundBoard()) do
 		if entry.section then
-			g = card(c, entry.section)
+			c = newCard(entry.section)
+			cards[#cards + 1] = c
 		else
-			button(g, entry[1], sample(entry[3]), 0.3)
-			label(g, entry[2], 0.68, GameFontHighlightSmall)
+			c:add(button(entry[1], sample(entry[3])), 0.3)
+			local p = para(entry[2], 12, COLORS.muted)
+			local fit = p.fit
+			-- (centred on the button's height)
+			p.fit = function(w) fit(w) p.fs:ClearAllPoints() p.fs:SetPoint("LEFT", p.frame, "LEFT") return 30 end
+			c:add(p, 0.7)
 		end
 	end
-end }
+	return cards
+end, dynamic = true }
 
-sections[#sections + 1] = { id = "about", label = "About", hint = "Who made it, feedback", build = function(c)
-	-- Header: the chilli, the name and the version
-	local head = AceGUI:Create("Label")
-	head:SetImage(core().MEDIA .. "Chilli")
-	head:SetImageSize(56, 56)
-	head:SetText("|cffffd100" .. core().TITLE .. "|r\n|cffa89c90Version " .. core().VERSION
-		.. " · Announcer voices for your killing blows in WoW Forever|r")
-	head:SetFontObject(GameFontNormalLarge)
-	head:SetFullWidth(true)
-	c:AddChild(head)
-	space(c, 1)
+sections[#sections + 1] = { id = "about", label = "About", hint = "Who made it, feedback", build = function()
+	local cards = {}
+	local c = newCard(nil)
+	local head = CreateFrame("Frame", nil, UIParent)
+	local icon = head:CreateTexture(nil, "ARTWORK")
+	icon:SetTexture(core().MEDIA .. "Chilli")
+	icon:SetSize(64, 64)
+	icon:SetPoint("LEFT")
+	local name = text(head, 26, COLORS.gold)
+	name:SetPoint("TOPLEFT", icon, "TOPRIGHT", 16, -6)
+	name:SetText(core().TITLE)
+	local tagline = text(head, 13, COLORS.muted)
+	tagline:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -6)
+	tagline:SetText("Version " .. core().VERSION .. "  ·  Announcer voices for your killing blows in WoW Forever")
+	c:add({ frame = head, height = 70 }, 1)
+	cards[#cards + 1] = c
 
-	local g = card(c, "Made by")
-	label(g, "|cffff7733Spicy Bubbletea|r", 1, GameFontNormalLarge)
-	label(g, "Horde  ·  WoW Forever  ·  PvP realm", 1, GameFontDisable)
-	space(g, 1)
-	label(g, "Ideas, bugs, or a kill you're proud of? I'd love to hear it.", 1, GameFontHighlight)
+	c = newCard("Made by")
+	c:add(para("|cffff7733Spicy Bubbletea|r", 20), 1)
+	c:add(para("Horde  ·  WoW Forever  ·  PvP realm", 12, COLORS.muted), 1)
+	c:add(gap(2), 1)
+	c:add(para("Ideas, bugs, or a kill you're proud of? I'd love to hear it.", 13), 1)
+	cards[#cards + 1] = c
 
-	g = card(c, "Feedback and bugs")
-	label(g, "|cffffd100In game|r   Send Spicy Bubbletea a message (Horde).", 1, GameFontHighlight)
-	label(g, "|cffffd100GitHub|r      github.com/zednx/spicy-kill-streaks (Issues)", 1, GameFontHighlight)
-	label(g, "|cffffd100Bugs|r          Debug log at the top, then Select all and Ctrl+C, and send it along.", 1,
-		GameFontHighlight)
-
-	g = card(c, "Credits")
-	local credits = {
-		{ "Original addon", "dG KillShot by Lance Inman" },
-		{ "Voices", "Unreal Tournament (Epic Games), Heroes of Newerth Flamboyant (S2 Games / Frostburn), and a few of WoW's own lines (Blizzard). Details in sounds\\CREDITS.txt" },
-		{ "Fonts", "Google Fonts: SIL Open Font License and Apache 2.0 (Media\\Fonts)" },
-		{ "Libraries", "Ace3" },
-		{ "Licence", "GNU GPL v2" },
-	}
-	for _, line in ipairs(credits) do
-		label(g, "|cffa89c90" .. line[1] .. "|r", 0.22, GameFontHighlightSmall)
-		label(g, line[2], 0.77, GameFontHighlightSmall)
+	c = newCard("Feedback and bugs")
+	for _, line in ipairs({
+		{ "In game", "Send Spicy Bubbletea a message (Horde)." },
+		{ "GitHub", "github.com/zednx/spicy-kill-streaks (Issues)" },
+		{ "Bugs", "Open the Debug log at the top, then Select all, Ctrl+C, and send it along." },
+	}) do
+		c:add(para("|cffffd100" .. line[1] .. "|r", 13), 0.18)
+		c:add(para(line[2], 13), 0.82)
 	end
+	cards[#cards + 1] = c
 
-	g = card(c, "More")
-	check(g, "Show the minimap button", nil, function() return not db().global.minimap.hide end, function(v)
+	c = newCard("Credits")
+	for _, line in ipairs({
+		{ "Original addon", "dG KillShot by Lance Inman" },
+		{ "Voices", "Unreal Tournament (Epic Games), Heroes of Newerth Flamboyant (S2 Games / Frostburn) and a few of WoW's own lines (Blizzard). Details in sounds\\CREDITS.txt" },
+		{ "Fonts", "Google Fonts, under the SIL Open Font License and Apache 2.0 (Media\\Fonts)" },
+		{ "Licence", "GNU GPL v2" },
+	}) do
+		c:add(para(line[1], 12, COLORS.muted), 0.18)
+		c:add(para(line[2], 12), 0.82)
+	end
+	cards[#cards + 1] = c
+
+	c = newCard("More")
+	c:add(toggle("Show the minimap button", nil, function() return not db().global.minimap.hide end, function(v)
 		db().global.minimap.hide = not v
 		ui.updateMinimap()
-	end, 1)
-	button(g, "Run the setup again", function() win:Hide() ui.openSetup() end, 0.33)
-	button(g, "Classic options window", function() win:Hide() core().openClassic() end, 0.33)
-	button(g, "Stats", function() win:Hide() core().openStats() end, 0.33)
+	end), 1)
+	c:add(button("Run the setup again", function() win:Hide() ui.openSetup() end, "primary"), 0.33)
+	c:add(button("Classic options window", function() win:Hide() core().openClassic() end), 0.33)
+	c:add(button("Stats", function() win:Hide() core().openStats() end), 0.33)
+	cards[#cards + 1] = c
+	return cards
 end }
 
+-- ---------------------------------------------------------------------------------------------
+-- Window
+-- ---------------------------------------------------------------------------------------------
+local pages = {} -- section id -> content frame (built once; "dynamic" sections are rebuilt)
+
 local function styleNav(b, selected)
-	b.bg:SetColorTexture(selected and 0.17 or 0, selected and 0.11 or 0, selected and 0.09 or 0, selected and 1 or 0)
+	if selected then
+		b.bg:SetColorTexture(0.20, 0.12, 0.09, 1)
+		b.name:SetTextColor(1, 1, 1)
+	else
+		b.bg:SetColorTexture(0, 0, 0, 0)
+		b.name:SetTextColor(COLORS.text[1], COLORS.text[2], COLORS.text[3])
+	end
 	b.bar:SetShown(selected)
 end
 
-function ui.show(id)
+local function buildPage(section)
+	local content = CreateFrame("Frame", nil, scroll)
+	content:SetWidth(CONTENT_W - 14)
+	local y = 0
+	local ok, cards = pcall(section.build)
+	if not ok then
+		local c = newCard("Could not build this page")
+		c:add(para(tostring(cards), 12, { 1, 0.4, 0.4 }), 1)
+		cards = { c }
+	end
+	for _, card in ipairs(cards) do
+		local f = CreateFrame("Frame", nil, content, "BackdropTemplate")
+		paint(f, COLORS.panel, 1)
+		f:SetPoint("TOPLEFT", 0, -y)
+		local h = layoutCard(f, card, CONTENT_W - 14)
+		f:SetSize(CONTENT_W - 14, h)
+		y = y + h + 14
+	end
+	content:SetHeight(math.max(y, 10))
+	return content
+end
+
+local function updateScrollbar()
+	local range = scroll:GetVerticalScrollRange() or 0
+	local track = scroll:GetHeight()
+	if range <= 0 then scroll.thumb:Hide() return end
+	local size = math.max(30, track * track / (track + range))
+	scroll.thumb:SetHeight(size)
+	scroll.thumb:ClearAllPoints()
+	scroll.thumb:SetPoint("TOPRIGHT", scroll, "TOPRIGHT", 10, -(track - size) * (scroll:GetVerticalScroll() / range))
+	scroll.thumb:Show()
+end
+
+-- rebuild: build the page again (its numbers changed)
+function ui.show(id, rebuild)
 	current = id
+	closePopup()
 	for _, b in ipairs(navButtons) do styleNav(b, b.id == id) end
-	scroll:ReleaseChildren()
-	scroll:PauseLayout()
+	for _, page in pairs(pages) do page:Hide() end
 	for _, s in ipairs(sections) do
 		if s.id == id then
-			local ok, err = pcall(s.build, scroll)
-			if not ok then label(scroll, "|cffff5555Could not build this page:|r " .. tostring(err), nil, GameFontHighlight) end
+			if rebuild or s.dynamic or not pages[id] then
+				if pages[id] then pages[id]:Hide() end
+				pages[id] = buildPage(s)
+			end
+			scroll:SetScrollChild(pages[id])
+			pages[id]:Show()
 		end
 	end
-	scroll:ResumeLayout()
-	scroll:DoLayout()
-	scroll:SetScroll(0)
+	scroll:SetVerticalScroll(0)
+	C_Timer.After(0, updateScrollbar)
 	refreshPreview()
 end
 
 local function buildWindow()
-	win = makeWindow("SpicyKillStreaksWindow", WIN_W, WIN_H, core().TITLE, db().global.window)
-	local version = win:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-	version:SetPoint("LEFT", win.title, "RIGHT", 8, -1)
+	local saved = db().global.window
+	win = CreateFrame("Frame", "SpicyKillStreaksWindow", UIParent, "BackdropTemplate")
+	win:SetSize(WIN_W, WIN_H)
+	if saved.point then win:SetPoint(saved.point, UIParent, saved.point, saved.x or 0, saved.y or 0) else win:SetPoint("CENTER") end
+	win:SetFrameStrata("HIGH")
+	win:SetToplevel(true)
+	win:SetClampedToScreen(true)
+	win:SetMovable(true)
+	win:EnableMouse(true)
+	win:RegisterForDrag("LeftButton")
+	win:SetScript("OnDragStart", win.StartMoving)
+	win:SetScript("OnDragStop", function()
+		win:StopMovingOrSizing()
+		local point, _, _, x, y = win:GetPoint()
+		saved.point, saved.x, saved.y = point, x, y
+	end)
+	win:SetScript("OnHide", closePopup)
+	paint(win, COLORS.bg, 0.98)
+	tinsert(UISpecialFrames, "SpicyKillStreaksWindow")
+
+	-- Header: gradient like the setup's banner, the chilli, the name, the version and actions
+	local band = win:CreateTexture(nil, "BORDER")
+	band:SetPoint("TOPLEFT", 1, -1)
+	band:SetPoint("TOPRIGHT", -1, -1)
+	band:SetHeight(HEADER_H)
+	gradient(band, 0.20, 0.07, 0.05, 0.13, 0.06, 0.16)
+	local line = win:CreateTexture(nil, "ARTWORK")
+	line:SetPoint("TOPLEFT", band, "BOTTOMLEFT")
+	line:SetPoint("TOPRIGHT", band, "BOTTOMRIGHT")
+	line:SetHeight(2)
+	gradient(line, COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 0.69, 0.32, 0.87)
+	local icon = win:CreateTexture(nil, "ARTWORK")
+	icon:SetTexture(core().MEDIA .. "Chilli")
+	icon:SetSize(38, 38)
+	icon:SetPoint("TOPLEFT", 14, -10)
+	local name = win:CreateFontString(nil, "OVERLAY")
+	font(name, 30, "OUTLINE", core().fonts.bangers and core().fonts.bangers.path)
+	name:SetPoint("LEFT", icon, "RIGHT", 10, 0)
+	name:SetText("SPICY |cffe8552aKILL STREAKS|r")
+	local version = text(win, 12, COLORS.muted)
+	version:SetPoint("BOTTOMLEFT", name, "BOTTOMRIGHT", 10, 4)
 	version:SetText("v" .. core().VERSION)
 
-	local debug = headerButton(win, "Debug log", 90, function() core().debugLog.setEnabled(not core().isDebugOn()) end)
-	debug:SetPoint("RIGHT", win.close, "LEFT", -4, 0)
-	local stats = headerButton(win, "Stats", 70, function() win:Hide() core().openStats() end)
-	stats:SetPoint("RIGHT", debug, "LEFT", -4, 0)
-	local test = headerButton(win, "Test a kill", 100, function() core().runTest("kill") end)
-	test:SetPoint("RIGHT", stats, "LEFT", -4, 0)
+	local close = makeClose(win, function() win:Hide() end)
+	close:SetPoint("TOPRIGHT", -8, -14)
+	local debug = makeButton(win, "Debug log", function() core().debugLog.setEnabled(not core().isDebugOn()) end)
+	debug:SetPoint("RIGHT", close, "LEFT", -8, 0)
+	local stats = makeButton(win, "Stats", function() win:Hide() core().openStats() end)
+	stats:SetPoint("RIGHT", debug, "LEFT", -8, 0)
+	local test = makeButton(win, "Test a kill", function() core().runTest("kill") end, "primary")
+	test:SetPoint("RIGHT", stats, "LEFT", -8, 0)
 
 	-- Navigation
 	local nav = CreateFrame("Frame", nil, win, "BackdropTemplate")
-	nav:SetPoint("TOPLEFT", 1, -45)
+	nav:SetPoint("TOPLEFT", 1, -(HEADER_H + 3))
 	nav:SetPoint("BOTTOMLEFT", 1, 1)
 	nav:SetWidth(NAV_W)
-	paint(nav, { 0.10, 0.08, 0.07 }, 1)
+	nav:SetBackdrop({ bgFile = WHITE })
+	nav:SetBackdropColor(0.07, 0.058, 0.048, 1)
 	navButtons = {}
 	for i, s in ipairs(sections) do
 		local b = CreateFrame("Button", nil, nav)
-		b:SetSize(NAV_W - 12, 40)
-		b:SetPoint("TOPLEFT", 6, -8 - (i - 1) * 44)
+		b:SetSize(NAV_W - 16, 46)
+		b:SetPoint("TOPLEFT", 8, -12 - (i - 1) * 50)
 		b.bg = b:CreateTexture(nil, "BACKGROUND")
 		b.bg:SetAllPoints()
 		b.bar = b:CreateTexture(nil, "ARTWORK")
@@ -664,30 +1005,42 @@ local function buildWindow()
 		b.bar:SetWidth(3)
 		local hl = b:CreateTexture(nil, "HIGHLIGHT")
 		hl:SetAllPoints()
-		hl:SetColorTexture(1, 1, 1, 0.05)
-		local name = b:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-		name:SetPoint("TOPLEFT", 12, -6)
-		name:SetText(s.label)
-		local hint = b:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
-		hint:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -2)
+		hl:SetColorTexture(1, 1, 1, 0.04)
+		b.name = text(b, 14)
+		b.name:SetPoint("TOPLEFT", 14, -8)
+		b.name:SetText(s.label)
+		local hint = text(b, 11, COLORS.muted)
+		hint:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -4)
 		hint:SetText(s.hint)
 		b.id = s.id
 		b:SetScript("OnClick", function() ui.show(s.id) end)
 		navButtons[#navButtons + 1] = b
 	end
-	-- Snooze status at the bottom of the navigation
-	local snooze = nav:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-	snooze:SetPoint("BOTTOMLEFT", 12, 12)
-	snooze:SetWidth(NAV_W - 24)
-	snooze:SetJustifyH("LEFT")
-	win.snoozeText = snooze
+	win.snoozeText = text(nav, 12, COLORS.gold)
+	win.snoozeText:SetPoint("BOTTOMLEFT", 16, 16)
+	win.snoozeText:SetWidth(NAV_W - 32)
 
 	buildPreview(win)
-	local top = 56 + PREVIEW_H + 10
-	scroll = hostContainer("ScrollFrame", win, CONTENT_X, -top, CONTENT_W, WIN_H - top - 12)
+
+	-- The scrolling page, with a thin scrollbar of our own
+	local top = HEADER_H + 14 + PREVIEW_H + 16
+	scroll = CreateFrame("ScrollFrame", nil, win)
+	scroll:SetPoint("TOPLEFT", win, "TOPLEFT", CONTENT_X, -top)
+	scroll:SetSize(CONTENT_W - 6, WIN_H - top - 16)
+	scroll:EnableMouseWheel(true)
+	scroll:SetScript("OnMouseWheel", function(self, delta)
+		local range = self:GetVerticalScrollRange() or 0
+		self:SetVerticalScroll(math.max(0, math.min(range, self:GetVerticalScroll() - delta * 60)))
+		updateScrollbar()
+	end)
+	scroll:SetScript("OnScrollRangeChanged", updateScrollbar)
+	scroll.thumb = win:CreateTexture(nil, "OVERLAY")
+	scroll.thumb:SetWidth(4)
+	scroll.thumb:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 0.7)
+
 	win:SetScript("OnShow", function()
 		local t = S().snoozedUntil()
-		win.snoozeText:SetText(t and ("|cffffd100Sounds snoozed|r\nuntil " .. date("%H:%M", t)) or "")
+		win.snoozeText:SetText(t and ("Sounds snoozed\nuntil " .. date("%H:%M", t)) or "")
 		refreshPreview()
 	end)
 end
@@ -708,17 +1061,6 @@ local PAGE_W = SETUP_W - 60
 local SHARING_STEP = 5
 local setup, setupStep
 local STEPS = {}
-
-local function font(fs, size, flags, path)
-	fs:SetFont(path or STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, flags or "")
-end
-
-local function gradient(tex, r1, g1, b1, r2, g2, b2)
-	tex:SetColorTexture(1, 1, 1, 1)
-	local ok = CreateColor and pcall(tex.SetGradient, tex, "HORIZONTAL", CreateColor(r1, g1, b1, 1), CreateColor(r2, g2, b2, 1))
-	if not ok then ok = pcall(tex.SetGradient, tex, "HORIZONTAL", r1, g1, b1, r2, g2, b2) end
-	if not ok then tex:SetColorTexture(r1, g1, b1, 1) end
-end
 
 -- A card: title, a line of description, an optional sample line on top, a tick when selected
 local function makeCard(parent)
@@ -1023,9 +1365,8 @@ local function buildSetup()
 	tagline:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 4, -4)
 	tagline:SetTextColor(0.85, 0.80, 0.75)
 	tagline:SetText("Announcer voices for your killing blows in WoW Forever")
-	local close = CreateFrame("Button", nil, setup, "UIPanelCloseButton")
-	close:SetPoint("TOPRIGHT", -4, -4)
-	close:SetScript("OnClick", function() finish(true) end)
+	local close = makeClose(setup, function() finish(true) end)
+	close:SetPoint("TOPRIGHT", -8, -8)
 
 	-- Step line, title and subtitle
 	setup.stepLine = setup:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")

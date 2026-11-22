@@ -55,3 +55,20 @@ which use the male voice.
 ## Release
 
 - [ ] `git pull && git tag v0.7.0 && git push origin v0.7.0` (check the latest tag first)
+
+## Next version
+
+### Kudos
+
+An optional little popup that appears for up to 30 seconds after an ally (party or guild member
+running the addon) gets a kill or dies:
+
+- **Kill:** send a thumbs-up / "Hell yeah!" that adds to their flair (they see it pop up on their
+  callout, e.g. "+3 hell yeahs").
+- **Death:** press **F** to pay respects to the fallen.
+- The player chooses where the popup sits (unlock and drag, like the combat text).
+- Off by default, with its own switch in Friends, and it follows the party/guild sharing settings.
+
+Notes for building it: the kudos travel as a new addon message type, whispered to the ally (so it
+only reaches them), limited to one per kill/death per player and rate-limited like the others.
+Older versions just ignore the new type.

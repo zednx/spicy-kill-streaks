@@ -257,12 +257,18 @@ function DebugLog.build()
 	w:SetMovable(true)
 	w:SetResizable(true)
 	if w.SetResizeBounds then w:SetResizeBounds(320, 160) elseif w.SetMinResize then w:SetMinResize(320, 160) end
-	w:SetBackdrop({
-		bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
-		edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-		tile = true, tileSize = 16, edgeSize = 16,
-		insets = { left = 4, right = 4, top = 4, bottom = 4 },
-	})
+	-- The flat dark style of the settings window (UI.lua's kit), when it is there
+	local kit = SPECIAL.ns.ui and SPECIAL.ns.ui.kit
+	if kit then
+		kit.paint(w, kit.COLORS.bg, 0.98)
+	else
+		w:SetBackdrop({
+			bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background-Dark",
+			edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+			tile = true, tileSize = 16, edgeSize = 16,
+			insets = { left = 4, right = 4, top = 4, bottom = 4 },
+		})
+	end
 	w:EnableMouse(true)
 	w:RegisterForDrag("LeftButton")
 	local function save()
@@ -277,9 +283,15 @@ function DebugLog.build()
 	title:SetPoint("TOPLEFT", 12, -10)
 	title:SetText(TITLE .. " debug log")
 
-	local close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
-	close:SetPoint("TOPRIGHT", 0, 0)
-	close:SetScript("OnClick", function() DebugLog.setEnabled(false) end)
+	local close
+	if kit then
+		close = kit.makeClose(w, function() DebugLog.setEnabled(false) end)
+		close:SetPoint("TOPRIGHT", -4, -2)
+	else
+		close = CreateFrame("Button", nil, w, "UIPanelCloseButton")
+		close:SetPoint("TOPRIGHT", 0, 0)
+		close:SetScript("OnClick", function() DebugLog.setEnabled(false) end)
+	end
 
 	local scroll = CreateFrame("ScrollFrame", "SpicyKillStreaksDebugLogScroll", w, "UIPanelScrollFrameTemplate")
 	scroll:SetPoint("TOPLEFT", 10, -30)
@@ -302,6 +314,7 @@ function DebugLog.build()
 
 	local hint = w:CreateFontString(nil, "OVERLAY", "GameFontDisableSmall")
 	local function button(text, width, onClick)
+		if kit then return kit.makeButton(w, text, onClick, "secondary", width, 24) end
 		local b = CreateFrame("Button", nil, w, "UIPanelButtonTemplate")
 		b:SetSize(width, 22)
 		b:SetText(text)
