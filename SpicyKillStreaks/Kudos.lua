@@ -1,6 +1,6 @@
 -- Spicy Kill Streaks: Kudos. When a party or guild member running the addon gets a kill or dies,
--- a small popup offers a reaction ("Zug zug!", "For the Horde!", "Hell yeah!", thumbs up; "RIP",
--- "F" for a death). The reaction travels as a hidden addon message on the channel the kill came
+-- a small popup offers a reaction: one of nine emoji (laughing, smiling, thumbs up, thumbs down, praying
+-- hands, skull and crossbones, skull, heart, party popper), the same for kills and deaths. The reaction travels as a hidden addon message on the channel the kill came
 -- from, addressed to that player's GUID, so only they show it (on their own kudos popup).
 -- Optionally it is also posted as a normal chat line, which everyone sees.
 --
@@ -25,7 +25,9 @@ local MAX_ROWS = 4
 local ROW_W = 360
 local PAD = 12          -- inside the card
 local TEXT_X = 34       -- the title, right of the icon
-local CHIP_H = 22
+local CHIP_H = 28
+local CHIP_W = 32
+local EMOJI_SIZE = 20
 local CHIP_GAP = 5
 local ROW_GAP = 5       -- between cards
 local SLIDE = 0.18      -- seconds to slide in
@@ -45,19 +47,32 @@ local ICONS = {
 	sent = "Interface\\RaidFrame\\ReadyCheck-Ready",
 }
 
--- Reactions: id -> { label, kind = "K" (for a kill) or "D" (for a death) }
+-- Reactions are emoji, the same nine for kills and deaths. WoW's fonts can't draw emoji, so each is
+-- a Twemoji image in Media\Emoji\ (CC-BY 4.0, see LICENSE-GRAPHICS.txt there). chat: the words a
+-- public chat post uses instead, since chat can't show images ({skull} is the raid marker).
+local EMOJI_PATH = "Interface\\AddOns\\SpicyKillStreaks\\Media\\Emoji\\"
 local REACTIONS = {
-	zug = { label = "Zug zug!", kind = "K" },
-	faction = { kind = "K" }, -- "For the Horde!" / "For the Alliance!": the sender's own faction
-	hell = { label = "Hell yeah!", kind = "K" },
-	thumbs = { label = "Thumbs up!", kind = "K" },
-	rip = { label = "RIP", kind = "D" },
-	f = { label = "F", kind = "D" },
+	laugh = { chat = "LOL!" },          -- face with tears of joy
+	smile = { chat = "Nice!" },         -- grinning face
+	thumbsup = { chat = "Thumbs up!" },
+	thumbsdown = { chat = "Thumbs down!" },
+	pray = { chat = "Respect!" },       -- folded hands
+	crossbones = { chat = "RIP" },      -- skull and crossbones
+	skull = { chat = "{skull}" },
+	heart = { chat = "<3" },
+	party = { chat = "GG!" },           -- party popper
 }
-local KILL_ORDER = { "zug", "faction", "hell", "thumbs" }
-local DEATH_ORDER = { "rip", "f" }
+local ORDER = { "laugh", "smile", "thumbsup", "thumbsdown", "pray", "crossbones", "skull", "heart", "party" }
+-- Text reactions from 1.1.x and 1.2.x, still shown when an older version sends one
+local LEGACY = { zug = "Zug zug!", hell = "Hell yeah!", thumbs = "Thumbs up!", rip = "RIP", f = "F" }
 local FACTION_TEXT = { H = "For the Horde!", A = "For the Alliance!" }
-kudos.REACTIONS, kudos.KILL_ORDER, kudos.DEATH_ORDER = REACTIONS, KILL_ORDER, DEATH_ORDER
+kudos.REACTIONS, kudos.ORDER = REACTIONS, ORDER
+
+-- An emoji as an inline texture; size 0 = the height of the text around it
+local function emoji(id, size)
+	return "|T" .. EMOJI_PATH .. id .. ":" .. (size or 0) .. "|t"
+end
+kudos.emoji = emoji
 
 -- Sounds, all the game's own files (by file ID):
 -- each kudos for a kill plays the sender's /cheer, for their race and sex (one of two at random)
@@ -76,7 +91,7 @@ local CHEERS = {
 	Worgen = { [2] = { 542207, 542194 }, [3] = { 542062, 542081 } },
 	Pandaren = { [2] = { 630064, 630066 }, [3] = { 636413, 636415 } },
 }
--- the 3rd and 5th kudos for the same kill add a loot toast; RIP and F play Shadow Word: Pain
+-- the 3rd and 5th kudos for the same kill add a loot toast; kudos for a death play Shadow Word: Pain
 local STACK_SOUNDS = { [3] = 1489461, [5] = 2174248 } -- legendary item toast, Azerite loot toast
 local DEATH_SOUND = 568353                             -- shadowwordpain_chest
 kudos.CHEERS, kudos.STACK_SOUNDS, kudos.DEATH_SOUND = CHEERS, STACK_SOUNDS, DEATH_SOUND
@@ -115,10 +130,12 @@ local function myFaction()
 	return nil
 end
 
--- The words of a reaction: faction is the sender's ("H"/"A"), for "For the ..."
+-- How a reaction shows on screen: its emoji, or an older version's words (faction: the sender's
+-- "H"/"A", for its "For the ..."). nil for anything unknown.
 local function reactionText(id, faction)
+	if REACTIONS[id] then return emoji(id) end
 	if id == "faction" then return FACTION_TEXT[faction] end
-	return REACTIONS[id] and REACTIONS[id].label
+	return LEGACY[id]
 end
 kudos.reactionText = reactionText
 
@@ -307,25 +324,27 @@ local function expireAfter(row, seconds, bar)
 	end)
 end
 
--- A reaction chip: small, dark, with a warm border on hover
-local function makeChip(row, words, onClick)
+-- A reaction chip: a small dark square with the emoji, a warm border and a little pop on hover
+local function makeChip(row, id, onClick)
 	local b = CreateFrame("Button", nil, row, "BackdropTemplate")
 	b:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
 	b:SetBackdropColor(0.15, 0.12, 0.10, 1)
 	b:SetBackdropBorderColor(0.32, 0.26, 0.22, 1)
-	b.text = fontString(b, 11, 0.93, 0.90, 0.87)
-	b.text:SetPoint("CENTER", 0, 0)
-	b.text:SetJustifyH("CENTER")
-	b.text:SetText(words)
-	b:SetSize(math.max(40, (b.text:GetStringWidth() or 40) + 18), CHIP_H)
+	b:SetSize(CHIP_W, CHIP_H)
+	b.icon = b:CreateTexture(nil, "ARTWORK")
+	b.icon:SetTexture(EMOJI_PATH .. id)
+	b.icon:SetSize(EMOJI_SIZE, EMOJI_SIZE)
+	b.icon:SetPoint("CENTER", 0, 0)
 	b:SetScript("OnEnter", function()
 		local c = TONES[row.tone] or TONES.kill
 		b:SetBackdropBorderColor(c[1], c[2], c[3], 1)
 		b:SetBackdropColor(0.22, 0.17, 0.13, 1)
+		b.icon:SetSize(EMOJI_SIZE + 4, EMOJI_SIZE + 4)
 	end)
 	b:SetScript("OnLeave", function()
 		b:SetBackdropBorderColor(0.32, 0.26, 0.22, 1)
 		b:SetBackdropColor(0.15, 0.12, 0.10, 1)
+		b.icon:SetSize(EMOJI_SIZE, EMOJI_SIZE)
 	end)
 	b:SetScript("OnClick", onClick)
 	return b
@@ -347,7 +366,7 @@ local function send(row, info, id)
 	if row.sent then return end
 	row.sent = true
 	local faction = myFaction()
-	local words = reactionText(id, faction) or "?"
+	local words = REACTIONS[id] and REACTIONS[id].chat or "?"
 	if not info.preview then
 		local sync = core().db().profile.sync
 		local channel
@@ -373,7 +392,7 @@ local function send(row, info, id)
 	end
 	for _, b in ipairs(row.buttons or {}) do b:Hide() end
 	setTone(row, "sent")
-	row.label:SetText("|cff9a8f86Sent|r " .. words .. " |cff9a8f86to|r " .. info.who
+	row.label:SetText("|cff9a8f86Sent|r " .. emoji(id) .. " |cff9a8f86to|r " .. info.who
 		.. (info.preview and " |cff9a8f86(preview)|r" or ""))
 	row.height = 32
 	row:SetHeight(32)
@@ -392,23 +411,16 @@ local function offer(info)
 		row.label:SetText("|cffffffff" .. info.who .. "|r  |cffff8a4a" .. deed .. "!|r")
 	end
 	row.buttons = {}
-	local order = info.kind == "D" and DEATH_ORDER or KILL_ORDER
-	local faction = myFaction()
 	-- Chips flow left to right and wrap onto another line if the card is full
 	local x, line = PAD, 0
-	for _, id in ipairs(order) do
-		local words = reactionText(id, faction)
-		if words then
-			local b = makeChip(row, words, function() send(row, info, id) end)
-			local w = math.min(ROW_W - 2 * PAD, b:GetWidth())
-			b:SetWidth(w)
-			if x > PAD and x + w > ROW_W - PAD then
-				x, line = PAD, line + 1
-			end
-			b:SetPoint("TOPLEFT", x, -31 - line * (CHIP_H + CHIP_GAP))
-			x = x + w + CHIP_GAP
-			row.buttons[#row.buttons + 1] = b
+	for _, id in ipairs(ORDER) do
+		local b = makeChip(row, id, function() send(row, info, id) end)
+		if x > PAD and x + CHIP_W > ROW_W - PAD then
+			x, line = PAD, line + 1
 		end
+		b:SetPoint("TOPLEFT", x, -31 - line * (CHIP_H + CHIP_GAP))
+		x = x + CHIP_W + CHIP_GAP
+		row.buttons[#row.buttons + 1] = b
 	end
 	row.height = 31 + (line + 1) * (CHIP_H + CHIP_GAP) + 5
 	row:SetHeight(row.height)
@@ -463,8 +475,7 @@ function kudos.receive(sender, channel, fields)
 	local me = core().playerGUID()
 	if not me or fields[3] ~= me then return end -- for someone else
 	local id, kind, faction = fields[4], fields[5], fields[6]
-	local reaction = REACTIONS[id]
-	if not reaction or (kind ~= "K" and kind ~= "D") or reaction.kind ~= kind then return end
+	if kind ~= "K" and kind ~= "D" then return end
 	if faction ~= "H" and faction ~= "A" then faction = nil end
 	local words = reactionText(id, faction)
 	if not words then return end
@@ -504,7 +515,7 @@ local function playKudosSound(sound, count, forced)
 end
 kudos.playKudosSound = playKudosSound
 
--- One kudos we got: "Bob: Hell yeah! (your Rampage) +3". sound: { kind, race, sex } or nil
+-- One kudos we got: "Bob <emoji> your Rampage +3". sound: { kind, race, sex } or nil
 function kudos.showGot(who, words, deed, count, sound, forced)
 	playKudosSound(sound, count, forced)
 	local row = newRow(32, "got")
@@ -562,17 +573,17 @@ end
 function kudos.preview()
 	offer({ kind = "K", who = "Bob", other = "Alice", rank = 2, multi = 0, streak = 3, preview = true })
 	offer({ kind = "D", who = "Panda", other = "Orcbro", preview = true })
-	kudos.showGot("Bob", "Hell yeah!", "Rampage", 2)
+	kudos.showGot("Bob", emoji("party"), "Rampage", 2)
 end
 
 -- What getting kudos looks like: five friends reacting to a Rampage, each one stacking up
 function kudos.previewGot()
 	local sample = {
-		{ "Bob", "Zug zug!", "Orc", 2 },
-		{ "Panda", reactionText("faction", myFaction()) or "Hell yeah!", "Pandaren", 3 },
-		{ "Alice", "Thumbs up!", "Human", 3 },
-		{ "Grug", "Zug zug!", "Tauren", 2 },
-		{ "Mira", "Hell yeah!", "Gnome", 3 },
+		{ "Bob", emoji("thumbsup"), "Orc", 2 },
+		{ "Panda", emoji("laugh"), "Pandaren", 3 },
+		{ "Alice", emoji("heart"), "Human", 3 },
+		{ "Grug", emoji("party"), "Tauren", 2 },
+		{ "Mira", emoji("smile"), "Gnome", 3 },
 	}
 	for i, entry in ipairs(sample) do
 		C_Timer.After((i - 1) * 1.4, function()
@@ -583,7 +594,7 @@ end
 
 -- A friend paying respects when we die
 function kudos.previewDeath()
-	kudos.showGot("Panda", "F", "death", 1, { kind = "D" }, true)
+	kudos.showGot("Panda", emoji("pray"), "death", 1, { kind = "D" }, true)
 end
 
 function kudos.clear()

@@ -71,7 +71,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 - **Mute** it in battlegrounds, dungeons or raids, or `/sks snooze` for 30 minutes.
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings. Post it to guild or party chat to brag (or shame).
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out. Battlegrounds and arenas are just for you: nothing is shared from them, and they don't count on the guild board.
-- **Kudos** (opt-in): when a friend running the addon gets a kill, hit *Zug zug!*, *For the Horde!*, *Hell yeah!* or a thumbs up; when they die, pay respects with *RIP* or *F*. It pops up on their screen with a running count, or goes in party or guild chat if you prefer.
+- **Kudos** (opt-in): when a friend running the addon gets a kill, or dies, send them an emoji: 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉. It pops up on their screen with a running count, or goes in party or guild chat if you prefer.
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.
 
@@ -102,7 +102,7 @@ Sharing with your party and guild is on by default, and the first-run setup says
 
 Made by **Spicy Bubbletea** (Horde, WoW Forever PvP). Inspired by **dG KillShot** by Lance Inman, whose voice packs ship with this addon. Uses the **Ace3** libraries. The code is open source under the GNU GPL v2 and on GitHub (linked on this project).
 
-**Sounds and fonts:** the announcer voices are not covered by the GPL. They belong to their owners (the Unreal Tournament announcers are © Epic Games) and are included as they were in dG KillShot; `sounds/CREDITS.txt` lists where each comes from, and rights holders can ask for removal on GitHub. The combat text fonts are from Google Fonts under the SIL Open Font License 1.1 and the Apache License 2.0, with their licences in `Media/Fonts`.
+**Sounds and fonts:** the announcer voices are not covered by the GPL. They belong to their owners (the Unreal Tournament announcers are © Epic Games) and are included as they were in dG KillShot; `sounds/CREDITS.txt` lists where each comes from, and rights holders can ask for removal on GitHub. The combat text fonts are from Google Fonts under the SIL Open Font License 1.1 and the Apache License 2.0, with their licences in `Media/Fonts`. The Kudos emoji are from Twemoji (Twitter, Inc and contributors) under CC-BY 4.0.
 
 ## Feedback
 

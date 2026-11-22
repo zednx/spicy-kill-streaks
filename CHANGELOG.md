@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.0
+
+- **Kudos are emoji now:** 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉, the same nine for a friend's kill or death, in one row of icons. They show as pictures in the popup and in the combat text (WoW's fonts can't draw emoji, so they ship as images, from Twemoji). A kudos posted in chat uses words instead ("LOL!", "GG!", "<3", a {skull} marker...). Kudos from 1.1 and 1.2 still show; friends need 1.3.0 to see emoji kudos.
+
 ## v1.2.0
 
 - **Friends' sounds are a little quieter:** sounds for party and guild members' kills and deaths play at about 75% of the volume of your own, so yours stand out.

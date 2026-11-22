@@ -731,15 +731,15 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 		return toggle(label, desc, function() return P().kudos[key] end, function(v) P().kudos[key] = v end)
 	end
 	c:add(ktoggle("give", "Kudos popup for friends' kills and deaths",
-		"Zug zug!, For the Horde!, Hell yeah!, thumbs up; RIP or F when they die"), 1)
+		"Nine emoji to pick from, for kills and deaths alike"), 1)
 	c:add(ktoggle("receive", "Show kudos friends send me", nil), 0.5)
 	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 0.5)
-	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; Shadow Word: Pain for RIP and F"), 1)
+	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; Shadow Word: Pain for kudos on a death"), 1)
 	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
 		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
 	c:add(button("Preview friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.34)
 	c:add(button("Preview kudos I get", function() if ns.kudos then ns.kudos.previewGot() end end), 0.33)
-	c:add(button("Preview RIP / F", function() if ns.kudos then ns.kudos.previewDeath() end end), 0.33)
+	c:add(button("Preview a death", function() if ns.kudos then ns.kudos.previewDeath() end end), 0.33)
 	c:add(button("Unlock to move", function()
 		if not ns.kudos then return end
 		ns.kudos.unlock(true)

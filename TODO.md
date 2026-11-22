@@ -61,7 +61,7 @@ which use the male voice.
 - [ ] With a friend on 1.1.0 (same party or guild, sharing on): switch on Friends > Kudos, then one of
       you gets a kill (or uses Friends > Send a test kill): the other sees the popup, clicks a reaction,
       and it pops up on the killer's screen
-- [ ] A death: RIP and F
+- [ ] A death: the emoji row there too
 - [ ] "Also post my reactions in chat": the line appears in party/guild chat (no "interface action failed")
 - [ ] `/sks kudos`: drag the popup, `/sks kudos` again to lock; it stays there after /reload
 - [ ] In a battleground (the popup shouldn't get in the way; the reply goes through battleground chat)

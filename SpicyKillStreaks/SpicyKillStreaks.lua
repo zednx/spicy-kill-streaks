@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.2.0"
+local VERSION = "1.3.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -150,7 +150,7 @@ local defaults = {
 			give = false,    -- a popup with reaction buttons when a party or guild member kills or dies
 			receive = true,  -- show the kudos friends send us (nothing arrives unless someone sends)
 			chat = false,    -- also post the reaction as a normal line in party or guild chat
-			sound = true,    -- kudos we get: the sender's /cheer, loot toasts as they stack, Shadow Word: Pain for RIP/F
+			sound = true,    -- kudos we get: the sender's /cheer, loot toasts as they stack, Shadow Word: Pain for a death
 			x = 0, y = -160, -- where the popup sits, from the centre of the screen
 			got = 0,         -- kudos received in total (flair)
 		},
