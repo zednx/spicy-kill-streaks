@@ -291,6 +291,8 @@ step("kudos: offer, send, chat post, receive", function()
   assert(#kudos.rows == 1, "two kudos from one player for one kill")
   assert(P.kudos.got == before + 1, "got not counted")
   -- preview, move, lock
+  kudos.previewGot(); runTimers(); kudos.clear()
+  SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()
   kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
   SlashCmdList.SPICYKILLSTREAKS("kudos"); SlashCmdList.SPICYKILLSTREAKS("kudos")
   kudos.clear()

@@ -86,7 +86,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 | `/sks unlock` | Move the text and sparkles (`/sks lock` when done) |
 | `/sks who` | See who in your group and guild runs it |
 | `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze off` to undo) |
-| `/sks kudos` | Preview the Kudos popup and drag it into place |
+| `/sks kudos` | Preview the Kudos popup and drag it into place (`/sks kudos got`: what friends send you) |
 | `/sks minimap` | Show or hide the minimap button |
 | `/sks debug` | Open the debug log (handy for bug reports) |
 

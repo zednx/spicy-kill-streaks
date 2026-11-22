@@ -49,7 +49,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks score` | Check that your battleground scoreboard row is found |
 | `/sks recap` | Print what your last Death Recap tells addons (for troubleshooting) |
 | `/sks classic` | The old options window |
-| `/sks kudos` | Preview the Kudos popup and drag it into place (again to lock it) |
+| `/sks kudos` | Preview the Kudos popup and drag it into place (again to lock it); `/sks kudos got` previews kudos you get |
 | `/sks minimap` | Show or hide the minimap button |
 | `/sks debug` | Open the debug log: what the kill detection sees, ready to copy |
 

@@ -3550,6 +3550,8 @@ local function initialize()
 			db.global.minimap.hide = not db.global.minimap.hide
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
 			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
+		elseif command == "kudos got" then
+			if SPECIAL.ns.kudos then SPECIAL.ns.kudos.previewGot() end
 		elseif command == "kudos" then
 			-- Show sample rows and unlock the popup to drag it; again to lock it
 			local kudos = SPECIAL.ns.kudos

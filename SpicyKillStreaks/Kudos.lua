@@ -322,9 +322,14 @@ function kudos.receive(sender, channel, fields)
 	event.count = event.count + 1
 	cfg().got = (tonumber(cfg().got) or 0) + 1
 	local who = (core().safeText(core().shortName(sender)) or "Someone"):gsub("%-.*$", "")
+	kudos.showGot(who, words, ownDeedText(kind, event.what), event.count)
+end
+
+-- One kudos we got: "Bob: Hell yeah! (your Rampage) +3"
+function kudos.showGot(who, words, deed, count)
 	local row = newRow(30)
-	local tally = event.count > 1 and ("  |cffffd100+" .. event.count .. "|r") or ""
-	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. ownDeedText(kind, event.what) .. ")|r" .. tally)
+	local tally = count > 1 and ("  |cffffd100+" .. count .. "|r") or ""
+	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. deed .. ")|r" .. tally)
 	expireAfter(row, GOT_FOR, false)
 end
 
@@ -371,9 +376,19 @@ end
 function kudos.preview()
 	offer({ kind = "K", who = "Bob", other = "Alice", rank = 2, multi = 0, streak = 3, preview = true })
 	offer({ kind = "D", who = "Panda", other = "Orcbro", preview = true })
-	local row = newRow(30)
-	row.label:SetText("|cffffd100Bob|r: Hell yeah! |cff9a8f86(your Rampage)|r  |cffffd100+2|r")
-	expireAfter(row, GOT_FOR, false)
+	kudos.showGot("Bob", "Hell yeah!", "Rampage", 2)
+end
+
+-- What getting kudos looks like: three friends reacting to a Rampage, a second apart
+function kudos.previewGot()
+	local sample = {
+		{ "Bob", "Zug zug!" },
+		{ "Panda", reactionText("faction", myFaction()) or "Hell yeah!" },
+		{ "Alice", "Thumbs up!" },
+	}
+	for i, entry in ipairs(sample) do
+		C_Timer.After((i - 1) * 1, function() kudos.showGot(entry[1], entry[2], "Rampage", i) end)
+	end
 end
 
 function kudos.clear()

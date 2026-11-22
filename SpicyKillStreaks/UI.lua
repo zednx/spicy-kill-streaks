@@ -732,12 +732,13 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 0.5)
 	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
 		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
-	c:add(button("Preview and move", function()
-		local kudos = ns.kudos
-		if not kudos then return end
-		local on = not kudos.isUnlocked()
-		kudos.unlock(on)
-		if on then kudos.preview() core().chat("Drag the Kudos popup, then press Lock.") end
+	c:add(button("Preview friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.5)
+	c:add(button("Preview kudos I get", function() if ns.kudos then ns.kudos.previewGot() end end), 0.5)
+	c:add(button("Unlock to move", function()
+		if not ns.kudos then return end
+		ns.kudos.unlock(true)
+		ns.kudos.preview()
+		core().chat("Drag the bar above the Kudos popup, then press Lock.")
 	end), 0.34)
 	c:add(button("Lock", function() if ns.kudos then ns.kudos.unlock(false) end end), 0.33)
 	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)
