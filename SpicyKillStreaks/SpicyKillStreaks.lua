@@ -2029,28 +2029,30 @@ function SPECIAL.topLine(count)
 	return table.concat(parts, "  ·  ")
 end
 
--- The board as chat lines: a title, one line per top killer, then the most deaths.
--- ({skull} and {cross} turn into raid marker icons in chat; addons can't post other images.)
-function SPECIAL.boardLines()
+-- The board as one chat line: the top killers and the most deaths. One line, because WoW Forever
+-- only lets an addon post during the click itself, and several posts at once can arrive out of
+-- order. ({skull} and {cross} become raid marker icons in chat; addons can't post other images.)
+SPECIAL.CHAT_LIMIT = 255
+function SPECIAL.boardLine()
 	local top = SPECIAL.top(3)
 	if #top == 0 then return nil end
-	local lines = { "{skull} Spicy Kill Streaks: top killers of " .. date("%B") .. " {skull}" }
-	for i, entry in ipairs(top) do
-		lines[#lines + 1] = i .. ". " .. entry.name .. " - " .. entry.best .. " kill streak"
-	end
+	local parts = {}
+	for i, entry in ipairs(top) do parts[i] = i .. ". " .. entry.name .. " - " .. entry.best .. " kill streak" end
+	local line = "{skull} Top killers of " .. date("%B") .. ": " .. table.concat(parts, ", ")
 	local deaths = SPECIAL.topDeaths(3)
 	if #deaths > 0 then
-		local parts = {}
-		for i, entry in ipairs(deaths) do parts[i] = entry.name .. " (" .. entry.deaths .. ")" end
-		lines[#lines + 1] = "{cross} Most deaths: " .. table.concat(parts, ", ")
+		local d = {}
+		for i, entry in ipairs(deaths) do d[i] = entry.name .. " (" .. entry.deaths .. ")" end
+		local withDeaths = line .. " {cross} Most deaths: " .. table.concat(d, ", ")
+		if #withDeaths <= SPECIAL.CHAT_LIMIT then line = withDeaths end
 	end
-	return lines
+	return strsub(line, 1, SPECIAL.CHAT_LIMIT)
 end
 
--- Post the board to guild or party chat (from a button press)
+-- Post the board to guild or party chat (only from a click: WoW Forever blocks it otherwise)
 function SPECIAL.shareBoard(channel)
-	local lines = SPECIAL.boardLines()
-	if not lines then
+	local line = SPECIAL.boardLine()
+	if not line then
 		chat("Nobody in your guild has a kill streak this month yet.")
 		return
 	end
@@ -2059,17 +2061,7 @@ function SPECIAL.shareBoard(channel)
 		channel = groupChannel()
 		if not channel then chat("You are not in a group.") return end
 	end
-	-- One line at a time: sent all at once, chat can show them out of order
-	local failed = false
-	for i, line in ipairs(lines) do
-		C_Timer.After((i - 1) * 0.35, function()
-			if failed then return end
-			if not pcall(SendChatMessage, line, channel) then
-				failed = true
-				chat("Could not post to chat.")
-			end
-		end)
-	end
+	if not pcall(SendChatMessage, line, channel) then chat("Could not post to chat.") end
 end
 
 function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
