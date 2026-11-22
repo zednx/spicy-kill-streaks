@@ -21,7 +21,10 @@ local GOT_FOR = 8          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 4
-local ROW_W = 300
+local ROW_W = 320
+local PAD = 10          -- inside the row
+local BUTTON_H = 24
+local BUTTON_GAP = 6
 
 -- Reactions: id -> { label, kind = "K" (for a kill) or "D" (for a death) }
 local REACTIONS = {
@@ -137,6 +140,7 @@ local function newRow(height)
 	row.label:SetPoint("TOPLEFT", 10, -8)
 	row.label:SetPoint("RIGHT", -26, 0)
 	row.label:SetJustifyH("LEFT")
+	row.label:SetWordWrap(false) -- one line; a long name is cut off rather than run into the buttons
 	if k then
 		local close = k.makeClose(row, function() removeRow(row) end)
 		close:SetSize(22, 22)
@@ -234,18 +238,26 @@ local function offer(info)
 	local order = info.kind == "D" and DEATH_ORDER or KILL_ORDER
 	local faction = myFaction()
 	local k = kit()
-	local x = 10
+	-- Buttons flow left to right and wrap onto another line when the row is full
+	local x, line = PAD, 0
 	for _, id in ipairs(order) do
 		local words = reactionText(id, faction)
 		if words and k then
-			local b = k.makeButton(row, words, function() send(row, info, id) end, "secondary", nil, 24)
+			local b = k.makeButton(row, words, function() send(row, info, id) end, "secondary", nil, BUTTON_H)
 			b.text:SetFont(b.text:GetFont(), 11, "")
-			b:SetWidth(math.max(44, (b.text:GetStringWidth() or 40) + 18))
-			b:SetPoint("BOTTOMLEFT", x, 8)
-			x = x + b:GetWidth() + 6
+			local w = math.min(ROW_W - 2 * PAD, math.max(44, (b.text:GetStringWidth() or 40) + 18))
+			b:SetWidth(w)
+			if x > PAD and x + w > ROW_W - PAD then
+				x, line = PAD, line + 1
+			end
+			b:SetPoint("TOPLEFT", x, -30 - line * (BUTTON_H + BUTTON_GAP))
+			x = x + w + BUTTON_GAP
 			row.buttons[#row.buttons + 1] = b
 		end
 	end
+	row.height = 30 + (line + 1) * (BUTTON_H + BUTTON_GAP) + 4
+	row:SetHeight(row.height)
+	layout()
 	expireAfter(row, SHOW_FOR, true)
 	return row
 end
@@ -323,14 +335,14 @@ function kudos.unlock(on)
 	ensureHolder()
 	if not mover then
 		mover = CreateFrame("Frame", nil, holder, "BackdropTemplate")
-		mover:SetPoint("TOP", holder, "TOP", 0, 0)
-		mover:SetSize(ROW_W, 62)
+		mover:SetPoint("BOTTOM", holder, "TOP", 0, 4)
+		mover:SetSize(ROW_W, 26)
 		mover:SetFrameLevel((holder:GetFrameLevel() or 1) + 20)
 		local k = kit()
 		if k then k.paint(mover, k.COLORS.accent, 0.35, k.COLORS.accent) end
 		local label = mover:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
 		label:SetPoint("CENTER")
-		label:SetText("Kudos popup: drag me")
+		label:SetText("Kudos popup: drag here")
 		mover:EnableMouse(true)
 		mover:RegisterForDrag("LeftButton")
 		mover:SetScript("OnDragStart", function() holder:StartMoving() end)
