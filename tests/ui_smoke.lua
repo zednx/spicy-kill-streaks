@@ -249,7 +249,9 @@ step("kudos: offer, send, chat post, receive", function()
   C_ChatInfo.SendAddonMessage = function(_, msg, channel) addon[#addon + 1] = channel .. ": " .. msg return true end
   SendChatMessage = function(msg, channel) said[#said + 1] = channel .. ": " .. msg end
   kudos.clear()
-  -- off by default: nothing offered
+  -- on by default now; switched off: nothing offered
+  assert(ns.core.defaults.profile.kudos.give == true, "kudos should be on by default")
+  P.kudos.give = false
   local bob = "Player-1-0002"
   local kill = table.concat({ "K", "1.0.1", "Alice", "3", "0", "2", "60", "60", "-", bob }, "\t")
   fire("CHAT_MSG_ADDON", PREFIX, kill, "GUILD", "Bob-Realm")

@@ -24,7 +24,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 - **Mute** in battlegrounds, dungeons or raids, or snooze for 30 minutes.
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings, with a button to post it to guild or party chat.
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills show in chat, as combat text, with sound, and whether their deaths show too. If a guildmate or party member has a newer version, it tells you in chat. Battlegrounds and arenas are just for you: nothing is shared from them, and they don't count on the guild board.
-- **Kudos** (opt-in): when a friend running the addon gets a kill, or dies, send them an emoji: 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉. It pops up on their screen only, or, if you choose, in party or guild chat too.
+- **Kudos**: when a friend running the addon gets a kill, or dies, send them an emoji: 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉. It pops up on their screen only, or, if you choose, in party or guild chat too.
 - **Request help** (world PvP): when a player kills you, one click asks your party and guild for help, with who killed you and where. Friends get a card with **On my way** and a waypoint, and killing your killer earns them an **AVENGED!**
 - **Battleground summary**: at the end of a match, your killing blows and best kill streak, with buttons to share it in battleground or guild chat (or not).
 - **Duels**: wins count, losses and fleeing get a *Humiliation*.
