@@ -13,6 +13,10 @@ Voice packs: male (this folder), female\, sexy\, baby\, humiliation\
 headshot.ogg, firstblood.ogg, pancake.ogg
   Added for Spicy Kill Streaks 0.6.0 from files supplied by the author. Source: to be confirmed.
 
+gank.ogg ("Pint sized!")
+  Added for Spicy Kill Streaks 1.1.0 from a file supplied by the author. The file's metadata
+  names sound designer Jamey Scott (2003). Source: to be confirmed.
+
 combowhore.ogg
   Added for Spicy Kill Streaks 0.7.0 from a file supplied by the author. "Combo Whore" is an
   Unreal Tournament 2004 announcer line ((c) Epic Games).

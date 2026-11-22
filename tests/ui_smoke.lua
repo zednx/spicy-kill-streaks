@@ -298,6 +298,21 @@ step("kudos: offer, send, chat post, receive", function()
   kudos.clear()
   P.kudos.give, P.kudos.chat = false, false
 end)
+step("gank line at most once a minute, Headshot and Ownage in between", function()
+  local played = {}
+  local old = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  local P = ns.core.db().profile
+  P.dosound, P.soundpack = true, "male"
+  ns.core.db().global.snoozeUntil = 0
+  P.mutebg, P.mutedungeon, P.muteraid = false, false, false
+  local sp = ns.core.special
+  sp.lastGankLine = nil
+  sp.playGank(); sp.playGank(); sp.playGank()
+  PlaySoundFile = old
+  assert(played[1]:find("gank%.ogg$"), played[1])
+  assert(played[2]:find("headshot%.ogg$") and played[3]:find("ownage%.ogg$"), table.concat(played, " "))
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

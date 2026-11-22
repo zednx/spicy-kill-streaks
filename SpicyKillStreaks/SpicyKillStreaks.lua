@@ -50,7 +50,7 @@ SPECIAL.ns = select(2, ...)
 -- Sounds the voice packs don't ship (players add their own); played instead while missing
 -- A number is one of the game's own sound files (its file ID): nothing to ship
 --   558146  sound/creature/peon/peonpissed4.ogg, the Peon's "Me not that kind of orc!"
-local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg", ["ganked.ogg"] = 558146, ["gank.ogg"] = "headshot.ogg" }
+local SOUND_STANDIN = { ["triplekill.ogg"] = "multikill.ogg", ["ganked.ogg"] = 558146 }
 local MULTIKILL_WINDOW = 30       -- seconds between kills that still chain into a multikill
 local LOG_LIMIT = 20
 local UNKNOWN_VICTIM = "an enemy" -- the scoreboard says that we killed, not whom
@@ -1309,7 +1309,22 @@ end
 -- Ganks. Both only fire when every fact is known; anything unclear plays the normal callouts.
 SPECIAL.GANK_LEVELS = 10   -- levels between killer and victim
 SPECIAL.GANK_WAIT = 1.5    -- seconds to wait for an honorable kill that would rule a gank out
-SPECIAL.gank = "gank.ogg"     -- Flamboyant has one; the other packs play Headshot until one is found (SOUND_STANDIN)
+SPECIAL.gank = "gank.ogg"     -- "Pint sized!" (Flamboyant has its own)
+SPECIAL.GANK_COOLDOWN = 60    -- seconds: the gank line plays at most once a minute
+
+-- A gank's sound (ours or a friend's): the gank line, or within a minute of it Headshot and
+-- Ownage taking turns, so a run of ganks doesn't repeat the same line
+function SPECIAL.playGank()
+	local now = GetTime()
+	if not SPECIAL.lastGankLine or now - SPECIAL.lastGankLine >= SPECIAL.GANK_COOLDOWN then
+		if playSound(SPECIAL.gank) then
+			SPECIAL.lastGankLine = now
+			return
+		end
+	end
+	SPECIAL.gankTurn = not SPECIAL.gankTurn
+	playSound(SPECIAL.gankTurn and SPECIAL.headshot or RANK_SOUNDS[1])
+end
 SPECIAL.ganked = "ganked.ogg" -- Flamboyant has one; the other packs play the Peon (SOUND_STANDIN)
 SPECIAL.FLAIR = { "Bully!", "Pick on someone your own size!", "Big hero.", "Shameful.", "Their mum is on the way." }
 
@@ -1540,7 +1555,7 @@ function SPECIAL.registerGank(victim)
 	local level = Levels.of(victim)
 	local flair = SPECIAL.FLAIR[math.random(#SPECIAL.FLAIR)]
 	announce((playerName or "You") .. " ganked a level " .. tostring(level or "?") .. " " .. victim .. ". " .. flair, "death")
-	playSound(SPECIAL.gank)
+	SPECIAL.playGank()
 	syncSendKill("K", victim, streak, 0, 0, true)
 	local times = count(profile.kills, victim)
 	if profile.dochat then chat("You have ganked " .. victim .. " " .. times .. " times. " .. flair) end
@@ -1872,7 +1887,7 @@ local function onFeedMessage(kind, sender, channel, fields)
 			.. ". " .. SPECIAL.FLAIR[math.random(#SPECIAL.FLAIR)]
 		if source.feed then chat(FEED_ICONS .. line) end
 		if source.text then showText(line, "death") end
-		if source.sound then playSound(SPECIAL.gank) end
+		if source.sound then SPECIAL.playGank() end
 		return
 	end
 	SPECIAL.allyEvent({ kind = kind, sender = sender, channel = channel, who = who, other = name,
@@ -3080,7 +3095,7 @@ function SPECIAL.soundBoard()
 		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
 		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
 		{ "Meat's back on the menu", "Your first kill after dying 3+ times in a row (a game sound)", SPECIAL.MEAT },
-		{ "Gank", "You kill a player 10+ levels below you (Headshot until it has its own sound, except in Flamboyant)", SPECIAL.gank },
+		{ "Gank", "You kill a player 10+ levels below you (at most once a minute; Headshot or Ownage in between)", SPECIAL.gank },
 		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
 		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
 		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },

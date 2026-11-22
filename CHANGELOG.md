@@ -2,6 +2,7 @@
 
 ## v1.1.0
 
+- **Ganks have a sound:** killing a player 10+ levels below you plays "Pint sized!", at most once a minute. Ganks in between play Headshot and Ownage in turn. Flamboyant keeps its own gank line.
 - **Kudos:** react to your friends' kills and deaths. When a party or guild member running the addon gets a kill, a small popup offers **Zug zug!**, **For the Horde!** (or Alliance, your own faction), **Hell yeah!** and **Thumbs up!**; when they die, **RIP** and **F**. One click sends it to them only: it pops up on their screen with a running count ("+3"), and flashes in their combat text too (smaller and calmer than a kill). Kudos stack: each one after the first for the same kill comes in a bit bigger and warmer, with a small sparkle burst that grows too. Off by default: switch it on under Friends > Kudos. Getting kudos is on by default.
 - Kudos can also be posted as a normal line in party or guild chat ("Zug zug! (to Bob for Rampage)"), which everyone sees. Off by default, at most one post every 15 seconds.
 - Kudos follow your sharing settings: they go back the way the kill came (party or guild), only for kills and deaths from the last 30 seconds, one per kill or death, and only kudos for something you just did are shown.

@@ -9,7 +9,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | File | Male `sounds\` | Female `sounds\female\` | Sexy `sounds\sexy\` | Baby `sounds\baby\` |
 |---|---|---|---|---|
 | `combowhore.ogg` (20 kills in a row) | done | [ ] | [ ] | [ ] |
-| `gank.ogg` (you ganked someone 10+ levels lower) | [ ] | [ ] | [ ] | [ ] |
+| `gank.ogg` (you ganked someone 10+ levels lower) | done ("Pint sized!") | male | male | male |
 | `ganked.ogg` (a player 10+ levels higher killed you) | Peon (built in) | Peon | Peon | Peon |
 | `triplekill.ogg` | done | [ ] | [ ] | [ ] |
 | `headshot.ogg` | done | [ ] | [ ] | [ ] |
@@ -18,15 +18,15 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 | `pancake.ogg` | done | [ ] | [ ] | [ ] |
 | `monsterkill.ogg` | done | done | done | [ ] |
 
-Until a file is added: a pack without it plays the male one; with no male one either, `gank`
-plays Headshot. `ganked` plays the game's own Peon line ("Me not that kind of orc!", file ID 558146).
+Until a file is added: a pack without it plays the male one. `gank` plays at most once a minute
+(Headshot and Ownage in between). `ganked` plays the game's own Peon line ("Me not that kind of orc!", file ID 558146).
 
 The **Flamboyant** pack (`sounds\flamboyant\`) is complete apart from `combowhore` and `prepare`,
 which use the male voice.
 
 - [ ] Listen to the HKSounds / MegaKill packs Claude sent ("Announcer sounds to review.zip"); MegaKill's
       Unreal pack has a `triple_kill.wav`
-- [ ] Tell Claude where `headshot`, `firstblood` and `pancake` came from, for `sounds/CREDITS.txt`
+- [ ] Tell Claude where `headshot`, `firstblood`, `pancake` and `gank` ("Pint sized") came from, for `sounds/CREDITS.txt`
 
 ### Where the current sounds came from
 
