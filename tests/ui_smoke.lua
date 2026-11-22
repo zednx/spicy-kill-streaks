@@ -602,6 +602,9 @@ step("secrets: 15 is the male voice only; five ganks in five minutes play the se
   for _ = 1, 5 do sp.registerGank("Lowbie") end
   PlaySoundFile = old
   assert(played[#played]:find("secret30%.ogg$"), "the fifth gank: " .. tostring(played[#played]))
+  local third
+  for _, f in ipairs(played) do if f:find("secretgank%.ogg$") then third = true end end
+  assert(third, "the third gank didn't play its secret")
   assert(not played[1]:find("secret30"), "the first gank played the secret")
 end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)

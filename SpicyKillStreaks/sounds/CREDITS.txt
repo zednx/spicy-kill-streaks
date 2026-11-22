@@ -17,9 +17,10 @@ gank.ogg
   Added for Spicy Kill Streaks 1.1.0 from a file supplied by the author. The file's metadata
   names sound designer Jamey Scott (2003). Source: to be confirmed.
 
-secret15.ogg (male pack), secret25.ogg, secret40.ogg
+secret15.ogg (male pack), secret25.ogg, secret40.ogg, secretgank.ogg
   Added for Spicy Kill Streaks 1.6.0 from files supplied by the author: announcer lines
-  (secret25.ogg's metadata names sound designer Jamey Scott, 2003). Source: to be confirmed. (What they say is a surprise.)
+  (secret25.ogg's and secretgank.ogg's metadata names sound designer Jamey Scott, 2003).
+  Source: to be confirmed. (What they say is a surprise.)
 
 secret30.ogg
   Added for Spicy Kill Streaks 1.6.0 from a file supplied by the author: a line from the GLaDOS

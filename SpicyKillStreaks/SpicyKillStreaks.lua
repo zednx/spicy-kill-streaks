@@ -626,8 +626,11 @@ function SPECIAL.secretFor(count)
 	if not file or (packs and not packs[db.profile.soundpack]) then return nil end
 	return file
 end
--- Ganking a run of players: this many within this many seconds plays a secret line instead
-SPECIAL.GANK_RUN, SPECIAL.GANK_RUN_WINDOW, SPECIAL.GANK_RUN_SOUND = 5, 300, "secret30.ogg"
+-- Ganking a run of players within this many seconds: the 3rd and the 5th play a secret line
+-- instead of the gank sound (the run starts again after the 5th)
+SPECIAL.GANK_RUN_WINDOW = 300
+SPECIAL.GANK_RUN_SOUNDS = { [3] = "secretgank.ogg", [5] = "secret30.ogg" }
+SPECIAL.GANK_RUN = 5
 -- Now and then Retribution is a surprise instead (a game sound, by file ID)
 SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 1 / 3
 -- The first kill after dying this many times in a row: a surprise (a game sound, by file ID)
@@ -1617,9 +1620,10 @@ function SPECIAL.registerGank(victim)
 	end
 	recent[#recent + 1] = now
 	SPECIAL.gankRun = recent
-	if #recent >= SPECIAL.GANK_RUN then
-		SPECIAL.gankRun = {}
-		if not playSound(SPECIAL.GANK_RUN_SOUND) then SPECIAL.playGank() end
+	local runSound = SPECIAL.GANK_RUN_SOUNDS[#recent]
+	if #recent >= SPECIAL.GANK_RUN then SPECIAL.gankRun = {} end
+	if runSound then
+		if not playSound(runSound) then SPECIAL.playGank() end
 	else
 		SPECIAL.playGank()
 	end
