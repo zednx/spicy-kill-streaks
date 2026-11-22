@@ -547,7 +547,8 @@ function playSound(file, pack)
 		-- The game's own files are mixed quieter than ours: two copies at once are about twice as loud
 		local channel = db.profile.soundchannel or "Master"
 		local ok, played = pcall(PlaySoundFile, file, channel)
-		if ok and played then pcall(PlaySoundFile, file, channel) end
+		-- (SPECIAL.soundOnce: just one copy, for quieter moments such as kudos)
+		if ok and played and not SPECIAL.soundOnce then pcall(PlaySoundFile, file, channel) end
 		return ok and played
 	end
 	pack = pack or db.profile.soundpack

@@ -378,14 +378,20 @@ end
 -- on the 3rd and 5th kudos for the same kill. forced: a preview, which plays even when muted.
 local function playKudosSound(sound, count, forced)
 	if not sound or not cfg().sound then return end
-	local play = forced and core().special.playForced or core().playSound
-	if sound.kind == "D" then
-		play(DEATH_SOUND)
-		return
-	end
-	local cheer = cheerFor(sound.race, sound.sex)
-	if cheer then play(cheer) end
-	if STACK_SOUNDS[count] then play(STACK_SOUNDS[count]) end
+	local special = core().special
+	local play = forced and special.playForced or core().playSound
+	-- Played once, at the game's own volume: kudos are a quiet moment, unlike the announcer
+	special.soundOnce = true
+	pcall(function()
+		if sound.kind == "D" then
+			play(DEATH_SOUND)
+			return
+		end
+		local cheer = cheerFor(sound.race, sound.sex)
+		if cheer then play(cheer) end
+		if STACK_SOUNDS[count] then play(STACK_SOUNDS[count]) end
+	end)
+	special.soundOnce = false
 end
 kudos.playKudosSound = playKudosSound
 
