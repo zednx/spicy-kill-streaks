@@ -2020,13 +2020,13 @@ function SPECIAL.topDeaths(count)
 	return list
 end
 
--- "1. Bob 12 in a row, 2. Alice 9 in a row, 3. Carl 7 in a row", or nil when nobody has a streak
+-- "Bob (12) · Alice (9) · Carl (7)" with the best streaks in gold, or nil when nobody has a streak
 function SPECIAL.topLine(count)
 	local list = SPECIAL.top(count)
 	if #list == 0 then return nil end
 	local parts = {}
-	for i, entry in ipairs(list) do parts[i] = i .. ". " .. entry.name .. " " .. entry.best .. " in a row" end
-	return table.concat(parts, ", ")
+	for i, entry in ipairs(list) do parts[i] = entry.name .. " |cffffd100(" .. entry.best .. ")|r" end
+	return table.concat(parts, "  ·  ")
 end
 
 -- The board as chat lines: a title, one line per top killer, then the most deaths.
@@ -2149,7 +2149,7 @@ local function loginCensus()
 			if #names <= MAX_NAMES_SHOWN then line = line .. ": " .. table.concat(names, ", ") end
 			chat(line .. ".")
 			local top = cfg.loginboard and SPECIAL.topLine(3)
-			if top then chat("Top killers this month: " .. top .. ".") end
+			if top then chat("Top killers this month: " .. top) end
 		end)
 	end)
 end
