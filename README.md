@@ -8,19 +8,25 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 
 ## Features
 
-- **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer, with matching rainbow callouts).
-- **Kill streaks**: *Headshot* on your first kill, then a rank for every kill from *Killing Spree* (3 in a row) up to *Godlike* (8 and beyond), with their own sounds, colours and on-screen callouts. Every kill, or Unreal Tournament style (every few kills).
-- **Special callouts**: *First Blood* on your first kill of the day, *Retribution* when you kill someone who killed you in the last hour, and *Pancake* when you (or a friend) die from falling or drowning.
-- **Multikills**: kills within 30 seconds of each other chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and on.
+- **Kill streaks**: a rank for every kill in a row: *Headshot* (1), *Ownage* (2), *Killing Spree* (3), *Rampage*, *Dominating*, *Unstoppable*, *Wicked Sick*, then *Godlike* from 8 on, each with its own sound, colour and callout. On every kill, or Unreal Tournament style (every few kills). There are a couple of secrets further up.
+- **Multikills**: kills within 30 seconds of each other chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and on, up to *Holy Shit*.
+- **Special callouts**, only when the addon is sure (otherwise you get the normal callout):
+  - *First Blood* on your first kill of the day
+  - *Retribution* when you kill someone who killed you in the last hour (one in three is the Candle King: "You no take candle!")
+  - *Comeback*: your first kill after dying 3+ times in a row gets the Butcher's "meat's back on the menu"
+  - *Pancake* when you (or a friend) die from falling or drowning
+  - **Ganks**: kill a player 10+ levels below you and get shamed instead of a callout (it doesn't count towards your streak); die to one 10+ levels above you and hear "You got ganked"
+- **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer, with rainbow callouts). Pick a separate voice for *Humiliation*, or add your own sound files.
 - **Only your killing blows count**, not kills your group finishes.
-- **Four voice packs**: male, female, sexy and baby. Pick a separate voice for *Humiliation*, or add your own sound files.
-- **Effects** (all optional): animated combat text that punches in and floats up, sparkle bursts (stars, chillies or confetti), and a screen-edge flash for big moments. Drag them anywhere.
-- **Guild board**: the month's top killers in your guild (best kill streak), shown at login and in the settings, with a button to post the top 3 in guild chat.
+- **Effects** (all optional): combat text that punches in and floats up, in a dozen fonts (or any SharedMedia font), sparkle bursts (stars, chillies or confetti), and a screen-edge flash for big moments. Drag them anywhere.
+- **Settings window** with a live preview of your font, size and voice pack, a **Sound board** that plays every sound and says when it plays, and a short **setup** on first login.
+- **Minimap button** (the chilli): settings, a quick menu, and Shift-click to snooze.
+- **Mute** in battlegrounds, dungeons or raids, or snooze for 30 minutes.
+- **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings, with a button to post it to guild or party chat.
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills show in chat, as combat text, with sound, and whether their deaths show too. If a guildmate or party member has a newer version, it tells you in chat.
 - **Duels**: wins count, losses and fleeing get a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent log.
-- **First-run setup** that walks you through voice, effects and sharing in about 30 seconds.
-- **Tests and previews** for everything, so you can try it without a fight.
+- **Debug log** window you can copy from, for bug reports.
 
 ## Install
 
@@ -39,6 +45,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks emote` | Send your last kill's custom emote message (WoW Forever only lets typed messages go out from a key press; put it in a macro). Built-in emotes like /cheer play by themselves after combat. |
 | `/sks synctest` | Send a test kill to your party/guild |
 | `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze 60` for an hour, `/sks snooze off` to undo) |
+| `/sks score` | Check that your battleground scoreboard row is found |
 | `/sks recap` | Print what your last Death Recap tells addons (for troubleshooting) |
 | `/sks classic` | The old options window |
 | `/sks minimap` | Show or hide the minimap button |
@@ -64,7 +71,7 @@ Sharing is on by default, and the first-run setup says so with a box to untick. 
 ## Credits and license
 
 - Made by **Spicy Bubbletea** (Horde, WoW Forever PvP). Feedback in game or on GitHub Issues.
-- Based on **dG KillShot** by Lance Inman. Its voice packs ship with this addon.
+- Inspired by **dG KillShot** by Lance Inman. Its voice packs ship with this addon.
 - Uses the **Ace3** libraries.
 - The code is licensed under the **GNU GPL v2** (see [LICENSE](LICENSE)), as dG KillShot is.
 
