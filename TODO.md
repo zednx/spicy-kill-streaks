@@ -82,6 +82,22 @@ Forever; addon whispers aren't tested there yet.
 - [ ] "Also post my request in chat" posts without "interface action failed"
 - [ ] Waypoint: the map pin appears (C_Map.SetUserWaypoint) or the position is printed instead
 
+### Share with friends (potential)
+
+Sync with characters on your friends list who run the addon, not only party and guild.
+
+- **Who:** online friends-list characters (Battle.net friends playing WoW Forever could follow,
+  through the Battle.net addon channel).
+- **How:** party and guild are one message each; friends need one addon whisper each, so cap it
+  (e.g. 10 friends per kill). Only whisper *online* friends (offline ones give "no player named X").
+- **Settings:** "Share with my friends", off by default (friends see your kills and deaths even when
+  you're not grouped), and a Friends' kills feed (chat, combat text, sounds, deaths) like party/guild.
+  Kudos and Request help work for friends too.
+- **Not covered:** battlegrounds/arenas (nothing is sent there) and the other faction.
+- **Check first:** addon whispers to one player haven't been tested on WoW Forever (only party and
+  guild so far). Try it with one friend online before building; if blocked, it can't work.
+- Receiving: the feed currently ignores whispered kills/deaths; allow them from friends-list senders.
+
 ### KOS / Nemesis list
 
 - **Adding someone:** when you die to a player who has killed you before, the death popup offers
