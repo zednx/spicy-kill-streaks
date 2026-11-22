@@ -87,7 +87,8 @@ local defaults = {
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
-		dobgsummary = true,      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
+		dobgsummary = true,
+		doflagcap = true,        -- "FLAG CAPTURED!" when the battleground says we captured a flag      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
 		dobgguess = true,        -- battlegrounds: count hidden killing blows that look like ours (see SPECIAL.hiddenKill)
 		dozonechange = false,
 		-- sound
@@ -2967,7 +2968,28 @@ function events.CHAT_MSG_SYSTEM(message)
 	end
 end
 
+-- Flag captures (Warsong Gulch, Eye of the Storm): the battleground's own line, e.g. "Name captured
+-- the Alliance flag!". Only when it is readable and names us exactly; the game plays its own
+-- capture fanfare, so this is a callout and sparkles, no sound.
+function SPECIAL.bgSystem(message)
+	debugPrint("bg system:", message)
+	if not usableString(message) or not db.profile.doflagcap then return end
+	local who = strmatch(message, "^(.-) captured the .- [Ff]lag")
+	if not usableString(who) then return end
+	local mine = ownNames()
+	if not (mine[who] or mine[(strsplit("-", who))] or isOurFamilyName(who, ownFirstNames())) then return end
+	local match = SPECIAL.match
+	if match then match.caps = (match.caps or 0) + 1 end
+	debugPrint("flag capture: ours")
+	announce("FLAG CAPTURED!", "rank", 5)
+	if db.profile.doscreen then celebrate("rank", 5) end
+end
+
+function events.CHAT_MSG_BG_SYSTEM_ALLIANCE(message) SPECIAL.bgSystem(message) end
+function events.CHAT_MSG_BG_SYSTEM_HORDE(message) SPECIAL.bgSystem(message) end
+
 function events.CHAT_MSG_BG_SYSTEM_NEUTRAL(message)
+	debugPrint("bg system:", message)
 	if not usableString(message) or not db.profile.doprepare then return end
 	if message:find("30 seconds", 1, true) then playSound(SOUND_PREPARE) end
 end
@@ -3021,7 +3043,9 @@ end
 -- The scoreboard's killing blows when it gives them; a hidden one is tried as it is (the second
 -- result says so, and the card falls back to the line without it if chat refuses it).
 function SPECIAL.matchLine(match, withoutKB)
+	local caps = match.caps or 0
 	local head, tail = "{skull} " .. match.zone .. ": ", "best kill streak " .. match.best
+		.. (caps > 0 and (", " .. caps .. " flag capture" .. (caps == 1 and "" or "s")) or "")
 	local kb = match.scoreKB
 	if withoutKB then return head .. tail end
 	if kb == nil then kb = match.kills end

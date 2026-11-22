@@ -465,6 +465,11 @@ step("match summary at the end of a battleground, shared only on a click", funct
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
   assert(sp.match and sp.match.zone == "Warsong Gulch", "no match started")
   sp.matchNote(3); sp.matchNote(5); sp.matchNote(1)
+  ns.core.db().profile.doflagcap = true
+  fire("CHAT_MSG_BG_SYSTEM_HORDE", "Bob captured the Alliance flag!")
+  assert((sp.match.caps or 0) == 0, "someone else's capture counted")
+  fire("CHAT_MSG_BG_SYSTEM_HORDE", "Tester captured the Alliance flag!")
+  assert(sp.match.caps == 1, "our capture not counted")
   -- the scoreboard's killing blows win over the addon's count
   GetNumBattlefieldScores = function() return 1 end
   C_PvP.GetScoreInfo = function() return { name = "Tester", killingBlows = 4 } end
@@ -473,7 +478,7 @@ step("match summary at the end of a battleground, shared only on a click", funct
   assert(card and card.__shown, "no summary card")
   assert(#said == 0, "posted without a click")
   card.shareGuild.__scripts.OnClick(card.shareGuild)
-  assert(said[1] == "GUILD: {skull} Warsong Gulch: 4 killing blows, best kill streak 5", tostring(said[1]))
+  assert(said[1] == "GUILD: {skull} Warsong Gulch: 4 killing blows, best kill streak 5, 1 flag capture", tostring(said[1]))
   card:Hide()
   IsInInstance = function() return false, "none" end
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()

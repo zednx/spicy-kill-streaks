@@ -603,6 +603,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
+	c:add(ptoggle("doflagcap", "Flag captures", "\"FLAG CAPTURED!\" when you capture a flag"), 0.5)
 	c:add(ptoggle("dobgsummary", "Battleground summary", "At the end of a match: your killing blows and best streak, to share or not"), 0.5)
 	c:add(button("Preview the summary", function() SlashCmdList.SPICYKILLSTREAKS("summary") end), 0.5)
 	c:add(ptoggle("dobgguess", "Battleground kills (best guess)",
@@ -1817,6 +1818,8 @@ function ui.matchSummary(match)
 	summary = summary or buildSummary()
 	summary.match = match
 	summary.title:SetText(match.zone)
+	local caps = match.caps or 0
+	summary.sub:SetText("Match summary" .. (caps > 0 and ("  ·  " .. caps .. " flag capture" .. (caps == 1 and "" or "s")) or ""))
 	-- The scoreboard's killing blows when there are some: a hidden value can't be read, but the
 	-- game may still let it be shown. Otherwise the addon's own count.
 	local fromScoreboard = match.scoreKB ~= nil and pcall(summary.kills.value.SetText, summary.kills.value, match.scoreKB)
