@@ -1862,4 +1862,5 @@ end
 -- Called by SpicyKillStreaks.lua once the saved settings are loaded
 function ui.init()
 	ui.updateMinimap()
+	if ns.kudos and ns.kudos.init then pcall(ns.kudos.init) end
 end

@@ -186,12 +186,12 @@ local function place()
 	holder:SetScale(scale)
 	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", (cfg().lx or 150) / scale, (cfg().ly or 120) / scale)
 	if kudos.grip then
-		-- the move handle sits left of the first card, at the anchor line
+		-- the move handle sits at the anchor line, on the side away from the cards
 		kudos.grip:ClearAllPoints()
 		if growsUp() then
-			kudos.grip:SetPoint("BOTTOMRIGHT", holder, "BOTTOMLEFT", -3, 0)
+			kudos.grip:SetPoint("TOP", holder, "BOTTOM", 0, -2)
 		else
-			kudos.grip:SetPoint("TOPRIGHT", holder, "TOPLEFT", -3, 0)
+			kudos.grip:SetPoint("BOTTOM", holder, "TOP", 0, 2)
 		end
 	end
 	if mover then
@@ -232,8 +232,6 @@ local function removeRow(row)
 	row:Hide()
 	row:SetScript("OnUpdate", nil)
 	layout()
-	-- the last card gone: the move handle goes too (unless it's being used)
-	if #rows == 0 and kudos.grip and kudos.grip:IsShown() and not kudos.grip:IsMouseOver() then kudos.grip:Hide() end
 end
 
 local function ensureHolder()
@@ -244,6 +242,7 @@ local function ensureHolder()
 	holder:SetClampedToScreen(true)
 	holder:SetMovable(true)
 	place()
+	kudos.makeGrip()
 	return holder
 end
 
@@ -271,10 +270,7 @@ local function newRow(height, tone)
 	ensureHolder()
 	local row = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 	row:SetSize(ROW_W, height)
-	-- Hovering a card shows the move handle beside the stack
 	row:EnableMouse(true)
-	row:SetScript("OnEnter", function() kudos.showGrip() end)
-	row:SetScript("OnLeave", function() kudos.hideGripSoon() end)
 	row.height = height
 	row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
 	row:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
@@ -621,52 +617,37 @@ function kudos.stopDrag()
 	place()
 end
 
--- The move handle: a small grip left of the stack, shown while the mouse is over a card or the grip
-function kudos.showGrip()
-	if not holder then return end
-	local grip = kudos.grip
-	if not grip then
-		grip = CreateFrame("Frame", nil, holder, "BackdropTemplate")
-		grip:SetSize(18, 30)
-		grip:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
-		grip:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
-		grip:SetBackdropBorderColor(0.95, 0.42, 0.18, 0.9)
-		local dots = grip:CreateFontString(nil, "OVERLAY")
-		dots:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 14, "")
-		dots:SetTextColor(0.95, 0.75, 0.6)
-		dots:SetPoint("CENTER", 0, 1)
-		dots:SetText(":\n:")
-		grip:EnableMouse(true)
-		grip:RegisterForDrag("LeftButton")
-		grip:SetScript("OnDragStart", function() kudos.startDrag() end)
-		grip:SetScript("OnDragStop", function() kudos.stopDrag(); kudos.hideGripSoon() end)
-		grip:SetScript("OnEnter", function(self)
-			kudos.showGrip()
-			if GameTooltip then
-				GameTooltip:SetOwner(self, "ANCHOR_LEFT")
-				GameTooltip:SetText("Drag to move")
-				GameTooltip:Show()
-			end
-		end)
-		grip:SetScript("OnLeave", function()
-			if GameTooltip then GameTooltip:Hide() end
-			kudos.hideGripSoon()
-		end)
-		kudos.grip = grip
-		place()
-	end
-	grip:Show()
+-- The move handle: a slim bar at the spot where cards appear, on the side away from the cards (so it
+-- never covers one). Mostly see-through and only while the mouse is over it; there whether or not
+-- cards are showing.
+function kudos.makeGrip()
+	if kudos.grip or not holder then return end
+	local grip = CreateFrame("Frame", "SpicyKillStreaksKudosHandle", holder, "BackdropTemplate")
+	grip:SetSize(ROW_W, 14)
+	grip:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+	grip:SetBackdropColor(0.95, 0.55, 0.3, 0.35)
+	local dots = grip:CreateFontString(nil, "OVERLAY")
+	dots:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 10, "")
+	dots:SetTextColor(1, 0.9, 0.8)
+	dots:SetPoint("CENTER", 0, 0)
+	dots:SetText("drag to move kudos")
+	grip:SetAlpha(0)
+	grip:EnableMouse(true)
+	grip:RegisterForDrag("LeftButton")
+	grip:SetScript("OnEnter", function(self) self:SetAlpha(0.8) end)
+	grip:SetScript("OnLeave", function(self) if not holder.isMoving then self:SetAlpha(0) end end)
+	grip:SetScript("OnDragStart", function() kudos.startDrag() end)
+	grip:SetScript("OnDragStop", function(self)
+		kudos.stopDrag()
+		if not self:IsMouseOver() then self:SetAlpha(0) end
+	end)
+	kudos.grip = grip
+	place()
 end
 
--- Hide the grip a moment after the mouse leaves, unless it's over a card or the grip again
-function kudos.hideGripSoon()
-	C_Timer.After(0.4, function()
-		local grip = kudos.grip
-		if not grip or not grip:IsShown() then return end
-		if grip:IsMouseOver() or (holder and #rows > 0 and holder:IsMouseOver()) then return end
-		if holder and holder.isMoving then return end
-		grip:Hide()
-	end)
+-- At login (UI.lua): make the popup and its handle, so the handle is there before any card
+function kudos.init()
+	ensureHolder()
 end
 
 -- The popup's size (a scale, 0.6 to 1.2)
