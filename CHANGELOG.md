@@ -4,7 +4,7 @@
 
 - **Flag captures:** when the battleground announces that you captured a flag (Warsong Gulch, Eye of the Storm), you get a "FLAG CAPTURED!" callout and sparkles (no sound: the game plays its own), and the match summary counts it. Only when the game's line is readable and names you. Switch it off under Announcer > Callouts.
 - **Kudos popup can grow upwards:** Friends > Kudos > **Grow upwards** stacks new cards up from the popup's spot instead of down (handy near the bottom of the screen).
-- **Battleground kills are stricter:** the best guess now only counts a killing blow when your target is the enemy player who just died (it counted some of your party's killing blows before). It may miss a kill on someone you weren't targeting, and it names the victim now.
+- **Battleground kills are stricter, and named:** the best guess now counts a hidden killing blow only when your target, an enemy player you saw alive a moment before, disappears with it (the game clears a target the moment it dies). The victim is named, so Retribution and the rest work there too. A kill on someone you weren't targeting is missed; a party member's killing blow on your own target can still count (the game doesn't say which of you it was).
 - **Battleground summary:** at the end of a battleground or arena match, a small card shows your killing blows and your best kill streak in that match. **Share to battleground** and **Share to guild** post it as one chat line ("{skull} Warsong Gulch: 11 killing blows, best kill streak 5"); nothing is posted unless you click. When the match ends, the killing blows come from the scoreboard; if you leave before the end, they're the addon's own count. Turn the card off under Announcer > Callouts; `/sks summary` shows a sample.
 
 ## v1.3.0

@@ -351,50 +351,45 @@ step("battleground probes write to the debug log", function()
   assert(text:find("table lookup of the hidden attacker: us"), "no lookup probe")
   ns.core.debugLog.setEnabled(false)
 end)
-step("battleground best guess: only when our target just died", function()
+step("battleground best guess: our enemy target disappears with the hidden killing blow", function()
   local sp = ns.core.special
   local clock = 1000
   local saved = { GetTime, IsInInstance, UnitExists, UnitIsPlayer, UnitCanAttack, GetUnitName, UnitIsDeadOrGhost }
-  local playerDead, targetDead, hasTarget = false, false, true
+  local playerDead, hasTarget, targetName = false, true, "Victim"
   GetTime = function() return clock end
   IsInInstance = function() return true, "pvp" end
   UnitAffectingCombat = function() return true end
   UnitExists = function(u) return u == "target" and hasTarget end
   UnitIsPlayer = function(u) return u == "target" end
   UnitCanAttack = function() return true end
-  GetUnitName = function(u) if u == "target" then return "Victim" end return "Tester" end
-  UnitIsDeadOrGhost = function(u) if u == "target" then return targetDead end return playerDead end
+  GetUnitName = function(u) if u == "target" then return hasTarget and targetName or nil end return "Tester" end
+  UnitIsDeadOrGhost = function(u) if u == "target" then return false end return playerDead end
   ns.core.db().profile.dobgguess = true
   fire("PLAYER_ENTERING_WORLD", false, false)
   runTimers()
-  local function hk() fire("PLAYER_PVP_KILLS_CHANGED", "player"); fire("PLAYER_PVP_KILLS_CHANGED", "player") end
-  -- our target, alive a moment ago, dies: the killing blow is ours
-  local function targetDies() targetDead = false; fire("UNIT_HEALTH", "target"); clock = clock + 1; targetDead = true; fire("UNIT_HEALTH", "target") end
-  targetDies(); fire("PARTY_KILL", nil, nil); clock = clock + 0.4; hk()
+  local function target(name) hasTarget, targetName = name ~= nil, name; fire("PLAYER_TARGET_CHANGED") end
+  local function kb() fire("PARTY_KILL", nil, nil) end
+  -- killing blow, then the client clears our dead target: ours, and named
+  target("Victim"); clock = clock + 0.5; kb(); clock = clock + 0.1; target(nil)
   assert(sp.hiddenCount == 1, "expected 1, got " .. tostring(sp.hiddenCount))
-  -- honorable kill first, killing blow just after
-  clock = clock + 10; targetDies(); hk(); clock = clock + 0.8; fire("PARTY_KILL", nil, nil)
+  -- target cleared first, killing blow just after: ours
+  clock = clock + 10; target("Second"); clock = clock + 0.5; target(nil); clock = clock + 0.2; kb()
   assert(sp.hiddenCount == 2, "expected 2, got " .. tostring(sp.hiddenCount))
-  -- a party member's kill while our target is alive: not ours
-  clock = clock + 10; targetDead = false; fire("UNIT_HEALTH", "target"); fire("PARTY_KILL", nil, nil); hk()
-  assert(sp.hiddenCount == 2, "counted with our target alive")
-  -- our target died long ago (a corpse we still target): not ours
-  clock = clock + 10; targetDies(); clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
-  assert(sp.hiddenCount == 2, "counted on an old corpse")
-  -- no target: not ours
-  hasTarget = false
-  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
-  assert(sp.hiddenCount == 2, "counted without a target")
-  hasTarget = true
-  -- an honorable kill on its own: nothing
-  clock = clock + 10; targetDies(); hk(); clock = clock + 5; runTimers()
-  assert(sp.hiddenCount == 2, "an honorable kill alone counted")
+  -- a party member's kill while our target lives on: not ours
+  clock = clock + 10; target("Third"); clock = clock + 0.5; kb(); clock = clock + 1; runTimers()
+  assert(sp.hiddenCount == 2, "counted with our target still alive")
+  -- our target cleared well after the killing blow: not ours
+  clock = clock + 10; target("Fourth"); clock = clock + 0.5; kb(); runTimers(); clock = clock + 2; target(nil)
+  assert(sp.hiddenCount == 2, "counted a late target clear")
+  -- switching to another enemy at the moment of a kill: not ours
+  clock = clock + 10; target("Fifth"); clock = clock + 0.5; kb(); target("Sixth"); runTimers()
+  assert(sp.hiddenCount == 2, "counted a target switch")
   -- dead or out of combat: nothing
   playerDead = true
-  clock = clock + 10; targetDies(); fire("PARTY_KILL", nil, nil); hk()
+  clock = clock + 10; target("Seventh"); clock = clock + 0.5; kb(); target(nil)
   playerDead = false
   UnitAffectingCombat = function() return false end
-  clock = clock + 10; targetDies(); fire("PARTY_KILL", nil, nil); hk()
+  clock = clock + 10; target("Eighth"); clock = clock + 0.5; kb(); target(nil)
   assert(sp.hiddenCount == 2, "counted while dead or out of combat")
   GetTime, IsInInstance, UnitExists, UnitIsPlayer, UnitCanAttack, GetUnitName, UnitIsDeadOrGhost = unpack(saved)
   UnitAffectingCombat = function() return false end

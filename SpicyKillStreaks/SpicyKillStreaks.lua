@@ -2572,17 +2572,15 @@ function SPECIAL.probeLookup(guid)
 end
 
 -- Battlegrounds with hidden killing blows (WoW Forever hides PARTY_KILL's GUIDs and the
--- scoreboard's killing blows there). PARTY_KILL still fires, for our killing blows and possibly
--- our party's, so it's a best guess, on by default and switchable (dobgguess). It counts as ours
--- only when:
---   * we are alive and in combat, and
---   * an honorable kill for us comes within a moment of it (an enemy player died near us).
--- The victim is our dead target if we have one, otherwise "an enemy".
-SPECIAL.HIDDEN_PAIR = 1.5 -- seconds between the killing-blow event and our honorable kill
--- Our target, an enemy player, last seen alive: { name, at = GetTime() }. The battleground guess
--- only counts a kill when this very target has just died, so a party member's killing blow on
--- someone else isn't ours. (It misses kills on enemies we weren't targeting: fine.)
-SPECIAL.TARGET_FRESH = 4 -- seconds: the target must have been alive this recently
+-- scoreboard's killing blows there). PARTY_KILL still fires, for our killing blows and our
+-- party's. It counts as ours (a best guess, on by default and switchable: dobgguess) when we are
+-- alive and in combat and our target, an enemy player we saw alive a moment ago, is the one who
+-- died: the client clears a target the moment it dies, so that target disappearing within half a
+-- second of the killing blow names the victim. Misses kills on enemies we weren't targeting; a
+-- party member's killing blow on our own target still counts (they can't be told apart).
+SPECIAL.TARGET_FRESH = 1.5  -- seconds: the target must have been seen alive this recently
+SPECIAL.LOST_WINDOW = 0.5   -- seconds between the killing blow and our target disappearing
+-- Our target, an enemy player, last seen alive: { name, at = GetTime() }
 function SPECIAL.noteTargetAlive()
 	local ok, name = pcall(function()
 		if UnitExists("target") and UnitIsPlayer("target") and UnitCanAttack("player", "target")
@@ -2607,23 +2605,40 @@ function SPECIAL.probeTarget(when)
 		SPECIAL.targetAlive and (SPECIAL.targetAlive.name .. string.format(" %.1fs ago", GetTime() - SPECIAL.targetAlive.at)) or "none")
 end
 
-function SPECIAL.hiddenKillCounts()
-	SPECIAL.probeTarget("at the kill")
-	local victim = deadEnemyTargetName()
+-- Our enemy target just disappeared or died: { name, at }, if it was alive a moment before
+function SPECIAL.noteTargetLost()
 	local alive = SPECIAL.targetAlive
-	if not victim or not alive or alive.name ~= victim or GetTime() - alive.at > SPECIAL.TARGET_FRESH then
-		debugPrint("bg guess: skipped, our target isn't an enemy that just died (target:", victim or "none",
-			"- last seen alive:", alive and alive.name or "none", alive and string.format("%.1fs ago", GetTime() - alive.at) or "", ")")
-		return
-	end
+	if not alive or GetTime() - alive.at > SPECIAL.TARGET_FRESH then return end
+	local ok, gone = pcall(function()
+		-- cleared (what the client does when a target dies), or still targeted and dead; switching
+		-- to someone else is the player's own doing, not a death
+		if not UnitExists("target") then return true end
+		return UnitIsDeadOrGhost("target") and GetUnitName("target", true) == alive.name
+	end)
+	if not ok or not gone then return end
+	SPECIAL.targetLost = { name = alive.name, at = GetTime() }
 	SPECIAL.targetAlive = nil
+	debugPrint("bg guess: our target", alive.name, "just disappeared")
+	-- A killing blow may be waiting for this
+	local pending = SPECIAL.hiddenPending
+	if pending and GetTime() - pending <= SPECIAL.LOST_WINDOW then
+		SPECIAL.hiddenPending = nil
+		SPECIAL.hiddenKillCounts()
+	end
+end
+
+function SPECIAL.hiddenKillCounts()
+	local lost = SPECIAL.targetLost
+	SPECIAL.targetLost = nil
+	if not lost then return end
 	SPECIAL.hiddenCount = (SPECIAL.hiddenCount or 0) + 1
-	debugPrint("bg guess: counted hidden kill #" .. SPECIAL.hiddenCount .. " this match, victim:", victim)
-	registerKill(victim, false)
+	debugPrint("bg guess: counted hidden kill #" .. SPECIAL.hiddenCount .. " this match, victim:", lost.name)
+	registerKill(lost.name, false)
 end
 
 function SPECIAL.hiddenKill()
 	if not (inBG or inArena) or not db.profile.dobgguess then return end
+	SPECIAL.probeTarget("at the kill")
 	local ok, dead, fighting = pcall(function()
 		return UnitIsDeadOrGhost("player") and true or false, UnitAffectingCombat("player") and true or false
 	end)
@@ -2631,34 +2646,22 @@ function SPECIAL.hiddenKill()
 	if dead then debugPrint("bg guess: skipped, we are dead") return end
 	if not fighting then debugPrint("bg guess: skipped, we are not in combat") return end
 	local now = GetTime()
-	-- Our honorable kill may already have arrived
-	if SPECIAL.lastHonorKill and now - SPECIAL.lastHonorKill <= SPECIAL.HIDDEN_PAIR then
-		SPECIAL.lastHonorKill = nil
+	-- Our target may already be gone (the target change can arrive first), or be dead right now
+	SPECIAL.noteTargetLost()
+	local lost = SPECIAL.targetLost
+	if lost and now - lost.at <= SPECIAL.LOST_WINDOW then
 		SPECIAL.hiddenKillCounts()
 		return
 	end
 	SPECIAL.hiddenPending = now
-	C_Timer.After(SPECIAL.HIDDEN_PAIR, function()
+	C_Timer.After(SPECIAL.LOST_WINDOW + 0.1, function()
 		if SPECIAL.hiddenPending == now then
 			SPECIAL.hiddenPending = nil
-			debugPrint("bg guess: skipped, no honorable kill followed")
+			local alive = SPECIAL.targetAlive
+			debugPrint("bg guess: skipped, our enemy target didn't disappear with it (last enemy seen alive:",
+				alive and alive.name or "none", ")")
 		end
 	end)
-end
-
--- Our honorable kill (PLAYER_PVP_KILLS_CHANGED "player", which the client sends twice): pairs with a
--- waiting killing-blow event, or waits a moment for one
-function SPECIAL.honorKill()
-	local now = GetTime()
-	-- The second copy of the event is the same kill: it must not pair with a later one
-	if SPECIAL.lastHonorEvent and now - SPECIAL.lastHonorEvent < 0.3 then return end
-	SPECIAL.lastHonorEvent = now
-	if SPECIAL.hiddenPending and now - SPECIAL.hiddenPending <= SPECIAL.HIDDEN_PAIR then
-		SPECIAL.hiddenPending = nil
-		SPECIAL.hiddenKillCounts()
-		return
-	end
-	SPECIAL.lastHonorKill = now
 end
 
 function events.CHAT_MSG_COMBAT_HONOR_GAIN(text)
@@ -2669,7 +2672,6 @@ function events.PLAYER_PVP_KILLS_CHANGED(unit)
 	debugPrint("PLAYER_PVP_KILLS_CHANGED", unit)
 	if not isSecret(unit) and unit == "player" then
 		SPECIAL.probeNext = true
-		SPECIAL.honorKill()
 		SPECIAL.probeHonor()
 		SPECIAL.probeStats("after an honorable kill:")
 	end
@@ -2854,7 +2856,10 @@ end
 
 function events.UNIT_HEALTH(unit)
 	if isSecret(unit) or unit ~= "target" then return end
-	if inBG or inArena then SPECIAL.noteTargetAlive() end
+	if inBG or inArena then
+		SPECIAL.noteTargetLost()
+		SPECIAL.noteTargetAlive()
+	end
 	checkTargetDeath()
 end
 
@@ -2871,6 +2876,7 @@ function events.PLAYER_TARGET_CHANGED()
 	-- (the last enemy seen alive is kept: a target cleared when it dies mustn't wipe it)
 	if inBG or inArena then
 		SPECIAL.probeTarget("changed")
+		SPECIAL.noteTargetLost()
 		SPECIAL.noteTargetAlive()
 	end
 	checkTargetDeath()
@@ -3099,7 +3105,7 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	if isInitialLogin or isReloadingUi then loginCensus() end
 	playerGUID = UnitGUID("player")
 	playerName = UnitName("player")
-	SPECIAL.hiddenCount, SPECIAL.hiddenPending, SPECIAL.lastHonorKill = 0, nil, nil
+	SPECIAL.hiddenCount, SPECIAL.hiddenPending, SPECIAL.targetLost, SPECIAL.targetAlive = 0, nil, nil, nil
 	updatePvPInstanceState()
 	-- New zone, new scoreboard: the killing blows already on it are the baseline
 	kbBaseline = nil
