@@ -379,6 +379,22 @@ step("battleground best guess: hidden killing blow + our honorable kill", functi
   fire("PLAYER_ENTERING_WORLD", false, false)
   runTimers()
 end)
+step("messages refused by the lockdown are held and sent after combat", function()
+  local sp = ns.core.special
+  local result, sent = 11, {}
+  local old = C_ChatInfo.SendAddonMessage
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) sent[#sent + 1] = channel return result end
+  sp.held = {}
+  sp.holdMessage("D\ttest", "GUILD")
+  assert(#sp.held == 1, "not held")
+  sp.sendHeld()
+  assert(#sp.held == 1, "dropped while still locked down")
+  result = 0
+  fire("PLAYER_REGEN_ENABLED"); runTimers()
+  assert(#sp.held == 0, "not sent after combat")
+  C_ChatInfo.SendAddonMessage = old
+  sp.retryScheduled = false
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

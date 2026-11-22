@@ -1593,12 +1593,60 @@ local function registerPrefix()
 	return prefixRegistered
 end
 
-local function sendAddonMessage(message, channel, target)
+-- SendAddonMessage's result codes (newer clients), for the debug log
+SPECIAL.SEND_RESULTS = { [0] = "success", "invalid prefix", "invalid message", "addon throttle", "invalid chat type",
+	"not in group", "target required", "invalid channel", "channel throttle", "general error", "not in guild",
+	"addon message lockdown" }
+SPECIAL.LOCKDOWN = 11
+
+local function sendAddonMessage(message, channel, target, isRetry)
 	if not (C_ChatInfo and C_ChatInfo.SendAddonMessage) or not registerPrefix() then return false end
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, message, channel, target)
-	debugPrint("sync: sent to", channel, target or "", ok and "ok" or "failed", result)
+	local why = ok and type(result) == "number" and SPECIAL.SEND_RESULTS[result]
+	debugPrint("sync: sent to", channel, target or "", ok and "ok" or "failed", result, why and ("(" .. why .. ")") or "")
+	-- Battlegrounds (and other instances) lock addon messages for a while: hold it and try again
+	if ok and result == SPECIAL.LOCKDOWN and not isRetry then SPECIAL.holdMessage(message, channel, target) end
 	-- Older clients return true/false, newer ones a result code (0 = success)
 	return ok and (result == nil or result == true or result == 0)
+end
+
+-- Messages refused by the lockdown wait here (at most 10, for at most a minute: news older than
+-- that is no longer worth showing) and go out when it lifts: after combat, or on a retry every
+-- 10 seconds.
+SPECIAL.held = {}
+SPECIAL.HOLD_FOR = 60
+function SPECIAL.holdMessage(message, channel, target)
+	local held = SPECIAL.held
+	if #held >= 10 then table.remove(held, 1) end
+	held[#held + 1] = { message = message, channel = channel, target = target, at = GetTime() }
+	debugPrint("sync: addon messages are locked down here; holding it to send later (" .. #held .. " waiting)")
+	SPECIAL.scheduleRetry()
+end
+
+function SPECIAL.scheduleRetry()
+	if SPECIAL.retryScheduled then return end
+	SPECIAL.retryScheduled = true
+	C_Timer.After(10, function()
+		SPECIAL.retryScheduled = false
+		SPECIAL.sendHeld()
+	end)
+end
+
+function SPECIAL.sendHeld()
+	local held = SPECIAL.held
+	if #held == 0 then return end
+	local now, keep = GetTime(), {}
+	for _, item in ipairs(held) do
+		if now - item.at <= SPECIAL.HOLD_FOR then
+			local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, item.message, item.channel, item.target)
+			debugPrint("sync: retry to", item.channel, ok and "ok" or "failed", result)
+			if ok and result == SPECIAL.LOCKDOWN then keep[#keep + 1] = item end
+		else
+			debugPrint("sync: dropped a held message, over a minute old")
+		end
+	end
+	SPECIAL.held = keep
+	if #keep > 0 then SPECIAL.scheduleRetry() end
 end
 
 -- The group channel we are in: battleground/arena/LFG, raid or party
@@ -2766,6 +2814,7 @@ end
 -- Built-in emotes from kills during the fight
 function events.PLAYER_REGEN_ENABLED()
 	C_Timer.After(1, flushEmotes)
+	C_Timer.After(0.5, SPECIAL.sendHeld)
 end
 
 -- ---------------------------------------------------------------------------------------------

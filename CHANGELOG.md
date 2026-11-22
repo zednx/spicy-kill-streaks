@@ -2,6 +2,7 @@
 
 ## v1.2.0
 
+- **Sharing in battlegrounds:** the game locks addon messages there for a while (your kills and deaths weren't reaching friends). Messages it refuses are now held and sent when the lock lifts (after combat, or retried every 10 seconds), for up to a minute. The debug log says why a message was refused.
 - **Battleground kills are back (best guess).** WoW Forever now hides who landed a killing blow in battlegrounds, and the killing blows on the scoreboard. The addon now counts the hidden killing-blow event as your kill when you're alive, in combat, and an honorable kill for you comes with it. It may now and then count a party member's killing blow. The victim is your dead target, or "an enemy". Switch it off under Announcer > Callouts ("Battleground kills"). The debug log numbers each one, so you can compare with your killing blows on the scoreboard.
 - Debug log: in battlegrounds it also writes what the game still lets addons read when the killing blows are hidden (your scoreboard row, honor, the hidden killing-blow event). `/sks note <text>` adds a marker to the log. It also reads your killing-blow character statistics; `/sks stats` shows them.
 
