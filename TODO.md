@@ -97,6 +97,22 @@ Sync with characters on your friends list who run the addon, not only party and 
 - **Check first:** addon whispers to one player haven't been tested on WoW Forever (only party and
   guild so far). Try it with one friend online before building; if blocked, it can't work.
 - Receiving: the feed currently ignores whispered kills/deaths; allow them from friends-list senders.
+- **Battle.net friends** too, but only online ones playing WoW Forever on the same realm (or a
+  connected one) and faction: check `C_BattleNet.GetFriendAccountInfo` → `gameAccountInfo`
+  (`isOnline`, `clientProgram == "WoW"`, `wowProjectID`, `realmID`/`realmName`, `factionName`).
+
+Research (Nov 2026, not yet tested on WoW Forever):
+- Addon **whispers** (`SendAddonMessage(..., "WHISPER", name)`) are documented to work outside
+  instances, unthrottled there, but only to players on the same or a connected realm. An offline
+  target prints "Player is offline" (result 12), so only whisper friends shown online.
+- **Battle.net**: `BNSendGameData(gameAccountID, prefix, text)` → `BN_CHAT_MSG_ADDON`, up to 4078
+  bytes, delivery order not guaranteed. **Deprecated in 12.0.0** ("will be removed in the future"),
+  so it may vanish; use it only if present, whispers otherwise (a Battle.net friend's character
+  on our realm can be whispered by name too).
+- Instances/PvP matches lock addon messages (result 11) as we found; nothing is sent there anyway.
+- WoW Forever 1.60.1: **trial and Veteran accounts can't send addon messages at all** (any channel).
+- Used for real by other addons on retail (AstralKeys sends to friends by whisper and Battle.net),
+  but nothing found proving it on WoW Forever. First step: one whisper test with a friend.
 
 ### KOS / Nemesis list
 
