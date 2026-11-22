@@ -1791,11 +1791,14 @@ local function buildSummary()
 	f.status = text(f, 11, COLORS.on)
 	f.status:SetPoint("BOTTOMLEFT", 16, 18)
 	local function share(channel)
-		local line = f.match and S().matchLine(f.match)
-		if not line or not channel then return end
-		-- Posted in the click itself: WoW Forever only lets an addon post to chat from a click
+		if not f.match or not channel then return end
+		local line, hidden = S().matchLine(f.match)
+		-- Posted in the click itself: WoW Forever only lets an addon post to chat from a click.
+		-- A hidden scoreboard number may not be allowed in chat: then without it.
 		if pcall(SendChatMessage, line, channel) then
 			f.status:SetText("Shared.")
+		elseif hidden and pcall(SendChatMessage, S().matchLine(f.match, true), channel) then
+			f.status:SetText("Shared (the game wouldn't let the killing blows into chat).")
 		else
 			f.status:SetText("Could not post to chat.")
 		end
@@ -1812,7 +1815,12 @@ function ui.matchSummary(match)
 	summary = summary or buildSummary()
 	summary.match = match
 	summary.title:SetText(match.zone)
-	summary.kills.value:SetText(tostring(match.kills))
+	-- The scoreboard's killing blows when there are some: a hidden value can't be read, but the
+	-- game may still let it be shown. Otherwise the addon's own count.
+	local fromScoreboard = match.scoreKB ~= nil and pcall(summary.kills.value.SetText, summary.kills.value, match.scoreKB)
+	if not fromScoreboard then summary.kills.value:SetText(tostring(match.kills)) end
+	summary.note:SetText(fromScoreboard and "Killing blows from the scoreboard."
+		or "Killing blows as counted by Spicy Kill Streaks (battlegrounds hide them, so it may miss a few).")
 	summary.best.value:SetText(tostring(match.best))
 	summary.status:SetText("")
 	-- Battleground chat only while we are still in the match's group

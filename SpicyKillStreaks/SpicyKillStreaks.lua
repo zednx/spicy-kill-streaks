@@ -2577,8 +2577,29 @@ end
 --   * an honorable kill for us comes within a moment of it (an enemy player died near us).
 -- The victim is our dead target if we have one, otherwise "an enemy".
 SPECIAL.HIDDEN_PAIR = 1.5 -- seconds between the killing-blow event and our honorable kill
+-- Our target, an enemy player, last seen alive: { name, at = GetTime() }. The battleground guess
+-- only counts a kill when this very target has just died, so a party member's killing blow on
+-- someone else isn't ours. (It misses kills on enemies we weren't targeting: fine.)
+SPECIAL.TARGET_FRESH = 4 -- seconds: the target must have been alive this recently
+function SPECIAL.noteTargetAlive()
+	local ok, name = pcall(function()
+		if UnitExists("target") and UnitIsPlayer("target") and UnitCanAttack("player", "target")
+			and not UnitIsDeadOrGhost("target") then
+			return GetUnitName("target", true)
+		end
+	end)
+	if ok and usableString(name) then SPECIAL.targetAlive = { name = name, at = GetTime() } end
+end
+
 function SPECIAL.hiddenKillCounts()
-	local victim = deadEnemyTargetName() or UNKNOWN_VICTIM
+	local victim = deadEnemyTargetName()
+	local alive = SPECIAL.targetAlive
+	if not victim or not alive or alive.name ~= victim or GetTime() - alive.at > SPECIAL.TARGET_FRESH then
+		debugPrint("bg guess: skipped, our target isn't an enemy that just died (target:", victim or "none",
+			"- last seen alive:", alive and alive.name or "none", alive and string.format("%.1fs ago", GetTime() - alive.at) or "", ")")
+		return
+	end
+	SPECIAL.targetAlive = nil
 	SPECIAL.hiddenCount = (SPECIAL.hiddenCount or 0) + 1
 	debugPrint("bg guess: counted hidden kill #" .. SPECIAL.hiddenCount .. " this match, victim:", victim)
 	registerKill(victim, false)
@@ -2816,6 +2837,7 @@ end
 
 function events.UNIT_HEALTH(unit)
 	if isSecret(unit) or unit ~= "target" then return end
+	if inBG or inArena then SPECIAL.noteTargetAlive() end
 	checkTargetDeath()
 end
 
@@ -2829,6 +2851,8 @@ end
 
 function events.PLAYER_TARGET_CHANGED()
 	Levels.note("target")
+	SPECIAL.targetAlive = nil
+	if inBG or inArena then SPECIAL.noteTargetAlive() end
 	checkTargetDeath()
 end
 
@@ -2957,24 +2981,63 @@ function SPECIAL.matchNote(streakCount)
 	if streakCount > match.best then match.best = streakCount end
 end
 
--- "{skull} Warsong Gulch: 11 killing blows, best kill streak 5" (for chat, only when shared)
-function SPECIAL.matchLine(match)
-	return "{skull} " .. match.zone .. ": " .. match.kills .. " killing blow" .. (match.kills == 1 and "" or "s")
-		.. ", best kill streak " .. match.best
+-- Our killing blows on the scoreboard, as the game gives them: a number, a hidden (secret) value
+-- (which may still be shown on screen, but not read), or nil when our row isn't there
+function SPECIAL.ourScoreKB()
+	if not (C_PvP and C_PvP.GetScoreInfo) then return nil end
+	local count = type(GetNumBattlefieldScores) == "function" and GetNumBattlefieldScores() or 0
+	if not usableNumber(count) then return nil end
+	local mineNames, firstNames = ownNames(), ownFirstNames()
+	for i = 1, count do
+		local ok, info = pcall(C_PvP.GetScoreInfo, i)
+		local name = ok and type(info) == "table" and info.name
+		if usableString(name) and (mineNames[name] or mineNames[(strsplit("-", name))] or isOurFamilyName(name, firstNames)) then
+			return info.killingBlows
+		end
+	end
+	return nil
 end
 
-function SPECIAL.matchEnd()
+-- The chat line, only when shared: "{skull} Warsong Gulch: 5 killing blows, best kill streak 3".
+-- The scoreboard's killing blows when it gives them; a hidden one is tried as it is (the second
+-- result says so, and the card falls back to the line without it if chat refuses it).
+function SPECIAL.matchLine(match, withoutKB)
+	local head, tail = "{skull} " .. match.zone .. ": ", "best kill streak " .. match.best
+	local kb = match.scoreKB
+	if withoutKB then return head .. tail end
+	if kb == nil then kb = match.kills end
+	if usableNumber(kb) then
+		return head .. kb .. " killing blow" .. (kb == 1 and "" or "s") .. ", " .. tail
+	end
+	local ok, line = pcall(function() return head .. kb .. " killing blows, " .. tail end)
+	if ok then return line, true end
+	return head .. tail
+end
+
+-- Show the card (once a match). fromScoreboard: the match just ended and the scoreboard is still
+-- there: ask for it fresh and use its killing blows.
+function SPECIAL.matchEnd(fromScoreboard)
 	local match = SPECIAL.match
 	if not match or match.shown then return end
 	match.shown = true
-	debugPrint("match over:", match.zone, match.kills, "killing blows, best streak", match.best)
-	if not db.profile.dobgsummary then return end
-	local ui = SPECIAL.ns.ui
-	if ui and ui.matchSummary then pcall(ui.matchSummary, match) end
+	local function show()
+		if fromScoreboard then match.scoreKB = SPECIAL.ourScoreKB() end
+		debugPrint("match over:", match.zone, "- addon counted", match.kills, "killing blows; scoreboard:",
+			match.scoreKB, "- best streak", match.best)
+		if not db.profile.dobgsummary then return end
+		local ui = SPECIAL.ns.ui
+		if ui and ui.matchSummary then pcall(ui.matchSummary, match) end
+	end
+	if fromScoreboard then
+		requestScoreData()
+		C_Timer.After(1.5, show)
+	else
+		show()
+	end
 end
 
 function events.PVP_MATCH_COMPLETE()
-	SPECIAL.matchEnd()
+	SPECIAL.matchEnd(true)
 end
 
 function events.ZONE_CHANGED_NEW_AREA()

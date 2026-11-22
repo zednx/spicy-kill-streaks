@@ -346,38 +346,52 @@ step("battleground probes write to the debug log", function()
   assert(text:find("table lookup of the hidden attacker: us"), "no lookup probe")
   ns.core.debugLog.setEnabled(false)
 end)
-step("battleground best guess: hidden killing blow + our honorable kill", function()
+step("battleground best guess: only when our target just died", function()
   local sp = ns.core.special
   local clock = 1000
-  local oldTime, oldInst = GetTime, IsInInstance
+  local saved = { GetTime, IsInInstance, UnitExists, UnitIsPlayer, UnitCanAttack, GetUnitName, UnitIsDeadOrGhost }
+  local playerDead, targetDead, hasTarget = false, false, true
   GetTime = function() return clock end
   IsInInstance = function() return true, "pvp" end
   UnitAffectingCombat = function() return true end
-  UnitIsDeadOrGhost = function() return false end
+  UnitExists = function(u) return u == "target" and hasTarget end
+  UnitIsPlayer = function(u) return u == "target" end
+  UnitCanAttack = function() return true end
+  GetUnitName = function(u) if u == "target" then return "Victim" end return "Tester" end
+  UnitIsDeadOrGhost = function(u) if u == "target" then return targetDead end return playerDead end
   ns.core.db().profile.dobgguess = true
   fire("PLAYER_ENTERING_WORLD", false, false)
   runTimers()
   local function hk() fire("PLAYER_PVP_KILLS_CHANGED", "player"); fire("PLAYER_PVP_KILLS_CHANGED", "player") end
-  -- killing blow, then our honorable kill: counts
-  fire("PARTY_KILL", nil, nil); clock = clock + 0.4; hk()
+  -- our target, alive a moment ago, dies: the killing blow is ours
+  local function targetDies() targetDead = false; fire("UNIT_HEALTH", "target"); clock = clock + 1; targetDead = true; fire("UNIT_HEALTH", "target") end
+  targetDies(); fire("PARTY_KILL", nil, nil); clock = clock + 0.4; hk()
   assert(sp.hiddenCount == 1, "expected 1, got " .. tostring(sp.hiddenCount))
-  -- honorable kill first, killing blow just after: counts
-  clock = clock + 10; hk(); clock = clock + 0.8; fire("PARTY_KILL", nil, nil)
+  -- honorable kill first, killing blow just after
+  clock = clock + 10; targetDies(); hk(); clock = clock + 0.8; fire("PARTY_KILL", nil, nil)
   assert(sp.hiddenCount == 2, "expected 2, got " .. tostring(sp.hiddenCount))
-  -- the duplicate honorable-kill event must not pair with a later killing blow
-  clock = clock + 1; fire("PARTY_KILL", nil, nil); runTimers()
-  assert(sp.hiddenCount == 2, "a duplicate honorable kill paired twice")
-  -- an honorable kill on its own (a teammate's kill near us): nothing
-  clock = clock + 10; hk(); clock = clock + 5
+  -- a party member's kill while our target is alive: not ours
+  clock = clock + 10; targetDead = false; fire("UNIT_HEALTH", "target"); fire("PARTY_KILL", nil, nil); hk()
+  assert(sp.hiddenCount == 2, "counted with our target alive")
+  -- our target died long ago (a corpse we still target): not ours
+  clock = clock + 10; targetDies(); clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
+  assert(sp.hiddenCount == 2, "counted on an old corpse")
+  -- no target: not ours
+  hasTarget = false
+  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
+  assert(sp.hiddenCount == 2, "counted without a target")
+  hasTarget = true
+  -- an honorable kill on its own: nothing
+  clock = clock + 10; targetDies(); hk(); clock = clock + 5; runTimers()
   assert(sp.hiddenCount == 2, "an honorable kill alone counted")
   -- dead or out of combat: nothing
-  UnitIsDeadOrGhost = function() return true end
-  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
-  UnitIsDeadOrGhost = function() return false end
+  playerDead = true
+  clock = clock + 10; targetDies(); fire("PARTY_KILL", nil, nil); hk()
+  playerDead = false
   UnitAffectingCombat = function() return false end
-  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
+  clock = clock + 10; targetDies(); fire("PARTY_KILL", nil, nil); hk()
   assert(sp.hiddenCount == 2, "counted while dead or out of combat")
-  GetTime, IsInInstance = oldTime, oldInst
+  GetTime, IsInInstance, UnitExists, UnitIsPlayer, UnitCanAttack, GetUnitName, UnitIsDeadOrGhost = unpack(saved)
   UnitAffectingCombat = function() return false end
   fire("PLAYER_ENTERING_WORLD", false, false)
   runTimers()
@@ -446,12 +460,15 @@ step("match summary at the end of a battleground, shared only on a click", funct
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
   assert(sp.match and sp.match.zone == "Warsong Gulch", "no match started")
   sp.matchNote(3); sp.matchNote(5); sp.matchNote(1)
-  fire("PVP_MATCH_COMPLETE")
+  -- the scoreboard's killing blows win over the addon's count
+  GetNumBattlefieldScores = function() return 1 end
+  C_PvP.GetScoreInfo = function() return { name = "Tester", killingBlows = 4 } end
+  fire("PVP_MATCH_COMPLETE"); runTimers()
   local card = rawget(_G, "SpicyKillStreaksMatchSummary")
   assert(card and card.__shown, "no summary card")
   assert(#said == 0, "posted without a click")
   card.shareGuild.__scripts.OnClick(card.shareGuild)
-  assert(said[1] == "GUILD: {skull} Warsong Gulch: 3 killing blows, best kill streak 5", tostring(said[1]))
+  assert(said[1] == "GUILD: {skull} Warsong Gulch: 4 killing blows, best kill streak 5", tostring(said[1]))
   card:Hide()
   IsInInstance = function() return false, "none" end
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
