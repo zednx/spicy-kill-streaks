@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.0
+
+- **The guild board stays in sync:** at login your board goes to the guild, and guildmates merge it, keeping the highest best streak, kills and deaths seen for each player (they only ever rise within a month, so the highest is the latest). They answer with just the entries where they know more, so everyone ends up with the same board, including players you were never online with. Your own numbers always come from you. Needs guild sharing on; nothing is sent from battlegrounds. Guildmates need 1.6.0 to take part.
+
 ## v1.5.0
 
 - **The Kudos popup is smaller and gets out of the way sooner:** smaller cards and emoji, at most 3 cards at once, a friend's kill stays 20 seconds (was 30) and kudos you get 6 (was 8). A **Popup size** slider under Friends > Kudos makes it smaller or bigger still.

@@ -540,6 +540,41 @@ step("request aid: offer on a player kill, send, a friend's request, on my way, 
   C_ChatInfo.SendAddonMessage = oldSend
   P.aid.chat = false
 end)
+step("guild board sync: merge the highest, reply with only what's higher", function()
+  local core, sp = ns.core, ns.core.special
+  local P = core.db().profile
+  P.sync.shareguild = true
+  core.db().global.boards = nil
+  sp.boardSeen = {}
+  sp.boardReplyPending = false
+  local sent = {}
+  local old = C_ChatInfo.SendAddonMessage
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) sent[#sent + 1] = channel .. ": " .. msg return true end
+  sp.boardNote("Panda", 12, 40, 3); sp.boardNote("Bob", 9, 15, 14)
+  local head = table.concat({ "B", "1.5.0", sp.monthKey(), "Spice Guild" }, "\t")
+  fire("CHAT_MSG_ADDON", "SpicyKS", head .. "\tL\tZed:7:20:2;Panda:15:41:3;Tester:99:99:99", "GUILD", "Carl-Realm")
+  local players = sp.board().players
+  assert(players.Zed and players.Zed.best == 7, "new player not merged")
+  assert(players.Panda.best == 15 and players.Panda.kills == 41, "higher values not taken")
+  assert(not players.Tester or players.Tester.best ~= 99, "an entry naming us was taken")
+  -- a lower value never lowers ours
+  fire("CHAT_MSG_ADDON", "SpicyKS", head .. "\tR\tPanda:3:1:0", "GUILD", "Dan-Realm")
+  assert(players.Panda.best == 15, "a lower value lowered the board")
+  -- our reply: only Bob (nobody sent him); Panda and Zed were already seen at least as high
+  runTimers(); runTimers()
+  assert(#sent == 1 and sent[1]:find("\tR\tBob:9:15:14$"), tostring(sent[1]))
+  -- wrong guild or month: ignored
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "B", "1.5.0", sp.monthKey(), "Other Guild", "R", "Evil:500:1:1" }, "\t"), "GUILD", "Eve-Realm")
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "B", "1.5.0", "1999-01", "Spice Guild", "R", "Evil:500:1:1" }, "\t"), "GUILD", "Eve-Realm")
+  assert(not players.Evil, "a board from another guild or month merged")
+  -- at login: our whole board goes out as an "L"
+  sent = {}
+  sp.boardLoginSync(); runTimers(); runTimers()
+  local all = table.concat(sent, "\n")
+  assert(all:find("\tL\t") and all:find("Panda:15:41:3") and all:find("Bob:9:15:14") and all:find("Zed:7:20:2"), all)
+  assert(not all:find("Tester:"), "our own entry sent in a board")
+  C_ChatInfo.SendAddonMessage = old
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

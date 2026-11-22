@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.5.0"
+local VERSION = "1.6.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -2132,6 +2132,126 @@ function SPECIAL.readStats(who, fields, trustedGuild)
 	SPECIAL.boardNote(who, fields[4], fields[5], fields[7])
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Board sync: everyone's board, merged by keeping the highest value per player. Each player's own
+-- numbers only ever rise within a month, so the highest seen is the most up to date one.
+--   "B", version, month, guild, kind, "name:best:kills:deaths;..."
+--   kind "L": sent at login with our whole board; guildmates answer with "R" (a reply) holding only
+--   the entries where they know something higher than anything sent since that "L". Nobody
+--   answers an "R", so it ends there. Our own entry never travels in a board (our own messages
+--   carry it), and entries naming us are ignored: we know our numbers best.
+-- ---------------------------------------------------------------------------------------------
+SPECIAL.BOARD_CHUNK = 200   -- characters of entries per message
+SPECIAL.BOARD_SEND_MAX = 60 -- entries per board sent (the best ones)
+SPECIAL.boardSeen = {}      -- name -> { best, kills, deaths }: the highest sent since the last "L"
+
+local function boardNumber(value, maxValue)
+	local n = tonumber(value)
+	if not n or n < 0 or n > maxValue then return nil end
+	return math.floor(n)
+end
+
+-- Note what a board message said, for the "only send what's higher" check
+function SPECIAL.boardSaw(name, best, kills, deaths)
+	local seen = SPECIAL.boardSeen[name]
+	if not seen then
+		seen = { best = 0, kills = 0, deaths = 0 }
+		SPECIAL.boardSeen[name] = seen
+	end
+	seen.best = math.max(seen.best, best or 0)
+	seen.kills = math.max(seen.kills, kills or 0)
+	seen.deaths = math.max(seen.deaths, deaths or 0)
+end
+
+-- Our board's entries (not us), best first; onlyHigher: just those above what was seen
+function SPECIAL.boardEntries(onlyHigher)
+	local board = SPECIAL.board()
+	if not board then return {} end
+	local list = {}
+	for name, entry in pairs(board.players) do
+		if not SPECIAL.isMe(name) then
+			local seen = SPECIAL.boardSeen[name]
+			local higher = not seen or entry.best > seen.best or (entry.kills or 0) > seen.kills
+				or (entry.deaths or 0) > seen.deaths
+			if not onlyHigher or higher then
+				list[#list + 1] = { name = name, best = entry.best, kills = entry.kills or 0, deaths = entry.deaths or 0 }
+			end
+		end
+	end
+	table.sort(list, function(a, b)
+		if a.best ~= b.best then return a.best > b.best end
+		return a.name < b.name
+	end)
+	while #list > SPECIAL.BOARD_SEND_MAX do table.remove(list) end
+	return list
+end
+
+-- Send entries as "B" messages to the guild, a few hundred characters each, half a second apart
+function SPECIAL.sendBoard(kind, list)
+	local guild = SPECIAL.guildName()
+	if not guild or #list == 0 or inBG or inArena or not syncConfig().shareguild then return end
+	local head = table.concat({ "B", VERSION, SPECIAL.monthKey(), cleanField(guild), kind }, "\t") .. "\t"
+	local chunks, current = {}, {}
+	local length = 0
+	for _, entry in ipairs(list) do
+		local item = (entry.name:gsub("[:;\t|]", "")) .. ":" .. entry.best .. ":" .. entry.kills .. ":" .. entry.deaths
+		if length + #item + 1 > SPECIAL.BOARD_CHUNK and #current > 0 then
+			chunks[#chunks + 1] = table.concat(current, ";")
+			current, length = {}, 0
+		end
+		current[#current + 1] = item
+		length = length + #item + 1
+		SPECIAL.boardSaw(entry.name, entry.best, entry.kills, entry.deaths)
+	end
+	if #current > 0 then chunks[#chunks + 1] = table.concat(current, ";") end
+	debugPrint("board: sending", #list, "entries in", #chunks, "message(s), kind", kind)
+	for i, chunk in ipairs(chunks) do
+		C_Timer.After((i - 1) * 0.5, function() sendAddonMessage(head .. chunk, "GUILD") end)
+	end
+end
+
+-- At login: our whole board to the guild (they merge it and answer with what we lack)
+function SPECIAL.boardLoginSync()
+	if not syncConfig().shareguild then return end
+	C_Timer.After(10, function()
+		if not inGuild() or inBG or inArena then return end
+		SPECIAL.boardSeen = {}
+		SPECIAL.sendBoard("L", SPECIAL.boardEntries(false))
+	end)
+end
+
+-- A guildmate's board: merge it (highest wins), and answer an "L" with what we know higher
+function SPECIAL.readBoard(sender, channel, fields)
+	if channel ~= "GUILD" or not syncConfig().shareguild or #fields < 6 then return end
+	local guild = SPECIAL.guildName()
+	if not guild or fields[3] ~= SPECIAL.monthKey() or fields[4] ~= cleanField(guild) then return end
+	local kind = fields[5]
+	if kind == "L" and not SPECIAL.boardReplyPending then
+		-- a new round: what counts as "seen" starts again with this board
+		SPECIAL.boardSeen = {}
+	end
+	local count = 0
+	for item in string.gmatch(fields[6], "[^;]+") do
+		count = count + 1
+		if count > SPECIAL.BOARD_SEND_MAX then break end
+		local name, best, kills, deaths = strmatch(item, "^([^:]+):(%d+):(%d+):(%d+)$")
+		name = safeText(name)
+		best, kills, deaths = boardNumber(best, 999), boardNumber(kills, 99999), boardNumber(deaths, 99999)
+		if name and best then
+			SPECIAL.boardSaw(name, best, kills, deaths)
+			if not SPECIAL.isMe(name) then SPECIAL.boardNote(name, best, kills, deaths) end
+		end
+	end
+	-- Answer a login board once, after a random moment (so others' answers can make ours smaller)
+	if kind == "L" and not SPECIAL.boardReplyPending then
+		SPECIAL.boardReplyPending = true
+		C_Timer.After(1 + math.random() * 3.5, function()
+			SPECIAL.boardReplyPending = false
+			SPECIAL.sendBoard("R", SPECIAL.boardEntries(true))
+		end)
+	end
+end
+
 -- The top players by best streak (then kills), us included
 function SPECIAL.top(count)
 	local board = SPECIAL.board()
@@ -2229,8 +2349,13 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" then
 		noticeVersion(sender, fields[2])
+	end
+	-- A guildmate's guild board (see SPECIAL.readBoard)
+	if kind == "B" then
+		SPECIAL.readBoard(sender, channel, fields)
+		return
 	end
 	-- Help requests and "on my way" answers (Aid.lua)
 	if kind == "A" or kind == "W" then
@@ -2397,6 +2522,13 @@ end
 local function isOurFamilyName(name, bases)
 	local first = strmatch(name, "^([^%s%-]+)[%s%-]")
 	return first ~= nil and bases[first] == true
+end
+
+-- Is this name us (any way our name can be written, or our first name + family name)?
+function SPECIAL.isMe(name)
+	if not usableString(name) then return false end
+	local mine = ownNames()
+	return mine[name] or mine[(strsplit("-", name))] or isOurFamilyName(name, ownFirstNames()) or false
 end
 
 -- Returns our killing blows and a table of enemy name -> deaths, or nil when our row is not there.
@@ -3125,7 +3257,10 @@ end
 
 function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	-- Login or /reload, not a zone change: count the guildmates using the addon
-	if isInitialLogin or isReloadingUi then loginCensus() end
+	if isInitialLogin or isReloadingUi then
+		loginCensus()
+		SPECIAL.boardLoginSync()
+	end
 	playerGUID = UnitGUID("player")
 	playerName = UnitName("player")
 	SPECIAL.hiddenCount, SPECIAL.hiddenPending, SPECIAL.targetLost, SPECIAL.targetAlive = 0, nil, nil, nil
