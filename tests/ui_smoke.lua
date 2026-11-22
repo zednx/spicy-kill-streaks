@@ -169,6 +169,20 @@ step("minimap drag", function() mini.__scripts.OnDragStart(mini); mini.__scripts
 step("snooze + badge", function() ns.core.special.snooze(30); ns.ui.updateMinimap(); assert(ns.core.special.snoozedUntil()) end)
 step("menu with snooze", function() mini.__scripts.OnClick(mini, "RightButton"); mini.__scripts.OnClick(mini, "RightButton") end)
 step("sound board plays", function() for _, e in ipairs(ns.core.special.soundBoard()) do if not e.section then ns.core.special.playForced(e[3]) end end end)
+step("guild board post: title, one line per killer, most deaths", function()
+  local sp = ns.core.special
+  sp.readStats("Panda", { "V!", "0.7.0", sp.monthKey(), "12", "40", "Spice Guild", "3" }, false)
+  sp.readStats("Bob", { "V!", "0.7.0", sp.monthKey(), "9", "15", "Spice Guild", "14" }, false)
+  sp.noteMyKill(1); sp.noteMyDeath()
+  local sent = {}
+  SendChatMessage = function(msg, channel) sent[#sent + 1] = channel .. ": " .. msg end
+  sp.shareBoard("GUILD")
+  assert(sent[1]:find("{skull} Spicy Kill Streaks: top killers of"), sent[1])
+  assert(sent[2] == "GUILD: 1. Panda - 12 kill streak", sent[2])
+  assert(sent[3] == "GUILD: 2. Bob - 9 kill streak", sent[3])
+  assert(sent[#sent]:find("{cross} Most deaths: Bob %(14%), Panda %(3%)"), sent[#sent])
+end)
+step("guild board page with deaths", function() ns.ui.open(); ns.ui.show("board") end)
 step("/sks minimap hides", function() SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end
 for _, l in ipairs(printed) do if l:find("failed") or l:find("Could not") then io.write("chat: ", l, "\n") end end

@@ -521,7 +521,10 @@ function playSound(file, pack)
 	if not SPECIAL.forceSound and (not db.profile.dosound or soundMuted()) then return end
 	-- A number is one of the game's own sound files, by file ID
 	if type(file) == "number" then
-		local ok, played = pcall(PlaySoundFile, file, db.profile.soundchannel or "Master")
+		-- The game's own files are mixed quieter than ours: two copies at once are about twice as loud
+		local channel = db.profile.soundchannel or "Master"
+		local ok, played = pcall(PlaySoundFile, file, channel)
+		if ok and played then pcall(PlaySoundFile, file, channel) end
 		return ok and played
 	end
 	pack = pack or db.profile.soundpack
@@ -1453,6 +1456,7 @@ local function registerDeath(killer, isDuel, killerGUID)
 		if not isDuel and profile.dodeathsound then playHumiliation() end
 	end
 	if not isDuel and not testing and killer ~= SPECIAL.UNKNOWN_KILLER then SPECIAL.rememberKiller(killer) end
+	if not isDuel and not testing then SPECIAL.noteMyDeath() end
 
 	if testing then return end
 
@@ -1871,9 +1875,14 @@ function SPECIAL.monthKey() return date("%Y-%m") end
 function SPECIAL.myMonth()
 	local c = db.char
 	if c.month ~= SPECIAL.monthKey() then
-		c.month, c.monthBest, c.monthKills = SPECIAL.monthKey(), 0, 0
+		c.month, c.monthBest, c.monthKills, c.monthDeaths = SPECIAL.monthKey(), 0, 0, 0
 	end
 	return c
+end
+
+function SPECIAL.noteMyDeath()
+	local m = SPECIAL.myMonth()
+	m.monthDeaths = (m.monthDeaths or 0) + 1
 end
 
 function SPECIAL.noteMyKill(streakCount)
@@ -1902,30 +1911,33 @@ function SPECIAL.board()
 end
 
 -- A guildmate's numbers (from their messages: checked, capped, and only ever raised)
-function SPECIAL.boardNote(name, best, kills)
+function SPECIAL.boardNote(name, best, kills, deaths)
 	local board = SPECIAL.board()
 	if not board or not name then return end
-	best, kills = tonumber(best), tonumber(kills)
+	best, kills, deaths = tonumber(best), tonumber(kills), tonumber(deaths)
 	if not best or best < 0 or best > 999 then return end
 	if kills and (kills < 0 or kills > 99999) then kills = nil end
+	if deaths and (deaths < 0 or deaths > 99999) then deaths = nil end
 	local entry = board.players[name]
 	if not entry then
 		local count = 0
 		for _ in pairs(board.players) do count = count + 1 end
 		if count >= SPECIAL.BOARD_MAX then return end
-		entry = { best = 0, kills = 0 }
+		entry = { best = 0, kills = 0, deaths = 0 }
 		board.players[name] = entry
 	end
 	entry.best = math.max(entry.best, math.floor(best))
 	if kills then entry.kills = math.max(entry.kills, math.floor(kills)) end
+	if deaths then entry.deaths = math.max(entry.deaths or 0, math.floor(deaths)) end
 	entry.at = time()
 end
 
--- "<month>\t<best>\t<kills>\t<guild>": what we add to the who-runs-it question and answer
+-- "<month>\t<best>\t<kills>\t<guild>\t<deaths>": what we add to the who-runs-it question and answer
+-- (deaths since 0.7.0, after the guild so older readers still find everything where they expect it)
 function SPECIAL.statsFields()
 	local m = SPECIAL.myMonth()
 	return table.concat({ SPECIAL.monthKey(), tostring(m.monthBest or 0), tostring(m.monthKills or 0),
-		cleanField(SPECIAL.guildName() or "") }, "\t")
+		cleanField(SPECIAL.guildName() or ""), tostring(m.monthDeaths or 0) }, "\t")
 end
 
 -- Take a guildmate's numbers from a V?/V! message, if they are for this month and our guild.
@@ -1935,7 +1947,7 @@ function SPECIAL.readStats(who, fields, trustedGuild)
 	local guild = SPECIAL.guildName()
 	if not guild then return end
 	if not trustedGuild and fields[6] ~= cleanField(guild) then return end
-	SPECIAL.boardNote(who, fields[4], fields[5])
+	SPECIAL.boardNote(who, fields[4], fields[5], fields[7])
 end
 
 -- The top players by best streak (then kills), us included
@@ -1943,16 +1955,35 @@ function SPECIAL.top(count)
 	local board = SPECIAL.board()
 	if not board then return {} end
 	local m = SPECIAL.myMonth()
-	if playerName and (m.monthBest or 0) > 0 then
-		board.players[playerName] = { best = m.monthBest, kills = m.monthKills or 0, at = time() }
+	if playerName and ((m.monthBest or 0) > 0 or (m.monthDeaths or 0) > 0) then
+		board.players[playerName] = { best = m.monthBest or 0, kills = m.monthKills or 0, deaths = m.monthDeaths or 0, at = time() }
 	end
 	local list = {}
 	for name, entry in pairs(board.players) do
-		if entry.best > 0 then list[#list + 1] = { name = name, best = entry.best, kills = entry.kills } end
+		if entry.best > 0 then
+			list[#list + 1] = { name = name, best = entry.best, kills = entry.kills, deaths = entry.deaths or 0 }
+		end
 	end
 	table.sort(list, function(a, b)
 		if a.best ~= b.best then return a.best > b.best end
 		if a.kills ~= b.kills then return a.kills > b.kills end
+		return a.name < b.name
+	end)
+	while #list > count do table.remove(list) end
+	return list
+end
+
+-- The players who died most this month (us included), most first
+function SPECIAL.topDeaths(count)
+	local board = SPECIAL.board()
+	if not board then return {} end
+	SPECIAL.top(1) -- refreshes our own entry
+	local list = {}
+	for name, entry in pairs(board.players) do
+		if (entry.deaths or 0) > 0 then list[#list + 1] = { name = name, deaths = entry.deaths } end
+	end
+	table.sort(list, function(a, b)
+		if a.deaths ~= b.deaths then return a.deaths > b.deaths end
 		return a.name < b.name
 	end)
 	while #list > count do table.remove(list) end
@@ -1968,10 +1999,28 @@ function SPECIAL.topLine(count)
 	return table.concat(parts, ", ")
 end
 
--- Post the top 3 to guild or party chat (from a button press)
+-- The board as chat lines: a title, one line per top killer, then the most deaths.
+-- ({skull} and {cross} turn into raid marker icons in chat; addons can't post other images.)
+function SPECIAL.boardLines()
+	local top = SPECIAL.top(3)
+	if #top == 0 then return nil end
+	local lines = { "{skull} Spicy Kill Streaks: top killers of " .. date("%B") .. " {skull}" }
+	for i, entry in ipairs(top) do
+		lines[#lines + 1] = i .. ". " .. entry.name .. " - " .. entry.best .. " kill streak"
+	end
+	local deaths = SPECIAL.topDeaths(3)
+	if #deaths > 0 then
+		local parts = {}
+		for i, entry in ipairs(deaths) do parts[i] = entry.name .. " (" .. entry.deaths .. ")" end
+		lines[#lines + 1] = "{cross} Most deaths: " .. table.concat(parts, ", ")
+	end
+	return lines
+end
+
+-- Post the board to guild or party chat (from a button press)
 function SPECIAL.shareBoard(channel)
-	local line = SPECIAL.topLine(3)
-	if not line then
+	local lines = SPECIAL.boardLines()
+	if not lines then
 		chat("Nobody in your guild has a kill streak this month yet.")
 		return
 	end
@@ -1980,8 +2029,9 @@ function SPECIAL.shareBoard(channel)
 		channel = groupChannel()
 		if not channel then chat("You are not in a group.") return end
 	end
-	local ok = pcall(SendChatMessage, "Top killers this month (best kill streak): " .. line, channel)
-	if not ok then chat("Could not post to chat.") end
+	for _, line in ipairs(lines) do
+		if not pcall(SendChatMessage, line, channel) then chat("Could not post to chat.") return end
+	end
 end
 
 function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
@@ -2006,6 +2056,12 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 		-- A guildmate's kill streak, live: their best this month is at least this
 		if kind == "K" and channel == "GUILD" and syncConfig().shareguild then
 			SPECIAL.boardNote(safeText(shortName(sender)), fields[4], nil)
+		elseif kind == "D" and fields[4] ~= "1" and channel == "GUILD" and syncConfig().shareguild then
+			-- A guildmate died: one more death this month (their own count, when it comes, wins if higher)
+			local who = safeText(shortName(sender))
+			local board = who and SPECIAL.board()
+			local entry = board and board.players[who]
+			SPECIAL.boardNote(who, entry and entry.best or 0, nil, ((entry and entry.deaths) or 0) + 1)
 		end
 	elseif kind == "V?" then
 		-- Only answer when the player shares with someone: otherwise stay invisible
