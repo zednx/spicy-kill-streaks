@@ -434,6 +434,32 @@ step("friends' sounds play the quiet copies, ours the normal ones", function()
   PlaySoundFile = old
   P.soundpack, P.sync.guild.sound = "male", false
 end)
+step("match summary at the end of a battleground, shared only on a click", function()
+  local sp = ns.core.special
+  local said = {}
+  local oldInst = IsInInstance
+  SendChatMessage = function(msg, channel) said[#said + 1] = channel .. ": " .. msg end
+  GetRealZoneText = function() return "Warsong Gulch" end
+  ns.core.db().profile.dobgsummary = true -- (the click-everything test above flips it)
+  local old = rawget(_G, "SpicyKillStreaksMatchSummary"); if old then old:Hide() end
+  IsInInstance = function() return true, "pvp" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  assert(sp.match and sp.match.zone == "Warsong Gulch", "no match started")
+  sp.matchNote(3); sp.matchNote(5); sp.matchNote(1)
+  fire("PVP_MATCH_COMPLETE")
+  local card = rawget(_G, "SpicyKillStreaksMatchSummary")
+  assert(card and card.__shown, "no summary card")
+  assert(#said == 0, "posted without a click")
+  card.shareGuild.__scripts.OnClick(card.shareGuild)
+  assert(said[1] == "GUILD: {skull} Warsong Gulch: 3 killing blows, best kill streak 5", tostring(said[1]))
+  card:Hide()
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  assert(not card.__shown and not sp.match, "shown twice or not ended")
+  SlashCmdList.SPICYKILLSTREAKS("summary")
+  assert(card.__shown, "no sample card"); card:Hide()
+  IsInInstance = oldInst
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

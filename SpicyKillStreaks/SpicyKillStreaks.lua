@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.3.0"
+local VERSION = "1.4.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -87,6 +87,7 @@ local defaults = {
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
+		dobgsummary = true,      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
 		dobgguess = true,        -- battlegrounds: count hidden killing blows that look like ours (see SPECIAL.hiddenKill)
 		dozonechange = false,
 		-- sound
@@ -1393,6 +1394,7 @@ local function registerKill(victim, isDuel, notGank)
 	deathstreak = 0
 	-- (battleground and arena kills stay off the guild board)
 	if not testing and not isDuel and not (inBG or inArena) then SPECIAL.noteMyKill(streak) end
+	if not testing and not isDuel and (inBG or inArena) then SPECIAL.matchNote(streak) end
 	local newRecord = false
 	if streak > profile.maxstreak and not testing then
 		profile.maxstreak = streak
@@ -2935,6 +2937,44 @@ local function updatePvPInstanceState()
 	if isSecret(instanceType) then instanceType = nil end
 	inArena = (instanceType == "arena")
 	inBG = (instanceType == "pvp")
+	-- A battleground or arena match: start its summary, or end it when we have left
+	if (inBG or inArena) and not SPECIAL.match then
+		local zone = type(GetRealZoneText) == "function" and GetRealZoneText() or nil
+		SPECIAL.match = { zone = usableString(zone) and zone or (inArena and "Arena" or "Battleground"), kills = 0, best = 0 }
+	elseif not (inBG or inArena) and SPECIAL.match then
+		SPECIAL.matchEnd()
+		SPECIAL.match = nil
+	end
+end
+
+-- Battleground and arena summary: our killing blows (as the addon counted them: in battlegrounds
+-- that's the best guess, see SPECIAL.hiddenKill) and our best kill streak in the match. Shown
+-- once, when the match ends or when we leave; the card (UI.lua) lets the player share it or not.
+function SPECIAL.matchNote(streakCount)
+	local match = SPECIAL.match
+	if not match then return end
+	match.kills = match.kills + 1
+	if streakCount > match.best then match.best = streakCount end
+end
+
+-- "{skull} Warsong Gulch: 11 killing blows, best kill streak 5" (for chat, only when shared)
+function SPECIAL.matchLine(match)
+	return "{skull} " .. match.zone .. ": " .. match.kills .. " killing blow" .. (match.kills == 1 and "" or "s")
+		.. ", best kill streak " .. match.best
+end
+
+function SPECIAL.matchEnd()
+	local match = SPECIAL.match
+	if not match or match.shown then return end
+	match.shown = true
+	debugPrint("match over:", match.zone, match.kills, "killing blows, best streak", match.best)
+	if not db.profile.dobgsummary then return end
+	local ui = SPECIAL.ns.ui
+	if ui and ui.matchSummary then pcall(ui.matchSummary, match) end
+end
+
+function events.PVP_MATCH_COMPLETE()
+	SPECIAL.matchEnd()
 end
 
 function events.ZONE_CHANGED_NEW_AREA()
@@ -3857,6 +3897,11 @@ local function initialize()
 			db.global.minimap.hide = not db.global.minimap.hide
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
 			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
+		elseif command == "summary" then
+			-- A sample end-of-match card (sharing from it posts the sample line)
+			if SPECIAL.ns.ui and SPECIAL.ns.ui.matchSummary then
+				SPECIAL.ns.ui.matchSummary({ zone = "Warsong Gulch (sample)", kills = 11, best = 5 })
+			end
 		elseif command == "kudos got" then
 			if SPECIAL.ns.kudos then SPECIAL.ns.kudos.previewGot() end
 		elseif command == "kudos" then
@@ -3926,7 +3971,7 @@ SPECIAL.ns.core = {
 		dialog:Open(ADDON)
 		dialog:SelectGroup(ADDON, "stats")
 	end,
-	-- for Kudos.lua
+	-- for Kudos.lua and the match summary
 	sendAddonMessage = sendAddonMessage,
 	groupChannel = groupChannel,
 	inGuild = inGuild,

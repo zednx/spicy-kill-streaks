@@ -603,6 +603,8 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
+	c:add(ptoggle("dobgsummary", "Battleground summary", "At the end of a match: your killing blows and best streak, to share or not"), 0.5)
+	c:add(button("Preview the summary", function() SlashCmdList.SPICYKILLSTREAKS("summary") end), 0.5)
 	c:add(ptoggle("dobgguess", "Battleground kills (best guess)",
 		"WoW Forever hides killing blows there; may now and then count a party member's"), 0.5)
 	c:add(ptoggle("dopve", "Count NPC kills", "Spammy, handy for trying it out"), 0.5)
@@ -1729,6 +1731,97 @@ local function buildMinimap()
 		C_Timer.After(10, tick)
 	end
 	C_Timer.After(10, tick)
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Match summary: at the end of a battleground or arena, our killing blows and best kill streak,
+-- with buttons to share it (nothing is posted unless one is clicked)
+-- ---------------------------------------------------------------------------------------------
+local summary
+
+local function statBox(parent, label)
+	local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+	paint(box, COLORS.field, 1)
+	box:SetSize(150, 74)
+	box.value = text(box, 30, { 1, 1, 1 })
+	font(box.value, 30, "OUTLINE", fontInfo("bangers"))
+	box.value:SetPoint("TOP", 0, -10)
+	box.value:SetJustifyH("CENTER")
+	box.label = text(box, 11, COLORS.muted)
+	box.label:SetPoint("BOTTOM", 0, 9)
+	box.label:SetJustifyH("CENTER")
+	box.label:SetText(label)
+	return box
+end
+
+local function buildSummary()
+	local f = CreateFrame("Frame", "SpicyKillStreaksMatchSummary", UIParent, "BackdropTemplate")
+	f:SetSize(340, 218)
+	f:SetPoint("TOP", UIParent, "TOP", 0, -140)
+	f:SetFrameStrata("DIALOG")
+	f:SetClampedToScreen(true)
+	f:SetMovable(true)
+	f:EnableMouse(true)
+	f:RegisterForDrag("LeftButton")
+	f:SetScript("OnDragStart", f.StartMoving)
+	f:SetScript("OnDragStop", f.StopMovingOrSizing)
+	paint(f, COLORS.bg, 0.96)
+	local band = f:CreateTexture(nil, "BORDER")
+	band:SetPoint("TOPLEFT", 1, -1)
+	band:SetPoint("TOPRIGHT", -1, -1)
+	band:SetHeight(46)
+	gradient(band, 0.20, 0.07, 0.05, 0.13, 0.06, 0.16)
+	f.title = text(f, 20, COLORS.gold)
+	font(f.title, 20, "OUTLINE", fontInfo("bangers"))
+	f.title:SetPoint("TOPLEFT", 16, -9)
+	f.sub = text(f, 11, COLORS.muted)
+	f.sub:SetPoint("TOPLEFT", 16, -30)
+	f.sub:SetText("Match summary")
+	local close = makeClose(f, function() f:Hide() end)
+	close:SetPoint("TOPRIGHT", -6, -8)
+	f.kills = statBox(f, "Killing blows")
+	f.kills:SetPoint("TOPLEFT", 16, -58)
+	f.best = statBox(f, "Best kill streak")
+	f.best:SetPoint("TOPRIGHT", -16, -58)
+	f.note = text(f, 10, COLORS.muted)
+	f.note:SetPoint("TOPLEFT", 16, -138)
+	f.note:SetPoint("RIGHT", -16, 0)
+	f.note:SetText("As counted by Spicy Kill Streaks (battlegrounds hide killing blows, so it's a best guess).")
+	f.note:SetWordWrap(true)
+	f.status = text(f, 11, COLORS.on)
+	f.status:SetPoint("BOTTOMLEFT", 16, 18)
+	local function share(channel)
+		local line = f.match and S().matchLine(f.match)
+		if not line or not channel then return end
+		-- Posted in the click itself: WoW Forever only lets an addon post to chat from a click
+		if pcall(SendChatMessage, line, channel) then
+			f.status:SetText("Shared.")
+		else
+			f.status:SetText("Could not post to chat.")
+		end
+	end
+	f.shareGroup = makeButton(f, "Share to battleground", function() share(f.groupChannel) end, "primary", 150, 28)
+	f.shareGroup:SetPoint("BOTTOMLEFT", 16, 40)
+	f.shareGuild = makeButton(f, "Share to guild", function() share("GUILD") end, "secondary", 150, 28)
+	f.shareGuild:SetPoint("BOTTOMRIGHT", -16, 40)
+	tinsert(UISpecialFrames, "SpicyKillStreaksMatchSummary") -- Escape closes it
+	return f
+end
+
+function ui.matchSummary(match)
+	summary = summary or buildSummary()
+	summary.match = match
+	summary.title:SetText(match.zone)
+	summary.kills.value:SetText(tostring(match.kills))
+	summary.best.value:SetText(tostring(match.best))
+	summary.status:SetText("")
+	-- Battleground chat only while we are still in the match's group
+	summary.groupChannel = core().groupChannel()
+	summary.shareGroup:SetShown(summary.groupChannel ~= nil)
+	summary.shareGroup:SetLabel(summary.groupChannel == "INSTANCE_CHAT" and "Share to battleground"
+		or (summary.groupChannel == "RAID" and "Share to raid" or "Share to party"))
+	summary.shareGuild:SetShown(core().inGuild())
+	summary:Show()
 end
 
 function ui.updateMinimap()

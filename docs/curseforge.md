@@ -72,6 +72,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings. Post it to guild or party chat to brag (or shame).
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out. Battlegrounds and arenas are just for you: nothing is shared from them, and they don't count on the guild board.
 - **Kudos** (opt-in): when a friend running the addon gets a kill, or dies, send them an emoji: 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉. It pops up on their screen with a running count, or goes in party or guild chat if you prefer.
+- **Battleground summary**: at the end of a match, your killing blows and best kill streak, ready to brag about in battleground or guild chat (only if you click share).
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.
 
@@ -87,6 +88,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 | `/sks who` | See who in your group and guild runs it |
 | `/sks snooze` | Mute the sounds for 30 minutes (`/sks snooze off` to undo) |
 | `/sks kudos` | Preview the Kudos popup and drag it into place (`/sks kudos got`: what friends send you) |
+| `/sks summary` | A sample of the end-of-match battleground summary |
 | `/sks minimap` | Show or hide the minimap button |
 | `/sks debug` | Open the debug log (handy for bug reports) |
 
