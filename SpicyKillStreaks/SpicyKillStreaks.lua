@@ -153,6 +153,7 @@ local defaults = {
 			chat = false,    -- also post the reaction as a normal line in party or guild chat
 			sound = true,    -- kudos we get: the sender's /cheer, loot toasts as they stack, Shadow Word: Pain for a death
 			x = 0, y = -160, -- where the popup sits, from the centre of the screen
+			growup = false,  -- new cards stack downwards from that point (true: upwards)
 			got = 0,         -- kudos received in total (flair)
 		},
 		-- stats

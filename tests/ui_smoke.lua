@@ -305,6 +305,11 @@ step("kudos: offer, send, chat post, receive", function()
   kudos.previewGot(); for _ = 1, 5 do runTimers() end; kudos.previewDeath(); kudos.clear()
   SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()
   kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
+  -- growing upwards: lay out, drag, and back
+  kudos.setGrowUp(true); assert(P.kudos.growup)
+  kudos.preview(); kudos.unlock(true)
+  for _, f in ipairs(ALLFRAMES) do if f.__scripts.OnDragStop and f.__parent == rawget(_G, "SpicyKillStreaksKudos") then f.__scripts.OnDragStart(f); f.__scripts.OnDragStop(f) end end
+  kudos.unlock(false); kudos.clear(); kudos.setGrowUp(false); assert(not P.kudos.growup)
   SlashCmdList.SPICYKILLSTREAKS("kudos"); SlashCmdList.SPICYKILLSTREAKS("kudos")
   kudos.clear()
   P.kudos.give, P.kudos.chat = false, false

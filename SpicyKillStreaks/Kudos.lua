@@ -170,21 +170,41 @@ kudos.deedText = deedText
 local holder, rows, mover = nil, {}, nil
 kudos.rows = rows -- (for the smoke test)
 
+-- The stack grows down from its anchor line (the default), or up from it (cfg().growup): then the
+-- newest card sits at the anchor and pushes the older ones up
+local function growsUp() return cfg().growup and true or false end
+
 local function place()
 	if not holder then return end
 	holder:ClearAllPoints()
-	holder:SetPoint("TOP", UIParent, "CENTER", cfg().x or 0, cfg().y or -160)
+	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "CENTER", cfg().x or 0, cfg().y or -160)
+	if mover then
+		mover:ClearAllPoints()
+		-- the drag bar sits on the far side of the anchor line from the cards
+		if growsUp() then
+			mover:SetPoint("TOP", holder, "BOTTOM", 0, -4)
+		else
+			mover:SetPoint("BOTTOM", holder, "TOP", 0, 4)
+		end
+	end
 end
+kudos.place = place
 
 local function layout()
-	local y = 0
-	for _, row in ipairs(rows) do
+	local y, up = 0, growsUp()
+	for i = up and #rows or 1, up and 1 or #rows, up and -1 or 1 do
+		local row = rows[i]
 		row:ClearAllPoints()
-		row:SetPoint("TOP", holder, "TOP", row.dx or 0, -y)
+		if up then
+			row:SetPoint("BOTTOM", holder, "BOTTOM", row.dx or 0, y)
+		else
+			row:SetPoint("TOP", holder, "TOP", row.dx or 0, -y)
+		end
 		y = y + row.height + ROW_GAP
 	end
 	holder:SetHeight(math.max(y, 1))
 end
+kudos.layout = layout
 
 local function removeRow(row)
 	for i, r in ipairs(rows) do
@@ -537,7 +557,6 @@ function kudos.unlock(on)
 	ensureHolder()
 	if not mover then
 		mover = CreateFrame("Frame", nil, holder, "BackdropTemplate")
-		mover:SetPoint("BOTTOM", holder, "TOP", 0, 4)
 		mover:SetSize(ROW_W, 24)
 		mover:SetFrameLevel((holder:GetFrameLevel() or 1) + 20)
 		local k = kit()
@@ -550,15 +569,24 @@ function kudos.unlock(on)
 		mover:SetScript("OnDragStart", function() holder:StartMoving() end)
 		mover:SetScript("OnDragStop", function()
 			holder:StopMovingOrSizing()
-			local x, top = holder:GetCenter(), holder:GetTop()
+			local x = holder:GetCenter()
+			local edge = growsUp() and holder:GetBottom() or holder:GetTop()
 			local ux, uy = UIParent:GetCenter()
-			if x and top and ux and uy then
-				cfg().x, cfg().y = math.floor(x - ux + 0.5), math.floor(top - uy + 0.5)
+			if x and edge and ux and uy then
+				cfg().x, cfg().y = math.floor(x - ux + 0.5), math.floor(edge - uy + 0.5)
 			end
 			place()
 		end)
+		place()
 	end
 	mover:SetShown(on and true or false)
+end
+
+-- Switch the growing direction: the anchor line stays where it is
+function kudos.setGrowUp(up)
+	cfg().growup = up and true or false
+	place()
+	if holder then layout() end
 end
 
 function kudos.isUnlocked() return mover and mover:IsShown() or false end
