@@ -529,14 +529,28 @@ step("request aid: offer on a player kill, send, a friend's request, on my way, 
   assert(kudos.rows[#kudos.rows].label:GetText():find("Dan.*on the way"), kudos.rows[#kudos.rows].label:GetText())
   -- we kill Gankster: avenged Panda
   assert(aid.requests["gankster"], "request not remembered")
-  aid.ownKill("Gankster")
+  local oldInfo = GetPlayerInfoByGUID
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Gankster" end
+  P.doretribution = true
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0099")
+  GetPlayerInfoByGUID = oldInfo
   assert(not aid.requests["gankster"], "avenge not taken")
+  assert(addon[#addon] == "GUILD: X\t" .. core.VERSION .. "\tPlayer-1-0005\tGankster\tPlayer-1-0001", addon[#addon])
+  -- a friend tells us they avenged us, and their kill also arrives in the feed: shown once
+  kudos.clear()
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "X", "1.6.0", "Player-1-0001", "Brute", "Player-1-0008" }, "\t"), "GUILD", "Eve-Realm")
+  assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("Eve.*avenged you"), kudos.rows[1] and kudos.rows[1].label:GetText())
+  core.db().char.recentKillers = core.db().char.recentKillers or {}
+  core.db().char.recentKillers["brute"] = time()
+  aid.allyKill({ kind = "K", who = "Eve", other = "Brute" })
+  assert(#kudos.rows == 1, "avenged shown twice")
   -- a friend kills who killed us: they avenged us
   core.db().char.recentKillers = core.db().char.recentKillers or {}
   core.db().char.recentKillers["orcbro"] = time()
   aid.allyKill({ kind = "K", who = "Bob", other = "Orcbro" })
   aid.previewOffer(); aid.previewRequest(); SlashCmdList.SPICYKILLSTREAKS("aid")
   kudos.clear()
+  runTimers(); runTimers() -- (the kill's own broadcast, still queued)
   C_ChatInfo.SendAddonMessage = oldSend
   P.aid.chat = false
 end)

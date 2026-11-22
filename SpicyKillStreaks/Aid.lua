@@ -229,7 +229,7 @@ function aid.receive(sender, channel, fields)
 	local req = { who = who, killer = killer, level = level, zone = safe(fields[5]) or "", sub = safe(fields[6]) or "",
 		mapID = mapID, x = x, y = y, guid = guid, channel = channel }
 	local key = firstName(killer)
-	if key then requests[key] = { who = who, at = now } end
+	if key then requests[key] = { who = who, at = now, guid = guid, channel = channel } end
 	showRequest(req)
 end
 
@@ -251,15 +251,65 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Avenged
 -- ---------------------------------------------------------------------------------------------
--- We killed someone: the killer of a friend who asked us for help?
-function aid.ownKill(victim)
+-- We killed someone: the killer of a friend who asked us for help? Returns that request (once)
+-- or nil. SpicyKillStreaks.lua makes the kill a Retribution and calls aid.notifyAvenged.
+function aid.takeAvenge(victim)
 	local key = firstName(victim)
 	local req = key and requests[key]
-	if not req or GetTime() - req.at > AVENGE_FOR then return end
+	if not req or GetTime() - req.at > AVENGE_FOR then return nil end
 	requests[key] = nil
-	core().showText("AVENGED " .. strupper(req.who) .. "!", "rank", 5)
-	core().celebrate("rank", 5)
+	return req
+end
+
+-- Tell the friend we avenged them ("X", version, their GUID, the victim, our GUID), on the channel
+-- their request came through, as far as we share there
+function aid.notifyAvenged(req, victim)
 	core().chat("You avenged " .. req.who .. ": " .. victim .. " is down.")
+	if not req.guid or core().inPvP() then return end
+	local sync = core().db().profile.sync
+	local channel
+	if req.channel == "GUILD" then
+		if sync.shareguild and core().inGuild() then channel = "GUILD" end
+	elseif sync.shareparty then
+		channel = core().groupChannel()
+	end
+	if channel then
+		core().sendAddonMessage(table.concat({ "X", core().VERSION, req.guid, field(victim), core().playerGUID() or "" }, "\t"), channel)
+	end
+end
+
+-- Shown once per killer: the friend's notice and their kill in the feed may both arrive
+local avengedShown = {} -- killer key -> GetTime()
+local function avengedOnce(key)
+	if not key then return false end
+	if avengedShown[key] and GetTime() - avengedShown[key] < 60 then return false end
+	avengedShown[key] = GetTime()
+	return true
+end
+
+local function showAvenged(who, victim)
+	core().showText(who .. " AVENGED YOU!", "rank", 4)
+	core().celebrate("rank", 4)
+	core().chat(who .. " avenged you: " .. victim .. " is down.")
+	local c = cards()
+	if c then
+		local row = c.newRow(32, "got")
+		row.label:SetText("|cffffd04d" .. who .. "|r avenged you!  |cff8a8079" .. victim .. " is down|r")
+		c.expireAfter(row, 8, false)
+	end
+end
+
+-- "X": a friend avenged us
+function aid.receiveAvenged(sender, channel, fields)
+	if #fields < 5 then return end
+	local me = core().playerGUID()
+	if not me or fields[3] ~= me then return end
+	local who = core().safeText(core().shortName(sender))
+	local victim = core().safeText(fields[4])
+	if not who or not victim then return end
+	who = who:gsub("%-.*$", "")
+	if not avengedOnce(firstName(victim)) then return end
+	showAvenged(who, victim)
 end
 
 -- A friend killed someone: the player who killed us lately? (our recent killers, for Retribution)
@@ -269,8 +319,8 @@ function aid.allyKill(info)
 	local list = core().db().char.recentKillers
 	local when = key and list and list[key]
 	if not when or time() - when > AVENGE_FOR then return end
-	core().showText((info.who or "A friend") .. " AVENGED YOU!", "rank", 4)
-	core().chat((info.who or "A friend") .. " avenged you: " .. info.other .. " is down.")
+	if not avengedOnce(key) then return end
+	showAvenged(info.who or "A friend", info.other)
 end
 
 -- ---------------------------------------------------------------------------------------------

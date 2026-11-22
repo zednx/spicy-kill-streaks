@@ -1446,11 +1446,23 @@ local function registerKill(victim, isDuel, notGank)
 		-- (A comeback leaves First Blood for the next kill)
 		firstBlood = not comeback and SPECIAL.firstOfDay() and profile.dofirstblood
 	end
+	-- The killer of a friend who asked us for help (Aid.lua): avenging them is a Retribution too
+	local avenged = not isDuel and not testing and not retribution and SPECIAL.ns.aid and SPECIAL.ns.aid.takeAvenge(victim)
+	if avenged then
+		if profile.doretribution then
+			retribution = true
+		else
+			announce("AVENGED " .. strupper(avenged.who) .. "!", "rank", 4)
+			celebrate("rank", 4)
+		end
+		pcall(SPECIAL.ns.aid.notifyAvenged, avenged, victim)
+	end
 
 	local rank = nil
 	if retribution then
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
 		announce("RETRIBUTION!", "rank", 4)
+		if avenged then announce("You avenged " .. avenged.who .. "!", "other") end
 		if not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
 			playSound(SPECIAL.retribution)
 		end
@@ -1757,7 +1769,6 @@ end
 -- Since 1.0.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
 -- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
 syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
-	if kind == "K" and SPECIAL.ns.aid then pcall(SPECIAL.ns.aid.ownKill, victim) end
 	SPECIAL.ownEvent("K", kind == "K" and (multi or 0) > 0 and ("m" .. multi) or (kind == "K" and (rank or 0) > 0 and ("r" .. rank)) or nil)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
 		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
@@ -2371,7 +2382,7 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" or kind == "X" then
 		noticeVersion(sender, fields[2])
 	end
 	-- A guildmate's guild board (see SPECIAL.readBoard)
@@ -2380,10 +2391,16 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 		return
 	end
 	-- Help requests and "on my way" answers (Aid.lua)
-	if kind == "A" or kind == "W" then
+	if kind == "A" or kind == "W" or kind == "X" then
 		local aid = SPECIAL.ns.aid
 		if aid then
-			if kind == "A" then aid.receive(sender, channel, fields) else aid.receiveOnMyWay(sender, channel, fields) end
+			if kind == "A" then
+				aid.receive(sender, channel, fields)
+			elseif kind == "W" then
+				aid.receiveOnMyWay(sender, channel, fields)
+			else
+				aid.receiveAvenged(sender, channel, fields)
+			end
 		end
 		return
 	end
