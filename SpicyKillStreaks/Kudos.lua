@@ -185,6 +185,15 @@ local function place()
 	local scale = tonumber(cfg().scale) or 0.85
 	holder:SetScale(scale)
 	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", (cfg().lx or 150) / scale, (cfg().ly or 120) / scale)
+	if kudos.grip then
+		-- the move handle sits left of the first card, at the anchor line
+		kudos.grip:ClearAllPoints()
+		if growsUp() then
+			kudos.grip:SetPoint("BOTTOMRIGHT", holder, "BOTTOMLEFT", -3, 0)
+		else
+			kudos.grip:SetPoint("TOPRIGHT", holder, "TOPLEFT", -3, 0)
+		end
+	end
 	if mover then
 		mover:ClearAllPoints()
 		-- the drag bar sits on the far side of the anchor line from the cards
@@ -223,6 +232,8 @@ local function removeRow(row)
 	row:Hide()
 	row:SetScript("OnUpdate", nil)
 	layout()
+	-- the last card gone: the move handle goes too (unless it's being used)
+	if #rows == 0 and kudos.grip and kudos.grip:IsShown() and not kudos.grip:IsMouseOver() then kudos.grip:Hide() end
 end
 
 local function ensureHolder()
@@ -260,11 +271,10 @@ local function newRow(height, tone)
 	ensureHolder()
 	local row = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 	row:SetSize(ROW_W, height)
-	-- Drag any card to move the whole stack
+	-- Hovering a card shows the move handle beside the stack
 	row:EnableMouse(true)
-	row:RegisterForDrag("LeftButton")
-	row:SetScript("OnDragStart", function() kudos.startDrag() end)
-	row:SetScript("OnDragStop", function() kudos.stopDrag() end)
+	row:SetScript("OnEnter", function() kudos.showGrip() end)
+	row:SetScript("OnLeave", function() kudos.hideGripSoon() end)
 	row.height = height
 	row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
 	row:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
@@ -591,12 +601,16 @@ end
 
 -- Dragging, from the drag bar or any card: the whole stack moves, and its spot is saved
 function kudos.startDrag()
-	if holder then holder:StartMoving() end
+	if holder then
+		holder.isMoving = true
+		holder:StartMoving()
+	end
 end
 
 function kudos.stopDrag()
 	if not holder then return end
 	holder:StopMovingOrSizing()
+	holder.isMoving = false
 	local x = holder:GetCenter()
 	local edge = growsUp() and holder:GetBottom() or holder:GetTop()
 	local left, uy = UIParent:GetLeft() or 0, select(2, UIParent:GetCenter())
@@ -605,6 +619,54 @@ function kudos.stopDrag()
 		cfg().lx, cfg().ly = math.floor(x * scale - left + 0.5), math.floor(edge * scale - uy + 0.5)
 	end
 	place()
+end
+
+-- The move handle: a small grip left of the stack, shown while the mouse is over a card or the grip
+function kudos.showGrip()
+	if not holder then return end
+	local grip = kudos.grip
+	if not grip then
+		grip = CreateFrame("Frame", nil, holder, "BackdropTemplate")
+		grip:SetSize(18, 30)
+		grip:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+		grip:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
+		grip:SetBackdropBorderColor(0.95, 0.42, 0.18, 0.9)
+		local dots = grip:CreateFontString(nil, "OVERLAY")
+		dots:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", 14, "")
+		dots:SetTextColor(0.95, 0.75, 0.6)
+		dots:SetPoint("CENTER", 0, 1)
+		dots:SetText(":\n:")
+		grip:EnableMouse(true)
+		grip:RegisterForDrag("LeftButton")
+		grip:SetScript("OnDragStart", function() kudos.startDrag() end)
+		grip:SetScript("OnDragStop", function() kudos.stopDrag(); kudos.hideGripSoon() end)
+		grip:SetScript("OnEnter", function(self)
+			kudos.showGrip()
+			if GameTooltip then
+				GameTooltip:SetOwner(self, "ANCHOR_LEFT")
+				GameTooltip:SetText("Drag to move")
+				GameTooltip:Show()
+			end
+		end)
+		grip:SetScript("OnLeave", function()
+			if GameTooltip then GameTooltip:Hide() end
+			kudos.hideGripSoon()
+		end)
+		kudos.grip = grip
+		place()
+	end
+	grip:Show()
+end
+
+-- Hide the grip a moment after the mouse leaves, unless it's over a card or the grip again
+function kudos.hideGripSoon()
+	C_Timer.After(0.4, function()
+		local grip = kudos.grip
+		if not grip or not grip:IsShown() then return end
+		if grip:IsMouseOver() or (holder and #rows > 0 and holder:IsMouseOver()) then return end
+		if holder and holder.isMoving then return end
+		grip:Hide()
+	end)
 end
 
 -- The popup's size (a scale, 0.6 to 1.2)

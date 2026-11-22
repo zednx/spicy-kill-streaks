@@ -3,7 +3,7 @@
 ## v1.5.0
 
 - **The Kudos popup is smaller and gets out of the way sooner:** smaller cards and emoji, at most 3 cards at once, a friend's kill stays 20 seconds (was 30) and kudos you get 6 (was 8). A **Popup size** slider under Friends > Kudos makes it smaller or bigger still.
-- **The Kudos popup sits on the left side of the screen** by default now, and you can drag it by any card at any time (no need to unlock first). Its spot is saved; Reset position puts it back on the left.
+- **The Kudos popup sits on the left side of the screen** by default now, and a small move handle appears beside it whenever your mouse is over it: drag that to move the popup, at any time (no need to unlock first). Its spot is saved; Reset position puts it back on the left.
 - **Kudos are on by default** now: the popup with emoji shows for your party and guild members' kills and deaths unless you switch it off under Friends > Kudos. (If you switched it off yourself before, it stays off.)
 - **Request help:** when a player kills you in the open world, a card offers **Need help!**. One click asks your party and guild (as far as you share with them): friends running the addon get a card with who killed you and where (the zone; your map position too if you switch that on), a raid warning sound, and **On my way** and **Waypoint** buttons. You see who's coming. Once a minute at most. Optionally also posted as a chat line. Settings under Friends > Request help; `/sks aid` previews it.
 - **AVENGED!** Kill the player who killed a friend who asked you for help, and you get an "AVENGED <friend>!" callout. When a friend kills whoever killed you lately, you see that they avenged you.

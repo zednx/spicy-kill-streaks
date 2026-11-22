@@ -308,7 +308,11 @@ step("kudos: offer, send, chat post, receive", function()
   SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()
   kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
   -- any card drags the stack
-  kudos.preview(); local card = kudos.rows[1]; card.__scripts.OnDragStart(card); card.__scripts.OnDragStop(card)
+  kudos.preview(); local card = kudos.rows[1]; card.__scripts.OnEnter(card)
+  local grip = kudos.grip; assert(grip and grip.__shown, "no move handle on hover")
+  grip.__scripts.OnEnter(grip); grip.__scripts.OnDragStart(grip); grip.__scripts.OnDragStop(grip); grip.__scripts.OnLeave(grip)
+  card.__scripts.OnLeave(card); runTimers()
+  assert(not grip.__shown, "handle didn't hide")
   assert(P.kudos.lx and P.kudos.ly, "position not saved"); kudos.resetPosition(); kudos.clear()
   -- growing upwards: lay out, drag, and back
   kudos.setGrowUp(true); assert(P.kudos.growup)
