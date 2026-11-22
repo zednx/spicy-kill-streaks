@@ -331,8 +331,12 @@ function kudos.showGot(who, words, deed, count)
 	local tally = count > 1 and ("  |cffffd100+" .. count .. "|r") or ""
 	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. deed .. ")|r" .. tally)
 	expireAfter(row, GOT_FOR, false)
-	-- and a smaller, calmer line in the combat text (no sparkles, no sound)
-	if core().db().profile.doscreen then core().showText(who .. ": " .. words, "kudos") end
+	-- and a line in the combat text: calm for the first, a bit bigger and warmer with each one
+	-- after it for the same kill, with a small sparkle burst from the second
+	if core().db().profile.doscreen then
+		core().showText(who .. ": " .. words .. (count > 1 and ("  +" .. count) or ""), "kudos", count)
+		core().celebrate("kudos", count)
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -381,15 +385,17 @@ function kudos.preview()
 	kudos.showGot("Bob", "Hell yeah!", "Rampage", 2)
 end
 
--- What getting kudos looks like: three friends reacting to a Rampage, a second apart
+-- What getting kudos looks like: five friends reacting to a Rampage, each one stacking up
 function kudos.previewGot()
 	local sample = {
 		{ "Bob", "Zug zug!" },
 		{ "Panda", reactionText("faction", myFaction()) or "Hell yeah!" },
 		{ "Alice", "Thumbs up!" },
+		{ "Grug", "Zug zug!" },
+		{ "Mira", "Hell yeah!" },
 	}
 	for i, entry in ipairs(sample) do
-		C_Timer.After((i - 1) * 1, function() kudos.showGot(entry[1], entry[2], "Rampage", i) end)
+		C_Timer.After((i - 1) * 0.9, function() kudos.showGot(entry[1], entry[2], "Rampage", i) end)
 	end
 end
 

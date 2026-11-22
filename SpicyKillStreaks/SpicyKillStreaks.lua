@@ -831,6 +831,18 @@ local TEXT_STYLES = {
 	kudos = { size = 18, punch = 1.3, life = 2.2 }, -- a kudos a friend sent us: visible, not spicy
 }
 SPECIAL.KUDOS_COLOR = { 1, 0.82, 0.3 }
+-- Kudos stack: the nth kudos for the same kill is a bit bigger, punchier and warmer than the last
+-- (gold towards spicy orange), pulsing from the 4th. Capped at the 8th.
+function SPECIAL.kudosStyle(n)
+	n = math.min(math.max(math.floor(tonumber(n) or 1), 1), 8)
+	local base = TEXT_STYLES.kudos
+	local heat = math.min((n - 1) / 5, 1)
+	local gold, hot = SPECIAL.KUDOS_COLOR, { 1, 0.42, 0.16 }
+	local color = {}
+	for i = 1, 3 do color[i] = gold[i] + (hot[i] - gold[i]) * heat end
+	return { size = base.size * (1 + 0.12 * (n - 1)), punch = base.punch + 0.25 * (n - 1),
+		life = base.life + 0.15 * (n - 1), pulse = n >= 4 }, color, n
+end
 local LINE_GAP = 6
 local MAX_LINES = 5
 local textPool, liveTexts = {}, {}
@@ -861,8 +873,8 @@ local function fancyText(text, kind, level)
 	local style = TEXT_STYLES[kind] or TEXT_STYLES.kill
 	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "death" and DEATH_COLOR)
-		or (kind == "other" and OTHER_COLOR) or (kind == "kudos" and SPECIAL.KUDOS_COLOR)
-		or RANK_COLORS[level or 1] or RANK_COLORS[1]
+		or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level or 1] or RANK_COLORS[1]
+	if kind == "kudos" then style, color = SPECIAL.kudosStyle(level) end
 	local size = style.size * fxConfig().scale
 	local holder = acquireTextHolder()
 	setFont(holder.text, size)
@@ -1103,6 +1115,12 @@ local function celebrate(kind, level)
 	level = level or 1
 	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level] or RANK_COLORS[1]
+	if kind == "kudos" then
+		-- A small burst from the 2nd kudos for the same kill, a little bigger with each (no flash)
+		local _, kudosColor, n = SPECIAL.kudosStyle(level)
+		if cfg.sparkles and n >= 2 then sparkleBurst(kudosColor, cfg.sparklecount * math.min(0.08 * n, 0.6), false) end
+		return
+	end
 	if cfg.sparkles then
 		local factor
 		if kind == "multi" then factor = 1 + 0.2 * level
@@ -3619,6 +3637,7 @@ SPECIAL.ns.core = {
 	shortName = shortName,
 	isGroupMember = isGroupMember,
 	showText = showText,
+	celebrate = celebrate,
 	playerGUID = function() return playerGUID end,
 	rankNames = RANK_NAMES,
 	finishSetup = function(skipped)
