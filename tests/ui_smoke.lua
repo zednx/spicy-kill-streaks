@@ -294,7 +294,7 @@ step("kudos: offer, send, chat post, receive", function()
   PlaySoundFile = oldPSF
   assert(played[1] == 540014 or played[1] == 539977, "expected a female dwarf cheer, got " .. tostring(played[1]))
   assert(#played == 1, "kudos sounds should play once, got " .. #played)
-  assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("^|cffffd100Bob|r: For the Alliance!.*your Killing Spree"), kudos.rows[1] and kudos.rows[1].label:GetText())
+  assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("Bob|r  For the Alliance!.*your Killing Spree"), kudos.rows[1] and kudos.rows[1].label:GetText())
   kudo("Player-1-0001", "hell", "K")
   assert(#kudos.rows == 1, "two kudos from one player for one kill")
   assert(P.kudos.got == before + 1, "got not counted")

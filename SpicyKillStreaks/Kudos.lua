@@ -22,10 +22,28 @@ local GOT_FOR = 8          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 4
-local ROW_W = 320
-local PAD = 10          -- inside the row
-local BUTTON_H = 24
-local BUTTON_GAP = 6
+local ROW_W = 360
+local PAD = 12          -- inside the card
+local TEXT_X = 34       -- the title, right of the icon
+local CHIP_H = 22
+local CHIP_GAP = 5
+local ROW_GAP = 5       -- between cards
+local SLIDE = 0.18      -- seconds to slide in
+local FADE = 0.35       -- seconds to fade out
+
+-- Card colours: the stripe, icon tint and timer bar per kind of card
+local TONES = {
+	kill = { 0.95, 0.42, 0.18 },
+	death = { 0.58, 0.64, 0.78 },
+	got = { 1, 0.80, 0.30 },
+	sent = { 0.45, 0.85, 0.50 },
+}
+local ICONS = {
+	kill = "Interface\\AddOns\\SpicyKillStreaks\\Media\\Chilli",
+	death = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8",
+	got = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1",
+	sent = "Interface\\RaidFrame\\ReadyCheck-Ready",
+}
 
 -- Reactions: id -> { label, kind = "K" (for a kill) or "D" (for a death) }
 local REACTIONS = {
@@ -129,8 +147,8 @@ end
 kudos.deedText = deedText
 
 -- ---------------------------------------------------------------------------------------------
--- The popup: a movable stack of rows. A friend's row has reaction buttons and a timer bar; a
--- kudos we got is a single line.
+-- The popup: a movable stack of small cards. A friend's card has reaction chips and a timer bar;
+-- a kudos we got is one line with a "+n" badge. Cards slide in and fade out.
 -- ---------------------------------------------------------------------------------------------
 local holder, rows, mover = nil, {}, nil
 kudos.rows = rows -- (for the smoke test)
@@ -145,8 +163,8 @@ local function layout()
 	local y = 0
 	for _, row in ipairs(rows) do
 		row:ClearAllPoints()
-		row:SetPoint("TOP", holder, "TOP", 0, -y)
-		y = y + row.height + 4
+		row:SetPoint("TOP", holder, "TOP", row.dx or 0, -y)
+		y = y + row.height + ROW_GAP
 	end
 	holder:SetHeight(math.max(y, 1))
 end
@@ -174,50 +192,143 @@ local function ensureHolder()
 	return holder
 end
 
-local function newRow(height)
+local function fontString(parent, size, r, g, b)
+	local fs = parent:CreateFontString(nil, "OVERLAY")
+	fs:SetFont(STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF", size, "")
+	fs:SetShadowOffset(1, -1)
+	fs:SetShadowColor(0, 0, 0, 0.8)
+	fs:SetTextColor(r or 1, g or 1, b or 1)
+	fs:SetJustifyH("LEFT")
+	fs:SetWordWrap(false) -- one line: a long name is cut off rather than run into the chips
+	return fs
+end
+
+-- Restyle a card for a kind ("kill", "death", "got", "sent"): stripe, icon and timer colours
+local function setTone(row, tone)
+	local c = TONES[tone] or TONES.kill
+	row.stripe:SetColorTexture(c[1], c[2], c[3], 1)
+	row.bar:SetColorTexture(c[1], c[2], c[3], 0.75)
+	row.icon:SetTexture(ICONS[tone] or ICONS.kill)
+	row.tone = tone
+end
+
+local function newRow(height, tone)
 	ensureHolder()
-	local k = kit()
 	local row = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 	row:SetSize(ROW_W, height)
 	row.height = height
-	if k then k.paint(row, k.COLORS.bg, 0.92) end
-	row.label = row:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-	row.label:SetPoint("TOPLEFT", 10, -8)
-	row.label:SetPoint("RIGHT", -26, 0)
-	row.label:SetJustifyH("LEFT")
-	row.label:SetWordWrap(false) -- one line; a long name is cut off rather than run into the buttons
-	if k then
-		local close = k.makeClose(row, function() removeRow(row) end)
-		close:SetSize(22, 22)
-		close:SetPoint("TOPRIGHT", -2, -2)
-	end
+	row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+	row:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
+	row:SetBackdropBorderColor(0.24, 0.20, 0.17, 1)
+	-- a soft lighter band at the top, for a little depth
+	local sheen = row:CreateTexture(nil, "BACKGROUND", nil, 1)
+	sheen:SetPoint("TOPLEFT", 1, -1)
+	sheen:SetPoint("TOPRIGHT", -1, -1)
+	sheen:SetHeight(16)
+	sheen:SetColorTexture(1, 1, 1, 0.03)
+	row.stripe = row:CreateTexture(nil, "ARTWORK")
+	row.stripe:SetPoint("TOPLEFT", 1, -1)
+	row.stripe:SetPoint("BOTTOMLEFT", 1, 1)
+	row.stripe:SetWidth(3)
+	row.icon = row:CreateTexture(nil, "ARTWORK")
+	row.icon:SetSize(16, 16)
+	row.icon:SetPoint("TOPLEFT", PAD, -8)
+	row.bar = row:CreateTexture(nil, "ARTWORK")
+	row.bar:SetPoint("BOTTOMLEFT", 4, 1)
+	row.bar:SetHeight(2)
+	row.bar:Hide()
+	row.label = fontString(row, 13)
+	row.label:SetPoint("TOPLEFT", TEXT_X, -9)
+	row.label:SetPoint("RIGHT", -52, 0)
+	-- "+n" badge on the right (kudos we got)
+	row.badge = CreateFrame("Frame", nil, row, "BackdropTemplate")
+	row.badge:SetSize(30, 18)
+	row.badge:SetPoint("TOPRIGHT", -26, -7)
+	row.badge:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8" })
+	row.badge:SetBackdropColor(1, 0.80, 0.30, 0.95)
+	row.badge.text = fontString(row.badge, 11, 0.12, 0.08, 0.04)
+	row.badge.text:SetPoint("CENTER", 0, 0)
+	row.badge.text:SetJustifyH("CENTER")
+	row.badge:Hide()
+	-- a small close cross
+	local close = CreateFrame("Button", nil, row)
+	close:SetSize(18, 18)
+	close:SetPoint("TOPRIGHT", -5, -6)
+	close.text = fontString(close, 12, 0.55, 0.5, 0.46)
+	close.text:SetPoint("CENTER", 0, 0)
+	close.text:SetText("x")
+	close:SetScript("OnEnter", function() close.text:SetTextColor(1, 1, 1) end)
+	close:SetScript("OnLeave", function() close.text:SetTextColor(0.55, 0.5, 0.46) end)
+	close:SetScript("OnClick", function() removeRow(row) end)
+	setTone(row, tone)
 	-- Keep at most MAX_ROWS: the oldest goes
 	if #rows >= MAX_ROWS then removeRow(rows[1]) end
 	rows[#rows + 1] = row
+	row.age, row.dx = 0, 24
+	row:SetAlpha(0)
 	row:Show()
 	layout()
 	return row
 end
 
--- Hide the row after `seconds`, with a timer bar along the bottom when bar is set
-local function expireAfter(row, seconds, bar)
-	row.left = seconds
-	if bar and not row.bar then
-		row.bar = row:CreateTexture(nil, "ARTWORK")
-		row.bar:SetPoint("BOTTOMLEFT", 1, 1)
-		row.bar:SetHeight(2)
-		local c = kit() and kit().COLORS.accent or { 0.91, 0.33, 0.16 }
-		row.bar:SetColorTexture(c[1], c[2], c[3], 0.9)
+-- The "+n" badge: shown from 2
+local function setBadge(row, count)
+	if count and count > 1 then
+		row.badge.text:SetText("+" .. count)
+		row.badge:SetWidth(math.max(26, (row.badge.text:GetStringWidth() or 14) + 12))
+		row.badge:Show()
+	else
+		row.badge:Hide()
 	end
-	if row.bar then row.bar:SetShown(bar and true or false) end
-	row.total = seconds
+end
+
+-- Slide in, then after `seconds` fade out and go; with a timer bar along the bottom when bar is set
+local function expireAfter(row, seconds, bar)
+	row.left, row.total = seconds, seconds
+	row.bar:SetShown(bar and true or false)
 	row:SetScript("OnUpdate", function(self, elapsed)
-		self.left = self.left - (elapsed or 0)
-		if self.bar and self.bar:IsShown() then
-			self.bar:SetWidth(math.max(1, (ROW_W - 2) * self.left / self.total))
+		elapsed = elapsed or 0
+		self.age = (self.age or 0) + elapsed
+		self.left = self.left - elapsed
+		-- slide in from the right while fading in
+		local t = math.min(self.age / SLIDE, 1)
+		local dx = 24 * (1 - t) * (1 - t)
+		if math.abs(dx - (self.dx or 0)) > 0.1 or (dx == 0 and self.dx ~= 0) then
+			self.dx = dx
+			layout()
+		end
+		local alpha = t
+		if self.left < FADE then alpha = math.max(self.left / FADE, 0) end
+		self:SetAlpha(alpha)
+		if self.bar:IsShown() then
+			self.bar:SetWidth(math.max(1, (ROW_W - 6) * math.max(self.left, 0) / self.total))
 		end
 		if self.left <= 0 then removeRow(self) end
 	end)
+end
+
+-- A reaction chip: small, dark, with a warm border on hover
+local function makeChip(row, words, onClick)
+	local b = CreateFrame("Button", nil, row, "BackdropTemplate")
+	b:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
+	b:SetBackdropColor(0.15, 0.12, 0.10, 1)
+	b:SetBackdropBorderColor(0.32, 0.26, 0.22, 1)
+	b.text = fontString(b, 11, 0.93, 0.90, 0.87)
+	b.text:SetPoint("CENTER", 0, 0)
+	b.text:SetJustifyH("CENTER")
+	b.text:SetText(words)
+	b:SetSize(math.max(40, (b.text:GetStringWidth() or 40) + 18), CHIP_H)
+	b:SetScript("OnEnter", function()
+		local c = TONES[row.tone] or TONES.kill
+		b:SetBackdropBorderColor(c[1], c[2], c[3], 1)
+		b:SetBackdropColor(0.22, 0.17, 0.13, 1)
+	end)
+	b:SetScript("OnLeave", function()
+		b:SetBackdropBorderColor(0.32, 0.26, 0.22, 1)
+		b:SetBackdropColor(0.15, 0.12, 0.10, 1)
+	end)
+	b:SetScript("OnClick", onClick)
+	return b
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -261,47 +372,45 @@ local function send(row, info, id)
 		end
 	end
 	for _, b in ipairs(row.buttons or {}) do b:Hide() end
-	if row.bar then row.bar:Hide() end
+	setTone(row, "sent")
 	row.label:SetText("|cff9a8f86Sent|r " .. words .. " |cff9a8f86to|r " .. info.who
-		.. (info.preview and " |cff9a8f86(preview, nothing sent)|r" or ""))
-	row.height = 30
-	row:SetHeight(30)
+		.. (info.preview and " |cff9a8f86(preview)|r" or ""))
+	row.height = 32
+	row:SetHeight(32)
 	layout()
 	expireAfter(row, 2.5, false)
 end
 kudos.send = send
 
 local function offer(info)
-	local row = newRow(62)
+	local row = newRow(62, info.kind == "D" and "death" or "kill")
 	row.info = info
 	local deed = deedText(info)
 	if info.kind == "D" then
-		row.label:SetText("|cffff7733" .. info.who .. "|r " .. deed .. ".")
+		row.label:SetText("|cffffffff" .. info.who .. "|r  |cff9aa3b8" .. deed .. "|r")
 	else
-		row.label:SetText("|cffff7733" .. info.who .. "|r: " .. deed .. "!")
+		row.label:SetText("|cffffffff" .. info.who .. "|r  |cffff8a4a" .. deed .. "!|r")
 	end
 	row.buttons = {}
 	local order = info.kind == "D" and DEATH_ORDER or KILL_ORDER
 	local faction = myFaction()
-	local k = kit()
-	-- Buttons flow left to right and wrap onto another line when the row is full
+	-- Chips flow left to right and wrap onto another line if the card is full
 	local x, line = PAD, 0
 	for _, id in ipairs(order) do
 		local words = reactionText(id, faction)
-		if words and k then
-			local b = k.makeButton(row, words, function() send(row, info, id) end, "secondary", nil, BUTTON_H)
-			b.text:SetFont(b.text:GetFont(), 11, "")
-			local w = math.min(ROW_W - 2 * PAD, math.max(44, (b.text:GetStringWidth() or 40) + 18))
+		if words then
+			local b = makeChip(row, words, function() send(row, info, id) end)
+			local w = math.min(ROW_W - 2 * PAD, b:GetWidth())
 			b:SetWidth(w)
 			if x > PAD and x + w > ROW_W - PAD then
 				x, line = PAD, line + 1
 			end
-			b:SetPoint("TOPLEFT", x, -30 - line * (BUTTON_H + BUTTON_GAP))
-			x = x + w + BUTTON_GAP
+			b:SetPoint("TOPLEFT", x, -31 - line * (CHIP_H + CHIP_GAP))
+			x = x + w + CHIP_GAP
 			row.buttons[#row.buttons + 1] = b
 		end
 	end
-	row.height = 30 + (line + 1) * (BUTTON_H + BUTTON_GAP) + 4
+	row.height = 31 + (line + 1) * (CHIP_H + CHIP_GAP) + 5
 	row:SetHeight(row.height)
 	layout()
 	expireAfter(row, SHOW_FOR, true)
@@ -398,9 +507,9 @@ kudos.playKudosSound = playKudosSound
 -- One kudos we got: "Bob: Hell yeah! (your Rampage) +3". sound: { kind, race, sex } or nil
 function kudos.showGot(who, words, deed, count, sound, forced)
 	playKudosSound(sound, count, forced)
-	local row = newRow(30)
-	local tally = count > 1 and ("  |cffffd100+" .. count .. "|r") or ""
-	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. deed .. ")|r" .. tally)
+	local row = newRow(32, "got")
+	row.label:SetText("|cffffd04d" .. who .. "|r  " .. words .. "  |cff8a8079your " .. deed .. "|r")
+	setBadge(row, count)
 	expireAfter(row, GOT_FOR, false)
 	-- and a line in the combat text: calm for the first, a bit bigger and warmer with each one
 	-- after it for the same kill, with a small sparkle burst from the second
@@ -418,7 +527,7 @@ function kudos.unlock(on)
 	if not mover then
 		mover = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 		mover:SetPoint("BOTTOM", holder, "TOP", 0, 4)
-		mover:SetSize(ROW_W, 26)
+		mover:SetSize(ROW_W, 24)
 		mover:SetFrameLevel((holder:GetFrameLevel() or 1) + 20)
 		local k = kit()
 		if k then k.paint(mover, k.COLORS.accent, 0.35, k.COLORS.accent) end
