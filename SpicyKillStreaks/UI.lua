@@ -603,6 +603,8 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
+	c:add(ptoggle("dobgguess", "Battleground kills (best guess)",
+		"WoW Forever hides killing blows there; may now and then count a party member's"), 0.5)
 	c:add(ptoggle("dopve", "Count NPC kills", "Spammy, handy for trying it out"), 0.5)
 	c:add(ptoggle("dozonechange", "Reset streaks when changing zone", nil), 1)
 	cards[#cards + 1] = c

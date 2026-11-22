@@ -1,7 +1,8 @@
 # Changelog
 
-## v1.1.1
+## v1.2.0
 
+- **Battleground kills are back (best guess).** WoW Forever now hides who landed a killing blow in battlegrounds, and the killing blows on the scoreboard. The addon now counts the hidden killing-blow event as your kill when you're alive, in combat, and an honorable kill for you comes with it. It may now and then count a party member's killing blow. The victim is your dead target, or "an enemy". Switch it off under Announcer > Callouts ("Battleground kills"). The debug log numbers each one, so you can compare with your killing blows on the scoreboard.
 - Debug log: in battlegrounds it also writes what the game still lets addons read when the killing blows are hidden (your scoreboard row, honor, the hidden killing-blow event). `/sks note <text>` adds a marker to the log. It also reads your killing-blow character statistics; `/sks stats` shows them.
 
 ## v1.1.0

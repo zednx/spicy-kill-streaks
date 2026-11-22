@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.1.1"
+local VERSION = "1.2.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -87,6 +87,7 @@ local defaults = {
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
+		dobgguess = true,        -- battlegrounds: count hidden killing blows that look like ours (see SPECIAL.hiddenKill)
 		dozonechange = false,
 		-- sound
 		dosound = true,
@@ -2494,14 +2495,69 @@ function SPECIAL.probeLookup(guid)
 	debugPrint("probe: table lookup of the hidden attacker:", ok and shown(result) or "error")
 end
 
+-- Battlegrounds with hidden killing blows (WoW Forever hides PARTY_KILL's GUIDs and the
+-- scoreboard's killing blows there). PARTY_KILL still fires, for our killing blows and possibly
+-- our party's, so it's a best guess, on by default and switchable (dobgguess). It counts as ours
+-- only when:
+--   * we are alive and in combat, and
+--   * an honorable kill for us comes within a moment of it (an enemy player died near us).
+-- The victim is our dead target if we have one, otherwise "an enemy".
+SPECIAL.HIDDEN_PAIR = 1.5 -- seconds between the killing-blow event and our honorable kill
+function SPECIAL.hiddenKillCounts()
+	local victim = deadEnemyTargetName() or UNKNOWN_VICTIM
+	SPECIAL.hiddenCount = (SPECIAL.hiddenCount or 0) + 1
+	debugPrint("bg guess: counted hidden kill #" .. SPECIAL.hiddenCount .. " this match, victim:", victim)
+	registerKill(victim, false)
+end
+
+function SPECIAL.hiddenKill()
+	if not (inBG or inArena) or not db.profile.dobgguess then return end
+	local ok, dead, fighting = pcall(function()
+		return UnitIsDeadOrGhost("player") and true or false, UnitAffectingCombat("player") and true or false
+	end)
+	if not ok then return end
+	if dead then debugPrint("bg guess: skipped, we are dead") return end
+	if not fighting then debugPrint("bg guess: skipped, we are not in combat") return end
+	local now = GetTime()
+	-- Our honorable kill may already have arrived
+	if SPECIAL.lastHonorKill and now - SPECIAL.lastHonorKill <= SPECIAL.HIDDEN_PAIR then
+		SPECIAL.lastHonorKill = nil
+		SPECIAL.hiddenKillCounts()
+		return
+	end
+	SPECIAL.hiddenPending = now
+	C_Timer.After(SPECIAL.HIDDEN_PAIR, function()
+		if SPECIAL.hiddenPending == now then
+			SPECIAL.hiddenPending = nil
+			debugPrint("bg guess: skipped, no honorable kill followed")
+		end
+	end)
+end
+
+-- Our honorable kill (PLAYER_PVP_KILLS_CHANGED "player", which the client sends twice): pairs with a
+-- waiting killing-blow event, or waits a moment for one
+function SPECIAL.honorKill()
+	local now = GetTime()
+	-- The second copy of the event is the same kill: it must not pair with a later one
+	if SPECIAL.lastHonorEvent and now - SPECIAL.lastHonorEvent < 0.3 then return end
+	SPECIAL.lastHonorEvent = now
+	if SPECIAL.hiddenPending and now - SPECIAL.hiddenPending <= SPECIAL.HIDDEN_PAIR then
+		SPECIAL.hiddenPending = nil
+		SPECIAL.hiddenKillCounts()
+		return
+	end
+	SPECIAL.lastHonorKill = now
+end
+
 function events.CHAT_MSG_COMBAT_HONOR_GAIN(text)
 	debugPrint("CHAT_MSG_COMBAT_HONOR_GAIN", text)
 end
 
 function events.PLAYER_PVP_KILLS_CHANGED(unit)
 	debugPrint("PLAYER_PVP_KILLS_CHANGED", unit)
-	if unit == "player" and not isSecret(unit) then
+	if not isSecret(unit) and unit == "player" then
 		SPECIAL.probeNext = true
+		SPECIAL.honorKill()
 		SPECIAL.probeHonor()
 		SPECIAL.probeStats("after an honorable kill:")
 	end
@@ -2616,6 +2672,7 @@ function events.PARTY_KILL(attackerGUID, targetGUID)
 		debugPrint("PARTY_KILL with hidden or missing GUIDs:", attackerGUID, targetGUID)
 		SPECIAL.probePartyKill(attackerGUID, targetGUID)
 		SPECIAL.probeLookup(attackerGUID)
+		SPECIAL.hiddenKill()
 		-- statistics may update a moment after the event
 		C_Timer.After(1, function() SPECIAL.probeStats("1s after PARTY_KILL:") end)
 		return
@@ -2823,6 +2880,7 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	if isInitialLogin or isReloadingUi then loginCensus() end
 	playerGUID = UnitGUID("player")
 	playerName = UnitName("player")
+	SPECIAL.hiddenCount, SPECIAL.hiddenPending, SPECIAL.lastHonorKill = 0, nil, nil
 	updatePvPInstanceState()
 	-- New zone, new scoreboard: the killing blows already on it are the baseline
 	kbBaseline = nil

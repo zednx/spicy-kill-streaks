@@ -343,6 +343,42 @@ step("battleground probes write to the debug log", function()
   assert(text:find("table lookup of the hidden attacker: us"), "no lookup probe")
   ns.core.debugLog.setEnabled(false)
 end)
+step("battleground best guess: hidden killing blow + our honorable kill", function()
+  local sp = ns.core.special
+  local clock = 1000
+  local oldTime, oldInst = GetTime, IsInInstance
+  GetTime = function() return clock end
+  IsInInstance = function() return true, "pvp" end
+  UnitAffectingCombat = function() return true end
+  UnitIsDeadOrGhost = function() return false end
+  ns.core.db().profile.dobgguess = true
+  fire("PLAYER_ENTERING_WORLD", false, false)
+  runTimers()
+  local function hk() fire("PLAYER_PVP_KILLS_CHANGED", "player"); fire("PLAYER_PVP_KILLS_CHANGED", "player") end
+  -- killing blow, then our honorable kill: counts
+  fire("PARTY_KILL", nil, nil); clock = clock + 0.4; hk()
+  assert(sp.hiddenCount == 1, "expected 1, got " .. tostring(sp.hiddenCount))
+  -- honorable kill first, killing blow just after: counts
+  clock = clock + 10; hk(); clock = clock + 0.8; fire("PARTY_KILL", nil, nil)
+  assert(sp.hiddenCount == 2, "expected 2, got " .. tostring(sp.hiddenCount))
+  -- the duplicate honorable-kill event must not pair with a later killing blow
+  clock = clock + 1; fire("PARTY_KILL", nil, nil); runTimers()
+  assert(sp.hiddenCount == 2, "a duplicate honorable kill paired twice")
+  -- an honorable kill on its own (a teammate's kill near us): nothing
+  clock = clock + 10; hk(); clock = clock + 5
+  assert(sp.hiddenCount == 2, "an honorable kill alone counted")
+  -- dead or out of combat: nothing
+  UnitIsDeadOrGhost = function() return true end
+  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
+  UnitIsDeadOrGhost = function() return false end
+  UnitAffectingCombat = function() return false end
+  clock = clock + 10; fire("PARTY_KILL", nil, nil); hk()
+  assert(sp.hiddenCount == 2, "counted while dead or out of combat")
+  GetTime, IsInInstance = oldTime, oldInst
+  UnitAffectingCombat = function() return false end
+  fire("PLAYER_ENTERING_WORLD", false, false)
+  runTimers()
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end
