@@ -82,75 +82,10 @@ Forever; addon whispers aren't tested there yet.
 - [ ] "Also post my request in chat" posts without "interface action failed"
 - [ ] Waypoint: the map pin appears (C_Map.SetUserWaypoint) or the position is printed instead
 
-### Share with friends (potential)
+### Planned features: tracked as GitHub issues
 
-Sync with characters on your friends list who run the addon, not only party and guild.
-
-- **Who:** online friends-list characters (Battle.net friends playing WoW Forever could follow,
-  through the Battle.net addon channel).
-- **How:** party and guild are one message each; friends need one addon whisper each, so cap it
-  (e.g. 10 friends per kill). Only whisper *online* friends (offline ones give "no player named X").
-- **Settings:** "Share with my friends", off by default (friends see your kills and deaths even when
-  you're not grouped), and a Friends' kills feed (chat, combat text, sounds, deaths) like party/guild.
-  Kudos and Request help work for friends too.
-- **Not covered:** battlegrounds/arenas (nothing is sent there) and the other faction.
-- **Check first:** addon whispers to one player haven't been tested on WoW Forever (only party and
-  guild so far). Try it with one friend online before building; if blocked, it can't work.
-- Receiving: the feed currently ignores whispered kills/deaths; allow them from friends-list senders.
-- **Battle.net friends** too, but only online ones playing WoW Forever on the same realm (or a
-  connected one) and faction: check `C_BattleNet.GetFriendAccountInfo` → `gameAccountInfo`
-  (`isOnline`, `clientProgram == "WoW"`, `wowProjectID`, `realmID`/`realmName`, `factionName`).
-
-- **Per-friend choice:** a Friends list page. When it opens (and at login) the addon asks each
-  online friend "do you run it?"; they answer with their version and whether they share with
-  friends. One row per online friend: name (Battle.net or character), status ("SKS 1.8 - sharing",
-  "not sharing", "no SKS"), and two switches: **Share with them** and **Show their kills** (mute).
-  Muted names form an ignore list that could cover party and guild members too (mute a noisy
-  guildmate). Saved per character name/GUID.
-
-Research (Nov 2026, not yet tested on WoW Forever):
-- Addon **whispers** (`SendAddonMessage(..., "WHISPER", name)`) are documented to work outside
-  instances, unthrottled there, but only to players on the same or a connected realm. An offline
-  target prints "Player is offline" (result 12), so only whisper friends shown online.
-- **Battle.net**: `BNSendGameData(gameAccountID, prefix, text)` → `BN_CHAT_MSG_ADDON`, up to 4078
-  bytes, delivery order not guaranteed. **Deprecated in 12.0.0** ("will be removed in the future"),
-  so it may vanish; use it only if present, whispers otherwise (a Battle.net friend's character
-  on our realm can be whispered by name too).
-- Instances/PvP matches lock addon messages (result 11) as we found; nothing is sent there anyway.
-- WoW Forever 1.60.1: **trial and Veteran accounts can't send addon messages at all** (any channel).
-- Used for real by other addons on retail (AstralKeys sends to friends by whisper and Battle.net),
-  but nothing found proving it on WoW Forever. First step: one whisper test with a friend.
-
-### KOS / Nemesis list
-
-- **Adding someone:** when you die to a player who has killed you before, the death popup offers
-  "Add to KOS". Also `/sks kos <name>`, or right-click them in the debug log.
-- **Nemesis (automatic):** anyone who kills you 3+ times without you killing them back becomes your
-  Nemesis, with its own callout and sound ("Your nemesis Orcbro strikes again!").
-- **Payback:** killing someone on the list gives "GRUDGE SETTLED!" / "NEMESIS SLAIN!", a stronger
-  Retribution with no 60-minute limit.
-- **Sightings:** when a listed player is your target, mouseover or on a nameplate, a small alert shows
-  ("KOS: Orcbro (60) nearby"). With Request aid, guildmates could optionally get a ping.
-- **Tally:** kills each way per player ("Orcbro: killed you 5, you killed them 2"), on a settings page
-  where names can be viewed and removed.
-- **Sharing (opt-in, off by default):** share the list with your guild so guildmates get the same alerts.
-- **Builds on** the killer memory Retribution and the gank checks already keep, made permanent.
-- **Stay 100% sure:**
-  - Only add or match someone when their GUID is readable (it can be secret in some content).
-  - Match by GUID, not by name (family names).
-  - Sightings only work when the addon can see the player (target, mouseover, nameplate), not
-    across the zone.
-
-#### Adding a KOS name by hand
-
-- **Where:** an "Add name" box on the KOS page, or `/sks kos <name>`.
-- **When:** the killer's GUID was hidden, the popup missed them, or you want someone who never killed you.
-- **Matching:** a typed name has no GUID, and names can repeat across families, so it's not 100% sure.
-  - The entry is "unconfirmed" (greyed out).
-  - The first time a player with that name is seen (target, mouseover, nameplate, or a kill either
-    way), ask "Is this the Orcbro you added? (Yes / No)", or link automatically if only one player
-    with that name has been seen. From then on it matches by GUID.
-- **Callouts:** unconfirmed entries still get the sighting alert, worded "possibly" ("KOS? Orcbro
-  nearby"). The big payback callout only plays once confirmed by GUID; until then the normal callout plays.
-- **Input safety:** typed names go through `safeText` and a length cap; shared lists get the same
-  checks as any other addon message.
+- [#1 Share with friends (friends list and Battle.net), with a per-friend list](https://github.com/zednx/spicy-kill-streaks/issues/1)
+- [#2 DaylightUI theme](https://github.com/zednx/spicy-kill-streaks/issues/2)
+- [#3 KOS / Nemesis list](https://github.com/zednx/spicy-kill-streaks/issues/3)
+- [#4 Flag sounds in capture-the-flag battlegrounds](https://github.com/zednx/spicy-kill-streaks/issues/4)
+- [#5 Spicy Kill Streaks Theme (DaylightUI Plugin)](https://github.com/zednx/spicy-kill-streaks/issues/5)
