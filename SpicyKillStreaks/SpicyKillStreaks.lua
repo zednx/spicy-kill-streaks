@@ -828,7 +828,9 @@ local TEXT_STYLES = {
 	multi = { size = 42, punch = 3.2, life = 3.2, pulse = true },
 	death = { size = 26, punch = 1, life = 2.6, sink = true },
 	other = { size = 20, punch = 1.6, life = 2.4 },
+	kudos = { size = 18, punch = 1.3, life = 2.2 }, -- a kudos a friend sent us: visible, not spicy
 }
+SPECIAL.KUDOS_COLOR = { 1, 0.82, 0.3 }
 local LINE_GAP = 6
 local MAX_LINES = 5
 local textPool, liveTexts = {}, {}
@@ -859,7 +861,8 @@ local function fancyText(text, kind, level)
 	local style = TEXT_STYLES[kind] or TEXT_STYLES.kill
 	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "death" and DEATH_COLOR)
-		or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level or 1] or RANK_COLORS[1]
+		or (kind == "other" and OTHER_COLOR) or (kind == "kudos" and SPECIAL.KUDOS_COLOR)
+		or RANK_COLORS[level or 1] or RANK_COLORS[1]
 	local size = style.size * fxConfig().scale
 	local holder = acquireTextHolder()
 	setFont(holder.text, size)

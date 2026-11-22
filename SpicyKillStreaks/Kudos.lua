@@ -331,6 +331,8 @@ function kudos.showGot(who, words, deed, count)
 	local tally = count > 1 and ("  |cffffd100+" .. count .. "|r") or ""
 	row.label:SetText("|cffffd100" .. who .. "|r: " .. words .. " |cff9a8f86(your " .. deed .. ")|r" .. tally)
 	expireAfter(row, GOT_FOR, false)
+	-- and a smaller, calmer line in the combat text (no sparkles, no sound)
+	if core().db().profile.doscreen then core().showText(who .. ": " .. words, "kudos") end
 end
 
 -- ---------------------------------------------------------------------------------------------
