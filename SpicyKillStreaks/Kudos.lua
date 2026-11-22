@@ -17,19 +17,19 @@ local function core() return ns.core end
 local function cfg() return ns.core.db().profile.kudos end
 local function kit() return ns.ui and ns.ui.kit end
 
-local SHOW_FOR = 30        -- seconds a friend's kill or death stays offered
-local GOT_FOR = 8          -- seconds a kudos we got stays on screen
+local SHOW_FOR = 20        -- seconds a friend's kill or death stays offered
+local GOT_FOR = 6          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
-local MAX_ROWS = 4
-local ROW_W = 250        -- narrow: the nine emoji go in two rows (5 + 4)
+local MAX_ROWS = 3       -- cards on screen at once (the oldest goes)
+local ROW_W = 220        -- narrow: the nine emoji go in two rows (5 + 4)
 local CHIPS_PER_LINE = 5
 local PAD = 12          -- inside the card
 local TEXT_X = 34       -- the title, right of the icon
-local CHIP_H = 28
-local CHIP_W = 32
-local EMOJI_SIZE = 20
-local CHIP_GAP = 5
+local CHIP_H = 24
+local CHIP_W = 28
+local EMOJI_SIZE = 17
+local CHIP_GAP = 4
 local ROW_GAP = 5       -- between cards
 local SLIDE = 0.18      -- seconds to slide in
 local FADE = 0.35       -- seconds to fade out
@@ -180,8 +180,11 @@ local function growsUp() return cfg().growup and true or false end
 local function place()
 	if not holder then return end
 	holder:ClearAllPoints()
-	-- From the left edge of the screen (lx: to the stack's middle) and its vertical middle (ly)
-	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", cfg().lx or 170, cfg().ly or 120)
+	-- From the left edge of the screen (lx: to the stack's middle) and its vertical middle (ly), in
+	-- screen units; the offsets are in the holder's own (scaled) units
+	local scale = tonumber(cfg().scale) or 0.85
+	holder:SetScale(scale)
+	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", (cfg().lx or 150) / scale, (cfg().ly or 120) / scale)
 	if mover then
 		mover:ClearAllPoints()
 		-- the drag bar sits on the far side of the anchor line from the cards
@@ -283,7 +286,7 @@ local function newRow(height, tone)
 	row.bar:SetPoint("BOTTOMLEFT", 4, 1)
 	row.bar:SetHeight(2)
 	row.bar:Hide()
-	row.label = fontString(row, 13)
+	row.label = fontString(row, 12)
 	row.label:SetPoint("TOPLEFT", TEXT_X, -9)
 	row.label:SetPoint("RIGHT", -26, 0) -- (further in when the "+n" badge shows)
 	-- "+n" badge on the right (kudos we got)
@@ -597,9 +600,16 @@ function kudos.stopDrag()
 	local x = holder:GetCenter()
 	local edge = growsUp() and holder:GetBottom() or holder:GetTop()
 	local left, uy = UIParent:GetLeft() or 0, select(2, UIParent:GetCenter())
+	local scale = holder:GetScale() or 1
 	if x and edge and uy then
-		cfg().lx, cfg().ly = math.floor(x - left + 0.5), math.floor(edge - uy + 0.5)
+		cfg().lx, cfg().ly = math.floor(x * scale - left + 0.5), math.floor(edge * scale - uy + 0.5)
 	end
+	place()
+end
+
+-- The popup's size (a scale, 0.6 to 1.2)
+function kudos.setScale(value)
+	cfg().scale = math.min(math.max(tonumber(value) or 0.85, 0.6), 1.2)
 	place()
 end
 

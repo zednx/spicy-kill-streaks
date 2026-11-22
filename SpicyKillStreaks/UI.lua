@@ -740,6 +740,8 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; Shadow Word: Pain for kudos on a death"), 1)
 	c:add(para("Reactions only reach the friend you send them to (and anyone in chat, if you post there). "
 		.. "Kudos received so far: |cffffd100" .. (tonumber(P().kudos.got) or 0) .. "|r", 12, COLORS.muted), 1)
+	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.85 end,
+		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 1)
 	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
 		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 1)
 	c:add(button("Preview friends' kills", function() if ns.kudos then ns.kudos.preview() end end), 0.34)
