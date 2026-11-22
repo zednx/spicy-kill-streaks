@@ -607,6 +607,28 @@ step("secrets: 15 is the male voice only; five ganks in five minutes play the se
   assert(third, "the third gank didn't play its secret")
   assert(not played[1]:find("secret30"), "the first gank played the secret")
 end)
+step("ganks in a group: no honor check", function()
+  local sp = ns.core.special
+  local oldGroup, oldCand = IsInGroup, sp.gankCandidate
+  local ganked = {}
+  local oldReg = sp.registerGank
+  sp.registerGank = function(v) ganked[#ganked + 1] = v end
+  sp.gankCandidate = function() return true end
+  ns.core.db().profile.dogank = true
+  IsInGroup = function() return true end
+  local oldInfo = GetPlayerInfoByGUID
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Lowbie" end
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0123")
+  assert(#ganked == 1 and ganked[1] == "Lowbie", "a gank in a group waited for honor")
+  -- solo: still waits for honor, and honor rules it out
+  IsInGroup = function() return false end
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Lowbie2" end
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0124")
+  assert(#ganked == 1, "a solo gank didn't wait for honor")
+  fire("PLAYER_PVP_KILLS_CHANGED", "player"); runTimers(); runTimers()
+  assert(#ganked == 1, "honor didn't rule out a solo gank")
+  IsInGroup, sp.gankCandidate, sp.registerGank, GetPlayerInfoByGUID = oldGroup, oldCand, oldReg, oldInfo
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

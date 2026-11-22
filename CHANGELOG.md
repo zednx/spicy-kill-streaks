@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.6.1
+
+- **Ganks in a group:** killing a player 10+ levels below you now counts as a gank when you're in a group too. Before, a lower-level party member earning honor from the kill made it count as a normal kill.
+
 ## v1.6.0
 
 - **Avenging is a Retribution:** kill the player who killed a guildmate who asked you for help, and it plays as a Retribution, with "You avenged <name>!". They get told straight away: "<you> avenged you! <killer> is down", once, even if your kill also reaches them in the feed.

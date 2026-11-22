@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.6.0"
+local VERSION = "1.6.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -1394,8 +1394,15 @@ local function registerKill(victim, isDuel, notGank)
 	victim = usableString(victim) and victim or UNKNOWN_VICTIM
 
 	-- A gank (a player 10+ levels below us, worth no honor): wait a moment for an honorable
-	-- kill. If one comes, it was not a gank after all and counts as a normal kill.
+	-- kill. If one comes, it was not a gank after all and counts as a normal kill. In a group the
+	-- level gap decides alone: a lower-level member can earn honor from a victim gray to us.
 	if not isDuel and not notGank and not testing and profile.dogank and SPECIAL.gankCandidate(victim) then
+		local grouped = type(IsInGroup) == "function" and IsInGroup()
+		if grouped and not isSecret(grouped) then
+			debugPrint("gank:", victim, "- in a group, so no honor check")
+			SPECIAL.registerGank(victim)
+			return
+		end
 		-- Every gank still waiting is ruled out by an honorable kill (two at once: neither is sure)
 		local pending = { victim = victim, honor = false }
 		SPECIAL.pendingGanks = SPECIAL.pendingGanks or {}
