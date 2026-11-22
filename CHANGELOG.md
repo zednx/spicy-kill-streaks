@@ -2,6 +2,7 @@
 
 ## v1.4.0
 
+- The Kudos popup is narrower: the nine emoji sit in two rows (5 + 4).
 - **Flag captures:** when the battleground announces that you captured a flag (Warsong Gulch, Eye of the Storm), you get a "FLAG CAPTURED!" callout and sparkles (no sound: the game plays its own), and the match summary counts it. Only when the game's line is readable and names you. Switch it off under Announcer > Callouts.
 - **Kudos popup can grow upwards:** Friends > Kudos > **Grow upwards** stacks new cards up from the popup's spot instead of down (handy near the bottom of the screen).
 - **Battleground kills are stricter, and named:** the best guess now counts a hidden killing blow only when your target, an enemy player you saw alive a moment before, disappears with it (the game clears a target the moment it dies). The victim is named, so Retribution and the rest work there too. A kill on someone you weren't targeting is missed; a party member's killing blow on your own target can still count (the game doesn't say which of you it was).

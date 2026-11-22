@@ -22,7 +22,8 @@ local GOT_FOR = 8          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 4
-local ROW_W = 360
+local ROW_W = 250        -- narrow: the nine emoji go in two rows (5 + 4)
+local CHIPS_PER_LINE = 5
 local PAD = 12          -- inside the card
 local TEXT_X = 34       -- the title, right of the icon
 local CHIP_H = 28
@@ -276,7 +277,7 @@ local function newRow(height, tone)
 	row.bar:Hide()
 	row.label = fontString(row, 13)
 	row.label:SetPoint("TOPLEFT", TEXT_X, -9)
-	row.label:SetPoint("RIGHT", -52, 0)
+	row.label:SetPoint("RIGHT", -26, 0) -- (further in when the "+n" badge shows)
 	-- "+n" badge on the right (kudos we got)
 	row.badge = CreateFrame("Frame", nil, row, "BackdropTemplate")
 	row.badge:SetSize(30, 18)
@@ -314,8 +315,10 @@ local function setBadge(row, count)
 		row.badge.text:SetText("+" .. count)
 		row.badge:SetWidth(math.max(26, (row.badge.text:GetStringWidth() or 14) + 12))
 		row.badge:Show()
+		row.label:SetPoint("RIGHT", -26 - row.badge:GetWidth() - 4, 0)
 	else
 		row.badge:Hide()
+		row.label:SetPoint("RIGHT", -26, 0)
 	end
 end
 
@@ -433,9 +436,9 @@ local function offer(info)
 	row.buttons = {}
 	-- Chips flow left to right and wrap onto another line if the card is full
 	local x, line = PAD, 0
-	for _, id in ipairs(ORDER) do
+	for i, id in ipairs(ORDER) do
 		local b = makeChip(row, id, function() send(row, info, id) end)
-		if x > PAD and x + CHIP_W > ROW_W - PAD then
+		if i > 1 and ((i - 1) % CHIPS_PER_LINE == 0 or x + CHIP_W > ROW_W - PAD) then
 			x, line = PAD, line + 1
 		end
 		b:SetPoint("TOPLEFT", x, -31 - line * (CHIP_H + CHIP_GAP))
