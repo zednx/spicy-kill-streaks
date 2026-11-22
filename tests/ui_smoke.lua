@@ -575,6 +575,21 @@ step("guild board sync: merge the highest, reply with only what's higher", funct
   assert(not all:find("Tester:"), "our own entry sent in a board")
   C_ChatInfo.SendAddonMessage = old
 end)
+step("secrets: 15 is the male voice only; five ganks in five minutes play the secret line", function()
+  local sp, P = ns.core.special, ns.core.db().profile
+  P.soundpack = "male"; assert(sp.secretFor(15) == "secret15.ogg" and sp.secretFor(30) and sp.secretFor(40))
+  P.soundpack = "female"; assert(sp.secretFor(15) == nil and sp.secretFor(30) == "secret30.ogg", "15 for another pack")
+  P.soundpack = "male"
+  local played = {}
+  local old = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  P.dosound = true; ns.core.db().global.snoozeUntil = 0
+  sp.gankRun, sp.lastGankLine = {}, nil
+  for _ = 1, 5 do sp.registerGank("Lowbie") end
+  PlaySoundFile = old
+  assert(played[#played]:find("secret30%.ogg$"), "the fifth gank: " .. tostring(played[#played]))
+  assert(not played[1]:find("secret30"), "the first gank played the secret")
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

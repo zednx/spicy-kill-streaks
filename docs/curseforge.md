@@ -54,7 +54,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 - **Multikills**: kills within 30 seconds chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and beyond, all the way to *Holy Shit!*
 - **Special callouts** (only when the addon is sure; otherwise you get the normal one):
   - *First Blood* on your first kill of the day
-  - *Retribution* when you kill someone who killed you in the last hour. Sometimes the Candle King turns up: "You no take candle!"
+  - *Retribution* when you kill someone who killed you in the last hour. And now and then, something else...
   - *Comeback*: your first kill after dying 3+ times in a row gets a surprise
   - *Pancake* when you (or a friend) die from falling or drowning
   - **Ganks**: kill a player 10+ levels below you and get shamed instead ("Bully!"), with no streak credit. Die to someone 10+ levels above you and the Peon says it for you.

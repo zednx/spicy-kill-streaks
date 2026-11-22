@@ -12,7 +12,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
 - **Multikills**: kills within 30 seconds of each other chain into *Double Kill*, *Triple Kill*, *Multi Kill*, *Mega Kill* and on, up to *Holy Shit*.
 - **Special callouts**, only when the addon is sure (otherwise you get the normal callout):
   - *First Blood* on your first kill of the day
-  - *Retribution* when you kill someone who killed you in the last hour (one in three is the Candle King: "You no take candle!")
+  - *Retribution* when you kill someone who killed you in the last hour (and now and then, something else...)
   - *Comeback*: your first kill after dying 3+ times in a row gets a surprise
   - *Pancake* when you (or a friend) die from falling or drowning
   - **Ganks**: kill a player 10+ levels below you and get shamed instead of a callout (it doesn't count towards your streak); die to one 10+ levels above you and hear "You got ganked"

@@ -8,6 +8,7 @@ Use the exact file names. `.ogg` or `.mp3`, ideally mono 22050 Hz like the other
 
 | File | Male `sounds\` | Female `sounds\female\` | Sexy `sounds\sexy\` | Baby `sounds\baby\` |
 |---|---|---|---|---|
+| `secret15.ogg` (15 in a row, male only) | done | - | - | - |
 | `secret20.ogg` (20 kills in a row; was combowhore.ogg) | done | [ ] | [ ] | [ ] |
 | `gank.ogg` (you ganked someone 10+ levels lower) | done ("Pint sized!") | male | male | male |
 | `ganked.ogg` (a player 10+ levels higher killed you) | Peon (built in) | Peon | Peon | Peon |
@@ -26,6 +27,7 @@ which use the male voice.
 
 - [ ] Listen to the HKSounds / MegaKill packs Claude sent ("Announcer sounds to review.zip"); MegaKill's
       Unreal pack has a `triple_kill.wav`
+- Secrets: 10 holyshit, 15 secret15 (male only), 20 secret20, 30 secret30 (GLaDOS, also 5 ganks in 5 min), 40 secret40
 - [ ] Tell Claude where `headshot`, `firstblood`, `pancake` and `gank` ("Pint sized") came from, for `sounds/CREDITS.txt`
 
 ### Where the current sounds came from

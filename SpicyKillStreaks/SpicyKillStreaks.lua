@@ -615,9 +615,20 @@ SPECIAL.TOP_RANK = 6 -- Godlike: repeats on every kill once reached
 -- Rank index -> how big it looks (colour, sparkles): Wicked Sick 6, Godlike 7 (the top)
 SPECIAL.LEVEL = { [6] = 7, [7] = 6 }
 -- Secret ranks: kills in a row -> their own sound and the big effects, no callout text
-SPECIAL.SECRETS = { [10] = "holyshit.ogg", [20] = "secret20.ogg" }
--- Now and then Retribution is the Candle King instead: "You no take candle!" (game file ID;
--- if this client lacks it, the normal Retribution sound plays)
+SPECIAL.SECRETS = { [10] = "holyshit.ogg", [15] = "secret15.ogg", [20] = "secret20.ogg", [30] = "secret30.ogg",
+	[40] = "secret40.ogg" }
+-- Secrets only some voice packs have (the others play the normal rank there)
+SPECIAL.SECRET_PACKS = { [15] = { male = true } }
+-- The secret for this streak in our voice pack, or nil
+function SPECIAL.secretFor(count)
+	local file = SPECIAL.SECRETS[count]
+	local packs = SPECIAL.SECRET_PACKS[count]
+	if not file or (packs and not packs[db.profile.soundpack]) then return nil end
+	return file
+end
+-- Ganking a run of players: this many within this many seconds plays a secret line instead
+SPECIAL.GANK_RUN, SPECIAL.GANK_RUN_WINDOW, SPECIAL.GANK_RUN_SOUND = 5, 300, "secret30.ogg"
+-- Now and then Retribution is a surprise instead (a game sound, by file ID)
 SPECIAL.CANDLE, SPECIAL.CANDLE_CHANCE = 5769482, 1 / 3
 -- The first kill after dying this many times in a row: a surprise (a game sound, by file ID)
 SPECIAL.MEAT, SPECIAL.MEAT_DEATHS = 995083, 3
@@ -1445,10 +1456,10 @@ local function registerKill(victim, isDuel, notGank)
 		end
 		celebrate("rank", 4)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
-	elseif SPECIAL.SECRETS[streak] and not isDuel then
+	elseif SPECIAL.secretFor(streak) and not isDuel then
 		-- A secret rank: its own sound and the big effects, but no callout text. It wins over a
 		-- multikill's sound (the multikill still shows its text).
-		playSound(SPECIAL.SECRETS[streak])
+		playSound(SPECIAL.secretFor(streak))
 		celebrate("rank", 6)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif multi > 0 then
@@ -1587,7 +1598,19 @@ function SPECIAL.registerGank(victim)
 	local level = Levels.of(victim)
 	local flair = SPECIAL.FLAIR[math.random(#SPECIAL.FLAIR)]
 	announce((playerName or "You") .. " ganked a level " .. tostring(level or "?") .. " " .. victim .. ". " .. flair, "death")
-	SPECIAL.playGank()
+	-- A run of ganks in a few minutes: a secret line instead of the gank sound
+	local now, recent = GetTime(), {}
+	for _, at in ipairs(SPECIAL.gankRun or {}) do
+		if now - at <= SPECIAL.GANK_RUN_WINDOW then recent[#recent + 1] = at end
+	end
+	recent[#recent + 1] = now
+	SPECIAL.gankRun = recent
+	if #recent >= SPECIAL.GANK_RUN then
+		SPECIAL.gankRun = {}
+		if not playSound(SPECIAL.GANK_RUN_SOUND) then SPECIAL.playGank() end
+	else
+		SPECIAL.playGank()
+	end
 	syncSendKill("K", victim, streak, 0, 0, true)
 	local times = count(profile.kills, victim)
 	if profile.dochat then chat("You have ganked " .. victim .. " " .. times .. " times. " .. flair) end
@@ -3663,6 +3686,7 @@ function SPECIAL.soundBoard()
 		{ "Unstoppable", "6 kills in a row", RANK_SOUNDS[5] },
 		{ "Wicked Sick", "7 kills in a row", RANK_SOUNDS[7] },
 		{ "Godlike", "8 kills in a row, and every kill after (Flamboyant takes turns with Diva and Fabulous)", RANK_SOUNDS[6] },
+		{ "Bonus", "Keep the streak going: there are a few secrets further up. Find out in game." },
 		{ section = "Multikills (each kill within 30 seconds of the last)" },
 	}
 	for i = 1, #MULTI_SOUNDS do
@@ -3671,7 +3695,6 @@ function SPECIAL.soundBoard()
 	for _, entry in ipairs({
 		{ section = "Special moments" },
 		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
-		{ "You no take candle!", "Retribution, 1 time in 3 (a game sound)", SPECIAL.CANDLE },
 		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
 		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
 		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },
@@ -3786,7 +3809,7 @@ local function buildOptions()
 					doretribution = toggle("doretribution", "\"Retribution\" when you kill someone who killed you in the last hour", 1.7),
 					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
 						"Plays instead of Humiliation."),
-					docomeback = toggle("docomeback", "Comeback: a surprise for your first kill after dying 3+ times in a row", 1.84),
+					docomeback = toggle("docomeback", "Comeback", 1.84),
 					dogank = toggle("dogank", "Shame ganks: killing a player 10+ levels below you", 1.85,
 						"No callout and no streak for it, just a bit of shame. Only when the levels are certain "
 						.. "and no honor came for the kill; otherwise it counts as a normal kill."),
