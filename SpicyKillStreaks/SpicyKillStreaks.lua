@@ -2592,7 +2592,22 @@ function SPECIAL.noteTargetAlive()
 	if ok and usableString(name) then SPECIAL.targetAlive = { name = name, at = GetTime() } end
 end
 
+-- Debug: what we can see of our target right now, each value readable or <secret>
+function SPECIAL.probeTarget(when)
+	if not debugOn then return end
+	local function get(fn, ...)
+		if type(fn) ~= "function" then return "no API" end
+		local ok, value = pcall(fn, ...)
+		return ok and shown(value) or "error"
+	end
+	debugPrint("probe: target " .. when .. ": exists=" .. get(UnitExists, "target"), "name=" .. get(GetUnitName, "target", true),
+		"player=" .. get(UnitIsPlayer, "target"), "enemy=" .. get(UnitCanAttack, "player", "target"),
+		"dead=" .. get(UnitIsDeadOrGhost, "target"), "- last enemy seen alive:",
+		SPECIAL.targetAlive and (SPECIAL.targetAlive.name .. string.format(" %.1fs ago", GetTime() - SPECIAL.targetAlive.at)) or "none")
+end
+
 function SPECIAL.hiddenKillCounts()
+	SPECIAL.probeTarget("at the kill")
 	local victim = deadEnemyTargetName()
 	local alive = SPECIAL.targetAlive
 	if not victim or not alive or alive.name ~= victim or GetTime() - alive.at > SPECIAL.TARGET_FRESH then
@@ -2852,8 +2867,11 @@ end
 
 function events.PLAYER_TARGET_CHANGED()
 	Levels.note("target")
-	SPECIAL.targetAlive = nil
-	if inBG or inArena then SPECIAL.noteTargetAlive() end
+	-- (the last enemy seen alive is kept: a target cleared when it dies mustn't wipe it)
+	if inBG or inArena then
+		SPECIAL.probeTarget("changed")
+		SPECIAL.noteTargetAlive()
+	end
 	checkTargetDeath()
 end
 
