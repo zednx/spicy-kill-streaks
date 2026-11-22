@@ -180,7 +180,8 @@ local function growsUp() return cfg().growup and true or false end
 local function place()
 	if not holder then return end
 	holder:ClearAllPoints()
-	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "CENTER", cfg().x or 0, cfg().y or -160)
+	-- From the left edge of the screen (lx: to the stack's middle) and its vertical middle (ly)
+	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", cfg().lx or 170, cfg().ly or 120)
 	if mover then
 		mover:ClearAllPoints()
 		-- the drag bar sits on the far side of the anchor line from the cards
@@ -256,6 +257,11 @@ local function newRow(height, tone)
 	ensureHolder()
 	local row = CreateFrame("Frame", nil, holder, "BackdropTemplate")
 	row:SetSize(ROW_W, height)
+	-- Drag any card to move the whole stack
+	row:EnableMouse(true)
+	row:RegisterForDrag("LeftButton")
+	row:SetScript("OnDragStart", function() kudos.startDrag() end)
+	row:SetScript("OnDragStop", function() kudos.stopDrag() end)
 	row.height = height
 	row:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8X8", edgeFile = "Interface\\Buttons\\WHITE8X8", edgeSize = 1 })
 	row:SetBackdropColor(0.06, 0.05, 0.045, 0.90)
@@ -573,20 +579,28 @@ function kudos.unlock(on)
 		label:SetText("Kudos popup: drag here")
 		mover:EnableMouse(true)
 		mover:RegisterForDrag("LeftButton")
-		mover:SetScript("OnDragStart", function() holder:StartMoving() end)
-		mover:SetScript("OnDragStop", function()
-			holder:StopMovingOrSizing()
-			local x = holder:GetCenter()
-			local edge = growsUp() and holder:GetBottom() or holder:GetTop()
-			local ux, uy = UIParent:GetCenter()
-			if x and edge and ux and uy then
-				cfg().x, cfg().y = math.floor(x - ux + 0.5), math.floor(edge - uy + 0.5)
-			end
-			place()
-		end)
+		mover:SetScript("OnDragStart", kudos.startDrag)
+		mover:SetScript("OnDragStop", kudos.stopDrag)
 		place()
 	end
 	mover:SetShown(on and true or false)
+end
+
+-- Dragging, from the drag bar or any card: the whole stack moves, and its spot is saved
+function kudos.startDrag()
+	if holder then holder:StartMoving() end
+end
+
+function kudos.stopDrag()
+	if not holder then return end
+	holder:StopMovingOrSizing()
+	local x = holder:GetCenter()
+	local edge = growsUp() and holder:GetBottom() or holder:GetTop()
+	local left, uy = UIParent:GetLeft() or 0, select(2, UIParent:GetCenter())
+	if x and edge and uy then
+		cfg().lx, cfg().ly = math.floor(x - left + 0.5), math.floor(edge - uy + 0.5)
+	end
+	place()
 end
 
 -- Switch the growing direction: the anchor line stays where it is
@@ -600,7 +614,7 @@ function kudos.isUnlocked() return mover and mover:IsShown() or false end
 
 function kudos.resetPosition()
 	local d = core().defaults.profile.kudos
-	cfg().x, cfg().y = d.x, d.y
+	cfg().lx, cfg().ly = d.lx, d.ly
 	place()
 end
 

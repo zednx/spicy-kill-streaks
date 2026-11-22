@@ -749,7 +749,7 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 		if not ns.kudos then return end
 		ns.kudos.unlock(true)
 		ns.kudos.preview()
-		core().chat("Drag the bar above the Kudos popup, then press Lock.")
+		core().chat("Drag the Kudos popup (any card, or the bar) where you want it, then press Lock.")
 	end), 0.34)
 	c:add(button("Lock", function() if ns.kudos then ns.kudos.unlock(false) end end), 0.33)
 	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)

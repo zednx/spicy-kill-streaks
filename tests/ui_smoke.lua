@@ -307,6 +307,9 @@ step("kudos: offer, send, chat post, receive", function()
   kudos.previewGot(); for _ = 1, 5 do runTimers() end; kudos.previewDeath(); kudos.clear()
   SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()
   kudos.preview(); kudos.unlock(true); assert(kudos.isUnlocked()); kudos.unlock(false); kudos.resetPosition()
+  -- any card drags the stack
+  kudos.preview(); local card = kudos.rows[1]; card.__scripts.OnDragStart(card); card.__scripts.OnDragStop(card)
+  assert(P.kudos.lx and P.kudos.ly, "position not saved"); kudos.resetPosition(); kudos.clear()
   -- growing upwards: lay out, drag, and back
   kudos.setGrowUp(true); assert(P.kudos.growup)
   kudos.preview(); kudos.unlock(true)
