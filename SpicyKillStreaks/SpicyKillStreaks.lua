@@ -2449,6 +2449,51 @@ function SPECIAL.probePartyKill(attackerGUID, targetGUID)
 	end
 end
 
+-- Character statistics whose name mentions killing blows: { { id, name } }, found once
+function SPECIAL.killingBlowStats()
+	if SPECIAL.kbStats then return SPECIAL.kbStats end
+	SPECIAL.kbStats = {}
+	if type(GetStatisticsCategoryList) ~= "function" or type(GetCategoryNumAchievements) ~= "function" then
+		debugPrint("probe: no statistics API")
+		return SPECIAL.kbStats
+	end
+	local ok, categories = pcall(function() return { GetStatisticsCategoryList() } end)
+	if not ok or type(categories) ~= "table" then return SPECIAL.kbStats end
+	-- Subcategories too: GetStatisticsCategoryList lists them all on current clients
+	for _, category in ipairs(categories) do
+		local okCount, count = pcall(GetCategoryNumAchievements, category)
+		if okCount and usableNumber(count) then
+			for i = 1, math.min(count, 200) do
+				local okInfo, id, name = pcall(GetAchievementInfo, category, i)
+				if okInfo and usableNumber(id) and usableString(name) and strfind(strlower(name), "killing blow") then
+					SPECIAL.kbStats[#SPECIAL.kbStats + 1] = { id = id, name = name }
+				end
+			end
+		end
+	end
+	debugPrint("probe: found", #SPECIAL.kbStats, "killing-blow statistics in", #categories, "categories")
+	return SPECIAL.kbStats
+end
+
+-- Their values right now (read after every honorable kill and killing-blow event)
+function SPECIAL.probeStats(when)
+	if not debugOn or type(GetStatistic) ~= "function" then return end
+	local parts = {}
+	for _, stat in ipairs(SPECIAL.killingBlowStats()) do
+		local ok, value = pcall(GetStatistic, stat.id)
+		parts[#parts + 1] = stat.name .. " (" .. stat.id .. ")=" .. (ok and shown(value) or "error")
+	end
+	if #parts > 0 then debugPrint("probe: stats", when, table.concat(parts, "; ")) end
+end
+
+-- Can a hidden GUID be looked up in a table (without comparing it)? Only to see whether the
+-- client allows it; nothing is decided on it.
+function SPECIAL.probeLookup(guid)
+	if not debugOn or not playerGUID then return end
+	local ok, result = pcall(function() return ({ [playerGUID] = "us" })[guid] end)
+	debugPrint("probe: table lookup of the hidden attacker:", ok and shown(result) or "error")
+end
+
 function events.CHAT_MSG_COMBAT_HONOR_GAIN(text)
 	debugPrint("CHAT_MSG_COMBAT_HONOR_GAIN", text)
 end
@@ -2458,6 +2503,7 @@ function events.PLAYER_PVP_KILLS_CHANGED(unit)
 	if unit == "player" and not isSecret(unit) then
 		SPECIAL.probeNext = true
 		SPECIAL.probeHonor()
+		SPECIAL.probeStats("after an honorable kill:")
 	end
 	-- Also fires for our raid unit ("raid9") and for other players; only "player" is counted
 	if isSecret(unit) or (unit ~= nil and unit ~= "player") then return end
@@ -2569,6 +2615,9 @@ function events.PARTY_KILL(attackerGUID, targetGUID)
 	if not usableString(attackerGUID) or not usableString(targetGUID) then
 		debugPrint("PARTY_KILL with hidden or missing GUIDs:", attackerGUID, targetGUID)
 		SPECIAL.probePartyKill(attackerGUID, targetGUID)
+		SPECIAL.probeLookup(attackerGUID)
+		-- statistics may update a moment after the event
+		C_Timer.After(1, function() SPECIAL.probeStats("1s after PARTY_KILL:") end)
 		return
 	end
 	debugPrint("PARTY_KILL attacker", attackerGUID, isOurs(attackerGUID) and "(us)" or "(someone else)", "target", targetGUID)
@@ -3691,6 +3740,14 @@ local function initialize()
 				else
 					chat("Kudos popup locked.")
 				end
+			end
+		elseif command == "stats" then
+			-- The killing-blow statistics now (also written to the debug log while it is on)
+			local list = SPECIAL.killingBlowStats()
+			if #list == 0 then chat("No killing-blow statistics found on this client.") end
+			for _, stat in ipairs(list) do
+				local ok, value = pcall(GetStatistic, stat.id)
+				chat(stat.name .. ": " .. (ok and SPECIAL.shown(value) or "not readable"))
 			end
 		elseif strmatch(command, "^note%s") then
 			-- A marker in the debug log, e.g. "/sks note mine" right after your own killing blow

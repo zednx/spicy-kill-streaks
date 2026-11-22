@@ -329,10 +329,18 @@ step("battleground probes write to the debug log", function()
   sp.probeScore(); sp.probeHonor(); sp.probePartyKill("Player-1-0001", "Player-1-0002")
   fire("PARTY_KILL", nil, nil)
   fire("CHAT_MSG_COMBAT_HONOR_GAIN", "Someone dies, honorable kill")
+  GetStatisticsCategoryList = function() return 1, 2 end
+  GetCategoryNumAchievements = function(c) return c == 1 and 2 or 1 end
+  GetAchievementInfo = function(c, i) if c == 1 and i == 1 then return 382, "Battleground killing blows" end return 100 + i, "Other stat" end
+  GetStatistic = function(id) return "7" end
+  sp.probeStats("test:"); sp.probeLookup("Player-1-0001")
+  SlashCmdList.SPICYKILLSTREAKS("stats")
   SlashCmdList.SPICYKILLSTREAKS("note mine")
   local text = ns.core.debugLog.text()
   assert(text:find("probe: our score row:.*honorableKills=5"), "no score row probe")
   assert(text:find("NOTE: mine"), "no note")
+  assert(text:find("probe: stats test: Battleground killing blows %(382%)=7"), "no stats probe")
+  assert(text:find("table lookup of the hidden attacker: us"), "no lookup probe")
   ns.core.debugLog.setEnabled(false)
 end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
