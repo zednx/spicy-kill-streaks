@@ -4,6 +4,27 @@
 
 - Ganking someone plays Headshot until it has its own sound (it was silent). Flamboyant keeps its own.
 
+Everything new in 1.0.0:
+
+- **New settings window** (`/sks`): sections on the left (Announcer, Sound, Screen, Friends, Guild board, Extras, Sound board, About), a **live preview** at the top that shows your font, size and voice pack's words, and buttons for Test a kill, Stats and the Debug log. The old options window is still there: `/sks classic`.
+- **New setup**: Welcome, Voice (click to hear each pack), Flair and font, Callouts, Friends, Ready. It opens once for everyone on their first login with 1.0.0, including players who set up an older version.
+- **Minimap button** (the chilli): left-click for settings, right-click for a menu (snooze, settings, test, debug log), Shift-click to snooze or wake up, drag to move. It shows zZ while snoozed. Hide it from its menu or About; `/sks minimap` brings it back.
+- **New rank ladder, one rank per kill:** Headshot 1 (First Blood once a day), Ownage 2, Killing Spree 3, Rampage 4, Dominating 5, Unstoppable 6, Wicked Sick 7, then **Godlike** from 8, the top tier with the biggest effects, on every kill after. The kill counts are fixed; the sliders are gone.
+- **Ganks:** killing a player 10+ levels below you gets a bit of shame ("Bob ganked a level 12 Alice. Bully!") instead of a callout, and doesn't count towards your streak. Dying to a player 10+ levels above you (or "??") says "You got ganked by Bob (60)". Both only happen when the addon is sure: the levels were seen in the last few minutes, the other side is a player, and for your kill no honor came. Anything unclear plays as normal. Friends see your ganks too (with 1.0.0+). Both can be turned off under General.
+- **Comeback:** your first kill after dying 3+ times in a row gets the Butcher: "Looks like meat's back on the menu, boys!" (the game's own sound). Turn it off under General.
+- One Retribution in three is the Candle King: "You no take candle!" (the game's own sound).
+- The game's own sounds (the Peon, the Candle King, the Butcher) play louder, to match the others.
+- Getting ganked plays the Peon's "Me not that kind of orc!" (the game's own sound; Flamboyant has its own line).
+- **Sound board** (`/sks` > Sound board): every sound with a play button, what it is and when it plays, in your voice pack. It plays even with sounds off, muted or snoozed.
+- **About:** who makes the addon and where to send feedback.
+- A couple of secrets at 10 and 20 kills in a row.
+- **New voice pack: Flamboyant**, the Heroes of Newerth announcer. Cherry Poppah, Rainbow Warrior, Unicorn Stampede, It's a three-way... The callout text changes to match, in rainbow letters, and Godlike takes turns between Super Star, Diva and Fabulous.
+- **Triple Kill** has its own voice in the male pack now.
+- **Guild board:** your best kill streak and kills this month are shared with guildmates who run the addon (and share with the guild). At login, after the guildmate count, the top 3 killers of the month are listed. **Guild board** in the settings shows the top 10, with buttons to post the top 3 in guild or party chat. The board starts again on the 1st of each month. Turn the login line off under Sync. The board also counts deaths, and **Post to guild chat** sends one line with the top killers ("1. Panda (12)") and the most deaths (one line, because WoW Forever only lets an addon post once per click).
+- **More fonts for the combat text:** eleven bundled fonts (Bangers, Luckiest Guy, Anton, Bebas Neue, Russo One, Black Ops One, Permanent Marker, Teko, Grandstander, Orbitron, Press Start 2P), Expressway when Daylight UI is installed, WoW's Narrow, and every font your other addons share through SharedMedia (ElvUI, Details...). Picking one shows a preview. The Fancy font is gone (it falls back to Classic). Restart the game after updating so WoW sees the new font files.
+- **Debug log window:** `/sks debug` (or the box under Tests > Troubleshooting) opens a small, movable, resizable window where the detection details are written, with timestamps and the client version at the top. The text can be selected: **Select all**, then Ctrl+C to copy it (addons can't write to the clipboard themselves). **Clear** empties it; closing the window turns debug off.
+- `/sks debug` now also shows who the Death Recap names when you die, how each kill's victim was found, and the Retribution check. `/sks recap` prints your last Death Recap.
+
 ## v1.0.0
 
 - **New settings window** (`/sks`): sections on the left (Announcer, Sound, Screen, Friends, Guild board, Extras, Sound board, About), a **live preview** at the top that shows your font, size and voice pack's words, and buttons for Test a kill, Stats and the Debug log. The old options window is still there: `/sks classic`.
