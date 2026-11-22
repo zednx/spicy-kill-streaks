@@ -70,7 +70,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 - **Minimap button**: left-click for settings, right-click for a quick menu, Shift-click to snooze.
 - **Mute** it in battlegrounds, dungeons or raids, or `/sks snooze` for 30 minutes.
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings. Post it to guild or party chat to brag (or shame).
-- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out.
+- **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out. Battlegrounds and arenas are just for you: nothing is shared from them, and they don't count on the guild board.
 - **Kudos** (opt-in): when a friend running the addon gets a kill, hit *Zug zug!*, *For the Horde!*, *Hell yeah!* or a thumbs up; when they die, pay respects with *RIP* or *F*. It pops up on their screen with a running count, or goes in party or guild chat if you prefer.
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.
 - **Stats**: longest streaks, top prey, top predators and a recent kill log.

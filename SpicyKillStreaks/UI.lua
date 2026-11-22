@@ -713,8 +713,8 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(synctoggle({ "shareparty" }, "My party", "Also raids, battlegrounds and arenas"), 0.5)
 	c:add(synctoggle({ "shareguild" }, "My guild", "And join this month's guild board"), 0.5)
 	c:add(para("Only players running Spicy Kill Streaks see anything. Switch both off to share nothing. "
-		.. "In battlegrounds the game blocks addon messages, so nothing is shared there (Kudos included); "
-		.. "when you leave, your numbers go to the guild board.", 12, COLORS.muted), 1)
+		.. "Battlegrounds and arenas are just for you: nothing is shared from them (Kudos included), "
+		.. "and they don't count on the guild board.", 12, COLORS.muted), 1)
 	cards[#cards + 1] = c
 
 	for _, who in ipairs({ { "party", "Party members' kills" }, { "guild", "Guild members' kills" } }) do

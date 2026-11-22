@@ -2,7 +2,8 @@
 
 ## v1.2.0
 
-- **Sharing in battlegrounds:** WoW Forever blocks addon messages for the whole match there, so your kills, deaths and Kudos can't reach friends from inside a battleground. The addon now notices the block and stops trying until you leave; then it sends your month's numbers to the guild once, so the guild board still counts the match. Elsewhere, a message refused by a short lock is held and sent when it lifts (for up to a minute). The debug log says why a message was refused.
+- **Battlegrounds and arenas are just for you:** nothing is shared from them any more (WoW Forever blocks addon messages there for the whole match anyway, and it was spammy), Kudos included, and kills and deaths there don't count on the guild board. Your own announcer works as before.
+- Elsewhere, a message the game refuses because of a short lock is held and sent when it lifts (for up to a minute). The debug log says why a message was refused.
 - A kill with an unknown victim ("an enemy") can no longer set off Retribution.
 - **Battleground kills are back (best guess).** WoW Forever now hides who landed a killing blow in battlegrounds, and the killing blows on the scoreboard. The addon now counts the hidden killing-blow event as your kill when you're alive, in combat, and an honorable kill for you comes with it. It may now and then count a party member's killing blow. The victim is your dead target, or "an enemy". Switch it off under Announcer > Callouts ("Battleground kills"). The debug log numbers each one, so you can compare with your killing blows on the scoreboard.
 - Debug log: in battlegrounds it also writes what the game still lets addons read when the killing blows are hidden (your scoreboard row, honor, the hidden killing-blow event). `/sks note <text>` adds a marker to the log. It also reads your killing-blow character statistics; `/sks stats` shows them.

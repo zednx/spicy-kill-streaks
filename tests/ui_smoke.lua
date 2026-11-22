@@ -402,27 +402,18 @@ step("an unnamed victim is never a Retribution", function()
   assert(sp.takeRetribution("an enemy") == false, "\"an enemy\" matched a killer named An")
   ns.core.db().char.recentKillers["an"] = nil
 end)
-step("battleground lockdown: stop sharing, send the board numbers on leaving", function()
-  local core, sp = ns.core, ns.core.special
-  local result, sent = 11, {}
+step("battlegrounds: nothing is sent", function()
+  local core = ns.core
+  local sent = {}
   local old, oldInst = C_ChatInfo.SendAddonMessage, IsInInstance
-  C_ChatInfo.SendAddonMessage = function(_, msg, channel) sent[#sent + 1] = channel .. ": " .. msg return result end
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) sent[#sent + 1] = channel return 0 end
   IsInInstance = function() return true, "pvp" end
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
-  core.sendAddonMessage("D\ttest", "GUILD")
-  assert(sp.pvpLocked, "lockdown not noticed")
-  core.sendAddonMessage("D\ttest2", "GUILD")
-  assert(#sent == 1, "kept sending while locked: " .. #sent)
-  result = 0
+  assert(core.sendAddonMessage("D\ttest", "GUILD") == false and #sent == 0, "sent from a battleground")
   IsInInstance = function() return false, "none" end
   fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
-  assert(not sp.pvpLocked and sent[#sent]:find("^GUILD: S\t"), "no board numbers sent on leaving: " .. tostring(sent[#sent]))
-  -- and a guildmate's S message updates the board
-  local P = core.db().profile
-  P.sync.shareguild = true
-  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "S", "1.2.0", sp.monthKey(), "15", "30", "Spice Guild", "4" }, "\t"), "GUILD", "Zed-Realm")
-  local entry = sp.board().players["Zed-Realm"] or sp.board().players["Zed"]
-  assert(entry and tonumber(entry.best) == 15, "board not updated from S")
+  sent = {}
+  assert(core.sendAddonMessage("D\ttest", "GUILD") and #sent == 1, "not sent outside")
   C_ChatInfo.SendAddonMessage, IsInInstance = old, oldInst
 end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)

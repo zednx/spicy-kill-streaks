@@ -1382,7 +1382,8 @@ local function registerKill(victim, isDuel, notGank)
 	local deathsBefore = deathstreak
 	streak = streak + 1
 	deathstreak = 0
-	if not testing and not isDuel then SPECIAL.noteMyKill(streak) end
+	-- (battleground and arena kills stay off the guild board)
+	if not testing and not isDuel and not (inBG or inArena) then SPECIAL.noteMyKill(streak) end
 	local newRecord = false
 	if streak > profile.maxstreak and not testing then
 		profile.maxstreak = streak
@@ -1536,7 +1537,7 @@ local function registerDeath(killer, isDuel, killerGUID)
 		if not isDuel and profile.dodeathsound then playHumiliation() end
 	end
 	if not isDuel and not testing and killer ~= SPECIAL.UNKNOWN_KILLER then SPECIAL.rememberKiller(killer) end
-	if not isDuel and not testing then SPECIAL.noteMyDeath() end
+	if not isDuel and not testing and not (inBG or inArena) then SPECIAL.noteMyDeath() end
 
 	if testing then return end
 
@@ -1603,25 +1604,17 @@ SPECIAL.LOCKDOWN = 11
 
 local function sendAddonMessage(message, channel, target, isRetry)
 	if not (C_ChatInfo and C_ChatInfo.SendAddonMessage) or not registerPrefix() then return false end
-	-- Battlegrounds and arenas lock addon messages for the whole match: once refused there, stop
-	-- trying until we leave (then the guild board gets our numbers, see PLAYER_ENTERING_WORLD)
-	if SPECIAL.pvpLocked and (inBG or inArena) then
-		debugPrint("sync: not sent, addon messages are locked in this battleground:", (message:gsub("\t", " ")))
+	-- Nothing is shared from battlegrounds and arenas: WoW Forever locks addon messages there for
+	-- the whole match anyway, and it would be spammy. They stay just for you.
+	if inBG or inArena then
+		debugPrint("sync: not sent from a battleground or arena:", (message:gsub("\t", " ")))
 		return false
 	end
 	local ok, result = pcall(C_ChatInfo.SendAddonMessage, PREFIX, message, channel, target)
 	local why = ok and type(result) == "number" and SPECIAL.SEND_RESULTS[result]
 	debugPrint("sync: sent to", channel, target or "", ok and "ok" or "failed", result, why and ("(" .. why .. ")") or "")
-	if ok and result == SPECIAL.LOCKDOWN and not isRetry then
-		if inBG or inArena then
-			-- Locked for the match: nothing more is sent until we leave
-			if not SPECIAL.pvpLocked then debugPrint("sync: addon messages are locked in this battleground; sharing pauses until you leave") end
-			SPECIAL.pvpLocked = true
-		else
-			-- Elsewhere the lock may lift soon: hold it and try again
-			SPECIAL.holdMessage(message, channel, target)
-		end
-	end
+	-- Some other instance locks addon messages for a while: hold it and try again
+	if ok and result == SPECIAL.LOCKDOWN and not isRetry then SPECIAL.holdMessage(message, channel, target) end
 	-- Older clients return true/false, newer ones a result code (0 = success)
 	return ok and (result == nil or result == true or result == 0)
 end
@@ -2208,14 +2201,8 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "S" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" then
 		noticeVersion(sender, fields[2])
-	end
-	-- A guildmate's month numbers after a battleground (where sharing is locked): the guild board
-	if kind == "S" then
-		local who = safeText(shortName(sender))
-		if who and channel == "GUILD" and syncConfig().shareguild then SPECIAL.readStats(who, fields, true) end
-		return
 	end
 	-- A kudos reaction (Kudos.lua checks it was meant for us and for something we just did)
 	if kind == "R" then
@@ -2953,16 +2940,6 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 	playerName = UnitName("player")
 	SPECIAL.hiddenCount, SPECIAL.hiddenPending, SPECIAL.lastHonorKill = 0, nil, nil
 	updatePvPInstanceState()
-	-- Left a battleground where sharing was locked: send the guild our month's numbers once, so
-	-- the guild board counts the match
-	if SPECIAL.pvpLocked and not (inBG or inArena) then
-		SPECIAL.pvpLocked = false
-		C_Timer.After(5, function()
-			if syncConfig().shareguild and inGuild() then
-				sendAddonMessage("S\t" .. VERSION .. "\t" .. SPECIAL.statsFields(), "GUILD")
-			end
-		end)
-	end
 	-- New zone, new scoreboard: the killing blows already on it are the baseline
 	kbBaseline = nil
 	wipe(enemyDeaths)
