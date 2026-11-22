@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.5.0
+
+- **Request help:** when a player kills you in the open world, a card offers **Need help!**. One click asks your party and guild (as far as you share with them): friends running the addon get a card with who killed you and where (the zone; your map position too if you switch that on), a raid warning sound, and **On my way** and **Waypoint** buttons. You see who's coming. Once a minute at most. Optionally also posted as a chat line. Settings under Friends > Request help; `/sks aid` previews it.
+- **AVENGED!** Kill the player who killed a friend who asked you for help, and you get an "AVENGED <friend>!" callout. When a friend kills whoever killed you lately, you see that they avenged you.
+- Nothing is sent from battlegrounds or arenas, so help requests work in the open world only.
+
 ## v1.4.0
 
 - The Kudos popup is narrower: the nine emoji sit in two rows (5 + 4).

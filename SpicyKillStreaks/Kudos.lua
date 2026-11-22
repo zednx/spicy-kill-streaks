@@ -40,12 +40,14 @@ local TONES = {
 	death = { 0.58, 0.64, 0.78 },
 	got = { 1, 0.80, 0.30 },
 	sent = { 0.45, 0.85, 0.50 },
+	aid = { 1, 0.25, 0.22 },
 }
 local ICONS = {
 	kill = "Interface\\AddOns\\SpicyKillStreaks\\Media\\Chilli",
 	death = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_8",
 	got = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1",
 	sent = "Interface\\RaidFrame\\ReadyCheck-Ready",
+	aid = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_7",
 }
 
 -- Reactions are emoji, the same nine for kills and deaths. WoW's fonts can't draw emoji, so each is
@@ -455,6 +457,8 @@ kudos.offer = offer
 
 -- A friend killed or died (from SpicyKillStreaks.lua's feed, already checked and de-duplicated)
 function kudos.allyEvent(info)
+	-- A friend's kill of whoever killed us lately: "AVENGED" (Aid.lua), whatever the Kudos setting
+	if ns.aid then pcall(ns.aid.allyKill, info) end
 	if not cfg().give then return end
 	info.guid = cleanGUID(info.guid)
 	if not info.guid or not info.who then return end -- older versions without a GUID: nowhere to send it
@@ -631,3 +635,9 @@ end
 function kudos.clear()
 	while #rows > 0 do removeRow(rows[1]) end
 end
+
+-- The card stack for Aid.lua (help requests share the popup)
+kudos.cards = {
+	newRow = newRow, setTone = setTone, expireAfter = expireAfter, layout = layout, removeRow = removeRow,
+	fontString = fontString, ROW_W = ROW_W, PAD = PAD, TEXT_X = TEXT_X,
+}

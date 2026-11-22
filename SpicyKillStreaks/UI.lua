@@ -755,6 +755,20 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(button("Reset position", function() if ns.kudos then ns.kudos.resetPosition() end end), 0.33)
 	cards[#cards + 1] = c
 
+	c = newCard("Request help")
+	local function atoggle(key, label, desc)
+		return toggle(label, desc, function() return P().aid[key] end, function(v) P().aid[key] = v end)
+	end
+	c:add(atoggle("enabled", "\"Need help!\" when a player kills you", "Asks your party and guild; not from battlegrounds"), 0.5)
+	c:add(atoggle("receive", "Show friends' help requests", "With On my way and a waypoint"), 0.5)
+	c:add(atoggle("location", "Include where I died", "Your map position (the zone is always included)"), 0.5)
+	c:add(atoggle("sound", "Raid warning sound for requests", nil), 0.5)
+	c:add(atoggle("chat", "Also post my request in chat", "Everyone sees it; once a minute at most"), 1)
+	c:add(para("Kill the player who killed a friend who asked, and you've AVENGED them.", 12, COLORS.muted), 1)
+	c:add(button("Preview my request", function() if ns.aid then ns.aid.previewOffer() end end), 0.5)
+	c:add(button("Preview a friend's request", function() if ns.aid then ns.aid.previewRequest() end end), 0.5)
+	cards[#cards + 1] = c
+
 	c = newCard("Guild extras")
 	c:add(synctoggle({ "logincount" }, "At login, count guildmates using it", nil), 0.5)
 	c:add(synctoggle({ "loginboard" }, "At login, show the top 3 killers", nil), 0.5)

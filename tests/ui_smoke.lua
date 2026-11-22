@@ -482,6 +482,57 @@ step("match summary at the end of a battleground, shared only on a click", funct
   assert(card.__shown, "no sample card"); card:Hide()
   IsInInstance = oldInst
 end)
+step("request aid: offer on a player kill, send, a friend's request, on my way, avenged", function()
+  local core, aid, kudos = ns.core, ns.aid, ns.kudos
+  local P = core.db().profile
+  local addon, said = {}, {}
+  local oldSend = C_ChatInfo.SendAddonMessage
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) addon[#addon + 1] = channel .. ": " .. msg return true end
+  SendChatMessage = function(msg, channel) said[#said + 1] = channel .. ": " .. msg end
+  GetRealZoneText = function() return "Ashenvale" end
+  GetSubZoneText = function() return "Splintertree Post" end
+  P.aid.enabled, P.aid.receive, P.aid.location, P.aid.chat, P.aid.sound = true, true, false, true, true
+  P.sync.shareguild, P.sync.shareparty = true, true
+  kudos.clear()
+  -- our "Need help!" card, and the request it sends (zone only: location is off)
+  local row = aid.offer({ killer = "Orcbro", level = 62 })
+  assert(row and row.button, "no Need help card")
+  row.button.__scripts.OnClick(row.button)
+  assert(#addon == 1 and addon[1]:find("^GUILD: A\t" .. core.VERSION .. "\tOrcbro\t62\tAshenvale\tSplintertree Post\t%-\t%-\t%-\tPlayer%-1%-0001$"), addon[1])
+  assert(#said == 1 and said[1]:find("Need help in Ashenvale %- Splintertree Post! Killed by Orcbro %(62%)"), said[1])
+  -- a second request within the minute is refused
+  local row2 = aid.offer({ killer = "Orcbro", level = 62 }); row2.button.__scripts.OnClick(row2.button)
+  assert(#addon == 1, "asked twice within the cooldown")
+  -- a friend's request, with a position: card, waypoint, on my way
+  kudos.clear()
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "A", "1.5.0", "Gankster", "60", "Barrens", "Crossroads", "1413", "0.5", "0.3", "Player-1-0005" }, "\t"), "GUILD", "Panda-Realm")
+  assert(#kudos.rows == 1 and kudos.rows[1].label:GetText():find("Panda.*needs help"), kudos.rows[1] and kudos.rows[1].label:GetText())
+  local req = kudos.rows[1]
+  assert(req.sub:GetText():find("Barrens %- Crossroads %(50, 30%)"), req.sub:GetText())
+  req.onMyWay.__scripts.OnClick(req.onMyWay)
+  assert(addon[#addon] == "GUILD: W\t" .. core.VERSION .. "\tPlayer-1-0005\tPlayer-1-0001", addon[#addon])
+  -- the same friend again within a minute: ignored
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "A", "1.5.0", "Gankster", "60", "Barrens", "", "-", "-", "-", "Player-1-0005" }, "\t"), "GUILD", "Panda-Realm")
+  assert(#kudos.rows == 1, "a repeated request shown")
+  -- bad coordinates are dropped
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "A", "1.5.0", "Other", "60", "Barrens", "", "99", "5", "-1", "Player-1-0006" }, "\t"), "GUILD", "Carl-Realm")
+  assert(#kudos.rows == 2 and not kudos.rows[2].sub:GetText():find("%(%d+, %d+%)"), kudos.rows[2].sub:GetText())
+  -- an answer to our request
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "W", "1.5.0", "Player-1-0001", "Player-1-0007" }, "\t"), "GUILD", "Dan-Realm")
+  assert(kudos.rows[#kudos.rows].label:GetText():find("Dan.*on the way"), kudos.rows[#kudos.rows].label:GetText())
+  -- we kill Gankster: avenged Panda
+  assert(aid.requests["gankster"], "request not remembered")
+  aid.ownKill("Gankster")
+  assert(not aid.requests["gankster"], "avenge not taken")
+  -- a friend kills who killed us: they avenged us
+  core.db().char.recentKillers = core.db().char.recentKillers or {}
+  core.db().char.recentKillers["orcbro"] = time()
+  aid.allyKill({ kind = "K", who = "Bob", other = "Orcbro" })
+  aid.previewOffer(); aid.previewRequest(); SlashCmdList.SPICYKILLSTREAKS("aid")
+  kudos.clear()
+  C_ChatInfo.SendAddonMessage = oldSend
+  P.aid.chat = false
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

@@ -72,20 +72,13 @@ Forever; addon whispers aren't tested there yet.
 
 ## Next version
 
-### Request aid on death
+### Request aid on death (built in 1.5.0, test in game)
 
-- **The button:** when you die, a small "Need help!" / "Avenge me!" button appears by the death
-  callout (or in the Kudos popup's spot). Shown prominently when you got ganked.
-- **What it sends:** one press sends e.g. "Spicy needs help in Ashenvale (52.1, 41.3), killed by
-  Orcbro (60)".
-  - **Through the addon (default):** party/guild members running it get a popup, with an optional
-    sound, map pin or waypoint button.
-  - **Party or guild chat (opt-in):** a normal chat line.
-- **Ties in with Retribution:** allies who answer and kill your killer get a special callout, e.g.
-  "AVENGED!".
-- **Safeguards:** a cooldown; follows the party/guild sharing settings; the location is only included
-  if you turn that on.
-- **Check in game:** chat posts only go out from a click/key press. A button click should count, but test it.
+- [ ] Die to a player in the open world with a friend on 1.5.0 in your party or guild: "Need help!", then
+      their card (On my way, Waypoint with "Include where I died" on), and "X is on the way!" back
+- [ ] The friend kills your killer: "AVENGED <you>!" for them, "<friend> AVENGED YOU!" for you
+- [ ] "Also post my request in chat" posts without "interface action failed"
+- [ ] Waypoint: the map pin appears (C_Map.SetUserWaypoint) or the position is printed instead
 
 ### KOS / Nemesis list
 

@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.4.0"
+local VERSION = "1.5.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -146,6 +146,14 @@ local defaults = {
 			--   text: on-screen combat text       deaths: also show when they die
 			party = { feed = true, sound = true, text = true, deaths = false },
 			guild = { feed = true, sound = false, text = false, deaths = false },
+		},
+		-- Request aid (Aid.lua)
+		aid = {
+			enabled = true,   -- when a player kills us (outside battlegrounds): a "Need help!" button
+			receive = true,   -- show friends' help requests
+			location = false, -- include our map position in a request (the zone is always in it)
+			chat = false,     -- also post the request as a normal chat line
+			sound = true,     -- the raid warning sound for a friend's request
 		},
 		-- Kudos (Kudos.lua): reactions to friends' kills and deaths
 		kudos = {
@@ -1555,6 +1563,11 @@ local function registerDeath(killer, isDuel, killerGUID)
 	if testing then return end
 
 	syncSendDeath(killer, isDuel, gankedBy and true or false)
+	-- Killed by a player: offer to ask friends for help (Aid.lua; not from battlegrounds or arenas)
+	if not isDuel and killer ~= SPECIAL.UNKNOWN_KILLER and usableString(killerGUID) and strsub(killerGUID, 1, 7) == "Player-"
+		and SPECIAL.ns.aid then
+		pcall(SPECIAL.ns.aid.offer, { killer = killer, level = Levels.of(killer) })
+	end
 	if deathstreak > profile.maxdeathstreak then profile.maxdeathstreak = deathstreak end
 	local times = count(profile.deaths, killer)
 	if profile.dochat then chat(killer .. " has " .. (isDuel and "defeated" or "killed") .. " you " .. times .. " times.") end
@@ -1721,6 +1734,7 @@ end
 -- Since 1.0.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
 -- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
 syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
+	if kind == "K" and SPECIAL.ns.aid then pcall(SPECIAL.ns.aid.ownKill, victim) end
 	SPECIAL.ownEvent("K", kind == "K" and (multi or 0) > 0 and ("m" .. multi) or (kind == "K" and (rank or 0) > 0 and ("r" .. rank)) or nil)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
 		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
@@ -2214,8 +2228,16 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" then
 		noticeVersion(sender, fields[2])
+	end
+	-- Help requests and "on my way" answers (Aid.lua)
+	if kind == "A" or kind == "W" then
+		local aid = SPECIAL.ns.aid
+		if aid then
+			if kind == "A" then aid.receive(sender, channel, fields) else aid.receiveOnMyWay(sender, channel, fields) end
+		end
+		return
 	end
 	-- A kudos reaction (Kudos.lua checks it was meant for us and for something we just did)
 	if kind == "R" then
@@ -4009,6 +4031,9 @@ local function initialize()
 			db.global.minimap.hide = not db.global.minimap.hide
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
 			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
+		elseif command == "aid" then
+			-- Previews: our "Need help!" card and a friend's request
+			if SPECIAL.ns.aid then SPECIAL.ns.aid.previewOffer(); SPECIAL.ns.aid.previewRequest() end
 		elseif command == "summary" then
 			-- A sample end-of-match card (sharing from it posts the sample line)
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.matchSummary then
@@ -4093,6 +4118,7 @@ SPECIAL.ns.core = {
 	showText = showText,
 	celebrate = celebrate,
 	playerGUID = function() return playerGUID end,
+	inPvP = function() return inBG or inArena end,
 	rankNames = RANK_NAMES,
 	finishSetup = function(skipped)
 		db.global.setupDone, db.global.sharingShown, db.global.setup1Done = true, true, true
