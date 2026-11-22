@@ -631,6 +631,29 @@ step("ganks in a group: no honor check", function()
   assert(#ganked == 1, "honor didn't rule out a solo gank")
   IsInGroup, sp.gankCandidate, sp.registerGank, GetPlayerInfoByGUID = oldGroup, oldCand, oldReg, oldInfo
 end)
+step("flag sounds from the battleground's lines", function()
+  local sp, P = ns.core.special, ns.core.db().profile
+  P.doflagsounds, P.dosound, P.soundpack = true, true, "male"
+  P.mutebg = false
+  local played = {}
+  local old = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  local lines = {
+    { "The Alliance Flag was picked up by Bob!", "flag_blue_taken" },
+    { "The Horde flag was dropped by Ann!", "flag_red_dropped" },
+    { "The Alliance Flag was returned to its base by Cid!", "flag_blue_returned" },
+    { "Bob captured the Horde flag!", "flag_blue_scores" },
+    { "Ann captured the Alliance flag!", "flag_red_scores" },
+    { "The Horde have captured the flag!", "flag_red_scores" },
+  }
+  for _, l in ipairs(lines) do
+    played = {}
+    fire("CHAT_MSG_BG_SYSTEM_ALLIANCE", l[1])
+    assert(played[1] and played[1]:find(l[2] .. "%.ogg$"), l[1] .. " -> " .. tostring(played[1]))
+  end
+  played = {}; fire("CHAT_MSG_BG_SYSTEM_HORDE", "Something else happened."); assert(#played == 0, "played for an unrelated line")
+  PlaySoundFile = old
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

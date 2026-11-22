@@ -87,8 +87,9 @@ local defaults = {
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
-		dobgsummary = true,
-		doflagcap = true,        -- "FLAG CAPTURED!" when the battleground says we captured a flag      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
+		dobgsummary = true,      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
+		doflagcap = true,        -- "FLAG CAPTURED!" when the battleground says we captured a flag
+		doflagsounds = true,     -- announcer lines for flags taken, dropped, returned and captured
 		dobgguess = true,        -- battlegrounds: count hidden killing blows that look like ours (see SPECIAL.hiddenKill)
 		dozonechange = false,
 		-- sound
@@ -3183,9 +3184,44 @@ end
 -- Flag captures (Warsong Gulch, Eye of the Storm): the battleground's own line, e.g. "Name captured
 -- the Alliance flag!". Only when it is readable and names us exactly; the game plays its own
 -- capture fanfare, so this is a callout and sparkles, no sound.
+-- Flag sounds: blue = Alliance, red = Horde, Unreal Tournament style. "taken", "dropped" and
+-- "returned" are about that colour's flag; "scores" is the team that captured.
+-- Warsong Gulch: "The Alliance Flag was picked up by X!", "... dropped by X!", "... returned to
+-- its base by X!", "X captured the Horde flag!". Eye of the Storm: "The Horde have captured the flag!"
+SPECIAL.FLAG_EVENTS = {
+	{ "^the (%a+) flag was picked up", "taken" },
+	{ "^the (%a+) flag was dropped", "dropped" },
+	{ "^the (%a+) flag was returned", "returned" },
+}
+SPECIAL.FLAG_COLOR = { alliance = "blue", horde = "red" }
+function SPECIAL.flagSound(message)
+	if not db.profile.doflagsounds then return end
+	local lower = strlower(message)
+	for _, rule in ipairs(SPECIAL.FLAG_EVENTS) do
+		local faction = strmatch(lower, rule[1])
+		local color = faction and SPECIAL.FLAG_COLOR[faction]
+		if color then
+			playSound("flag_" .. color .. "_" .. rule[2] .. ".ogg")
+			return
+		end
+	end
+	-- Captures: the team that scores is the one that took the other side's flag
+	local captured = strmatch(lower, " captured the (%a+) flag")
+	if captured then
+		local scorer = captured == "alliance" and "red" or (captured == "horde" and "blue")
+		if scorer then playSound("flag_" .. scorer .. "_scores.ogg") end
+		return
+	end
+	local team = strmatch(lower, "^the (%a+) have captured the flag")
+	local color = team and SPECIAL.FLAG_COLOR[team]
+	if color then playSound("flag_" .. color .. "_scores.ogg") end
+end
+
 function SPECIAL.bgSystem(message)
 	debugPrint("bg system:", message)
-	if not usableString(message) or not db.profile.doflagcap then return end
+	if not usableString(message) then return end
+	SPECIAL.flagSound(message)
+	if not db.profile.doflagcap then return end
 	local who = strmatch(message, "^(.-) captured the .- [Ff]lag")
 	if not usableString(who) then return end
 	local mine = ownNames()
@@ -3728,6 +3764,15 @@ function SPECIAL.soundBoard()
 		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
 		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },
 		{ "Prepare", "A battleground or duel is about to start (if switched on)", SOUND_PREPARE },
+		{ section = "Capture the flag (blue = Alliance, red = Horde)" },
+		{ "Blue flag taken", "The Alliance flag is picked up", "flag_blue_taken.ogg" },
+		{ "Blue flag dropped", "The Alliance flag is dropped", "flag_blue_dropped.ogg" },
+		{ "Blue flag returned", "The Alliance flag goes back to its base", "flag_blue_returned.ogg" },
+		{ "Blue team scores", "The Alliance captures a flag", "flag_blue_scores.ogg" },
+		{ "Red flag taken", "The Horde flag is picked up", "flag_red_taken.ogg" },
+		{ "Red flag dropped", "The Horde flag is dropped", "flag_red_dropped.ogg" },
+		{ "Red flag returned", "The Horde flag goes back to its base", "flag_red_returned.ogg" },
+		{ "Red team scores", "The Horde captures a flag", "flag_red_scores.ogg" },
 	}) do board[#board + 1] = entry end
 	return board
 end

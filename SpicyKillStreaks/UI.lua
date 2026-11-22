@@ -604,6 +604,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
 	c:add(ptoggle("doflagcap", "Flag captures", "\"FLAG CAPTURED!\" when you capture a flag"), 0.5)
+	c:add(ptoggle("doflagsounds", "Flag sounds", "Flags taken, dropped, returned and captured"), 0.5)
 	c:add(ptoggle("dobgsummary", "Battleground summary", "At the end of a match: your killing blows and best streak, to share or not"), 0.5)
 	c:add(button("Preview the summary", function() SlashCmdList.SPICYKILLSTREAKS("summary") end), 0.5)
 	c:add(ptoggle("dobgguess", "Battleground kills (best guess)",

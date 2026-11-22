@@ -30,6 +30,10 @@ secret20.ogg
   Added for Spicy Kill Streaks 0.7.0 from a file supplied by the author. An Unreal Tournament
   2004 announcer line ((c) Epic Games). (What it says is a surprise.)
 
+flag_blue_*.ogg, flag_red_*.ogg (taken, dropped, returned, scores)
+  Added for Spicy Kill Streaks 1.7.0 from files supplied by the author: Unreal Tournament style
+  capture-the-flag announcer lines. Source: to be confirmed.
+
 retribution.ogg
   Added for Spicy Kill Streaks 0.6.0. The file was encoded by Unreal Engine 3, so it comes from
   an Unreal Engine 3 game such as Unreal Tournament 3 ((c) Epic Games).

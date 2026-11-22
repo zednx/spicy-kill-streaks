@@ -2,6 +2,7 @@
 
 ## v1.7.0
 
+- **Flag sounds** in Warsong Gulch (and captures in Eye of the Storm): Unreal Tournament style announcer lines when a flag is taken, dropped or returned (blue = Alliance, red = Horde), and "Blue team scores!" / "Red team scores!" on a capture. Only when the battleground's own lines are readable to addons. Switch them off under Announcer > Callouts; all eight are on the Sound board.
 - **Kudos has its own settings page** (between Friends and Guild board), with a note at the top that it needs party or guild sharing on.
 - **Kudos card width:** a **Card width** slider on the Kudos page makes the cards wider (or narrower), so longer names and text fit.
 - **A nicer battleground summary:** a proper header with the chilli, bigger numbers in tiles with a coloured strip, the note under them, and the share buttons in a footer (no more text running into a button).
