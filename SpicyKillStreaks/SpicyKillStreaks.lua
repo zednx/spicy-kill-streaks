@@ -1843,13 +1843,16 @@ local function versionCheck()
 		return
 	end
 	census = { names = {}, quiet = false }
-	chat("Asking your group and guild who runs " .. TITLE .. "...")
+	-- Online friends too (Friends.lua): they answer by whisper, and say whether they share
+	local friendsOnline = SPECIAL.ns.friends and not (inBG or inArena) and #SPECIAL.ns.friends.online() or 0
+	chat("Asking your group, guild" .. (friendsOnline > 0 and " and online friends" or "") .. " who runs " .. TITLE .. "...")
 	-- Asking is an explicit request, so it goes out whatever the sharing settings say
 	local message = "V?\t" .. VERSION .. "\t" .. SPECIAL.statsFields()
 	if groupChannel() then sendAddonMessage(message, groupChannel()) end
 	if inGuild() then sendAddonMessage(message, "GUILD") end
-	if not (groupChannel() or inGuild()) then
-		chat("You are not in a group or guild, so nobody can answer.")
+	if friendsOnline > 0 then SPECIAL.ns.friends.check(true) end
+	if not (groupChannel() or inGuild()) and friendsOnline == 0 then
+		chat("You are not in a group or guild and no friends are online, so nobody can answer.")
 	end
 end
 

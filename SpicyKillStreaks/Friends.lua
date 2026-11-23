@@ -214,9 +214,11 @@ local function hello(kind)
 	return table.concat({ kind, core().VERSION, sync().sharefriends and "1" or "0", core().playerGUID() or "" }, "\t")
 end
 
--- Ask every online friend (it's an explicit question, so it goes out whatever the share setting)
-function friends.check()
+-- Ask every online friend (it's an explicit question, so it goes out whatever the share setting).
+-- announce: print each answer in chat (/sks who), for the next few seconds
+function friends.check(announce)
 	if core().inPvP() then return 0 end
+	friends.announceUntil = announce and GetTime() + 8 or nil
 	local asked = 0
 	for _, f in ipairs(friends.online()) do
 		if asked >= 50 then break end
@@ -231,6 +233,11 @@ function friends.receive(sender, channel, fields)
 	local key = shortKey(sender)
 	local version = core().safeText(fields[2])
 	if key then friends.status[key] = { version = version or "?", sharing = fields[3] == "1", at = GetTime() } end
+	if fields[1] == "F!" and friends.announceUntil and GetTime() <= friends.announceUntil then
+		local who = core().safeText(core().shortName(sender)) or "A friend"
+		core().chat(who:gsub("%-.*$", "") .. " (friend) runs " .. core().TITLE .. " " .. (version or "?")
+			.. (fields[3] == "1" and ", sharing with friends." or ", not sharing with friends."))
+	end
 	if fields[1] == "F?" then
 		-- answer, so they see we run it (and whether we share)
 		core().sendAddonMessage(hello("F!"), "WHISPER", sender)

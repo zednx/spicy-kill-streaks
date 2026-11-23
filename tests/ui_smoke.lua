@@ -730,6 +730,18 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   assert(F.check() == 3, "didn't ask every online friend")
   fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "1", "Player-1-0043" }, "\t"), "WHISPER", "Alice")
   assert(F.status.alice and F.status.alice.version == "1.8.0" and F.status.alice.sharing, "status not saved")
+  -- /sks who asks friends too, and prints their answers
+  sent = {}
+  SlashCmdList.SPICYKILLSTREAKS("who")
+  local whispered = 0
+  for _, m in ipairs(sent) do if m:find("^WHISPER:") then whispered = whispered + 1 end end
+  assert(whispered == 3, "/sks who didn't ask the online friends: " .. table.concat(sent, " "))
+  local said = {}
+  local oldPrint2 = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "0", "Player-1-0045" }, "\t"), "WHISPER", "Carl")
+  print = oldPrint2
+  assert(table.concat(said, "\n"):find("Carl %(friend%) runs"), "friend's answer not printed")
   sent = {}
   fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F?", "1.8.0", "0", "Player-1-0044" }, "\t"), "WHISPER", "Bob")
   assert(sent[1] == "WHISPER:Bob:F", "didn't answer a friend's question: " .. tostring(sent[1]))
