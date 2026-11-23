@@ -61,6 +61,10 @@ UIParent = stub("UIParent"); Minimap = stub("Minimap"); WorldFrame = stub("World
 GameTooltip = stub("GameTooltip")
 ALLFRAMES = {}
 FONTSTRINGS = {} -- every font string made, to find text shown on screen
+-- Forget the text shown so far (button labels stay, to find the buttons by)
+function clearShown()
+  for _, f in ipairs(FONTSTRINGS) do if not (f.__parent and f.__parent.__scripts.OnClick) then f.__text = nil end end
+end
 function CreateFrame(kind, name, parent) local f = stub(kind); f.__gname = name; f.__parent = parent; if name then rawset(_G, name, f) end ALLFRAMES[#ALLFRAMES + 1] = f return f end
 function CreateFont(n) local f = stub("Font"); rawset(_G, n, f); return f end
 issecretvalue = nil
@@ -184,7 +188,7 @@ step("patch notes: newest open, a click opens another, /sks news", function()
     for _, f in ipairs(FONTSTRINGS) do if f.__text then out[#out + 1] = f.__text end end
     return table.concat(out, "|")
   end
-  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  clearShown()
   SlashCmdList.SPICYKILLSTREAKS("news")
   assert(ns.ui.current == "news")
   local out = shownText()
@@ -196,7 +200,7 @@ step("patch notes: newest open, a click opens another, /sks news", function()
     if fs.__text == ns.core.TITLE .. " " .. ns.patchNotes[2].version then second = fs.__parent end
   end
   assert(second and second.__scripts.OnClick, "no header for " .. ns.patchNotes[2].version)
-  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  clearShown()
   second.__scripts.OnClick(second); runTimers()
   assert(shownText():find(ns.patchNotes[2].summary, 1, true), "a click should open it")
 end)
@@ -212,6 +216,35 @@ step("an update says where the patch notes are, once", function()
   for _, line in ipairs(said) do if line:find("/sks news", 1, true) then n = n + 1 end end
   assert(n == 1, "expected one patch notes line, got " .. n)
   assert(g.notesSeen == ns.core.VERSION)
+end)
+step("Show in game matches the chosen sample", function()
+  ns.ui.open(); ns.ui.show("screen")
+  local P = ns.core.db().profile
+  local savedPack = P.soundpack
+  P.soundpack = "zealot"
+  local labels = { Kill = "HEADSHOT!", Rank = "KILLING SPREE!", Multi = "TRIPLE KILL!", Payback = "RETRIBUTION!", Godlike = "GODLIKE!", Gank = "Bully!" }
+  local function find(label)
+    for _, fs in ipairs(FONTSTRINGS) do
+      if fs.__text == label and fs.__parent and fs.__parent.__scripts.OnClick then return fs.__parent end
+    end
+  end
+  local real = assert(find("Show in game"), "no Show in game button")
+  for label, want in pairs(labels) do
+    local b = assert(find(label), "no sample button " .. label)
+    b.__scripts.OnClick(b)
+    local played = {}
+    local old = PlaySoundFile
+    PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+    clearShown()
+    real.__scripts.OnClick(real)
+    PlaySoundFile = old
+    local shown = {}
+    for _, f in ipairs(FONTSTRINGS) do if f.__text then shown[#shown + 1] = f.__text end end
+    shown = table.concat(shown, "|")
+    assert(shown:find(want, 1, true), label .. ": expected " .. want .. " on screen, got " .. shown)
+    assert(#played > 0, label .. ": no sound")
+  end
+  P.soundpack = savedPack
 end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
@@ -372,7 +405,7 @@ step("zealot pack: taunts on screen, standard text in chat, its own sounds", fun
   print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
   PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
   local before = #FONTSTRINGS
-  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  clearShown()
   ns.core.announce("RAMPAGE!", "rank", 3)
   ns.core.announce("GODLIKE!", "rank", 6, "DEATH WARRANT ENFORCED!")
   ns.core.playHumiliation(); ns.core.playHumiliation()

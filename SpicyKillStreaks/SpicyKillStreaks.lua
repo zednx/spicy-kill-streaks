@@ -917,6 +917,7 @@ local TEXT_STYLES = {
 	kudos = { size = 18, punch = 1.3, life = 2.2 }, -- a kudos a friend sent us: visible, not spicy
 }
 SPECIAL.KUDOS_COLOR = { 1, 0.82, 0.3 }
+SPECIAL.TAUNT_COLOR = { 1, 1, 1 } -- a pack's taunt, white under the coloured callout
 -- Kudos stack: the nth kudos for the same kill is a bit bigger, punchier and warmer than the last
 -- (gold towards spicy orange), pulsing from the 4th. Capped at the 8th.
 function SPECIAL.kudosStyle(n)
@@ -959,7 +960,8 @@ local function fancyText(text, kind, level)
 	local style = TEXT_STYLES[kind] or TEXT_STYLES.kill
 	if kind == "rank" or kind == "kill" or kind == "taunt" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "death" and DEATH_COLOR)
-		or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level or 1] or RANK_COLORS[1]
+		or (kind == "other" and OTHER_COLOR) or (kind == "taunt" and SPECIAL.TAUNT_COLOR)
+		or RANK_COLORS[level or 1] or RANK_COLORS[1]
 	if kind == "kudos" then style, color = SPECIAL.kudosStyle(level) end
 	local size = style.size * fxConfig().scale
 	local holder = acquireTextHolder()
@@ -1266,37 +1268,33 @@ local function showText(text, kind, level)
 	end
 end
 
--- One line of news: the log, the chat window and the screen
--- taunt: the pack's own words for it (SPECIAL.PACK_TAUNTS), if not the usual ones
-local function announce(text, kind, level, taunt)
-	-- A pack with its own words: its callout text, in rainbow letters on screen and in chat
+-- A callout on screen: a pack's own words in rainbow letters (SPECIAL.PACK_TEXT), or the usual
+-- name with the pack's taunt under it (SPECIAL.PACK_TAUNTS). taunt: the words, if not the usual ones
+function SPECIAL.screenCallout(text, kind, level, taunt)
 	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
-	if packText then
-		text = packText[text] or text
-		local plain = text
-		if not testing then
-			table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. plain)
-			while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
-		end
-		text = SPECIAL.rainbow(text)
-		if db.profile.dochat then chat(text) end
-		if db.profile.doscreen then showText(text, kind, level) end
-		return
-	end
-	if not testing then
-		table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. text)
-		while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
-	end
-	if db.profile.dochat then chat(text) end
+	if packText then return showText(SPECIAL.rainbow(packText[text] or text), kind, level) end
 	local taunts = kind == "rank" and SPECIAL.PACK_TAUNTS[db.profile.soundpack]
 	taunt = taunts and (taunt or taunts[text])
-	if db.profile.doscreen and taunt then
-		-- the standard name first, so the taunt (pushing it up) sits under it
+	if taunt then
+		-- the usual name first, so the taunt (pushing it up) sits under it
 		showText(text, "kill", level)
 		showText(taunt, "taunt", level)
-	elseif db.profile.doscreen then
+	else
 		showText(text, kind, level)
 	end
+end
+
+-- One line of news: the log, the chat window and the screen
+local function announce(text, kind, level, taunt)
+	-- A pack with its own words says them in the log and chat too (rainbow in chat)
+	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
+	local logged = packText and packText[text] or text
+	if not testing then
+		table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. logged)
+		while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
+	end
+	if db.profile.dochat then chat(packText and SPECIAL.rainbow(logged) or text) end
+	if db.profile.doscreen then SPECIAL.screenCallout(text, kind, level, taunt) end
 end
 
 -- Effect previews: the effects and sounds only, no log, chat or stats
@@ -1326,6 +1324,19 @@ local function preview(what)
 		showText("Friend-Name (10) killed Test-Victim (12)! (streak 3)", "other")
 		celebrate("other")
 	end
+end
+
+-- The settings window's "Show in game": the live preview's sample (UI.lua SAMPLES), for real
+function SPECIAL.previewSample(sample)
+	if sample.grey then
+		showText(sample.small .. " " .. sample.text, "death")
+	else
+		local kind, level = sample.multi and "multi" or "rank", sample.multi and 2 or sample.level
+		showText(sample.small, "kill", sample.level or 1)
+		SPECIAL.screenCallout(sample.text, kind, level)
+		celebrate(kind, level)
+	end
+	SPECIAL.playForced(sample.sound)
 end
 
 -- ---------------------------------------------------------------------------------------------
