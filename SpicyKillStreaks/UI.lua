@@ -431,13 +431,13 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Lists the settings use
 -- ---------------------------------------------------------------------------------------------
-local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)" }
-local PACK_ORDER = { "male", "female", "sexy", "baby", "flamboyant" }
+local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)", zealot = "Zealot (UT3)" }
+local PACK_ORDER = { "male", "female", "sexy", "baby", "flamboyant", "zealot" }
 local HUMILIATION = {
 	humiliation = "Humiliation (classic)", pack = "Same as the voice pack", male = "Male", female = "Female",
-	sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", custom = "Custom file",
+	sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", custom = "Custom file",
 }
-local HUMILIATION_ORDER = { "humiliation", "pack", "male", "female", "sexy", "baby", "flamboyant", "custom" }
+local HUMILIATION_ORDER = { "humiliation", "pack", "male", "female", "sexy", "baby", "flamboyant", "zealot", "custom" }
 local CHANNELS = { Master = "Master", SFX = "Effects", Dialog = "Dialog", Music = "Music", Ambience = "Ambience" }
 local CHANNEL_ORDER = { "Master", "SFX", "Dialog", "Music", "Ambience" }
 local SPARKLES = { mix = "Mix", star = "Stars", chilli = "Chillies", confetti = "Confetti" }

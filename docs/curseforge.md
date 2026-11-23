@@ -59,7 +59,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
   - *Pancake* when you (or a friend) die from falling or drowning
   - **BIG GAME HUNTER!** for killing a player 10+ levels above you
   - **Ganks**: kill a player 10+ levels below you and get shamed instead ("Bully!"), with no streak credit. Die to someone 10+ levels above you and the Peon says it for you.
-- **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer: *Cherry Poppah*, *Rainbow Warrior*, *Unicorn Stampede*... with rainbow callouts to match). Pick a separate voice for *Humiliation*, or drop in your own sound files.
+- **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer: *Cherry Poppah*, *Rainbow Warrior*, *Unicorn Stampede*... with rainbow callouts to match) and **Zealot** (Unreal Tournament 3's holy-warrior taunts: *His justice is swift!*, *Thy will be done!*, as callouts too). Pick a separate voice for *Humiliation*, or drop in your own sound files.
 - **Only your killing blows count**, not kills your group finishes.
 - **Flair** (all optional):
   - Animated combat text that punches in and floats up, coloured by your streak

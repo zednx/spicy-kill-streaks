@@ -2,6 +2,7 @@
 
 ## v1.9.0
 
+- **Zealot voice pack:** Unreal Tournament 3's holy-warrior taunts, pitched down. The taunt is the big callout ("HIS JUSTICE IS SWIFT!") with the usual name above it ("RAMPAGE!"); chat and the log keep the usual names. Its own lines for First Blood, Headshot, every rank, Retribution, GRUDGE SETTLED!, NEMESIS SLAIN!, BIG GAME HUNTER!, comebacks, avenging a friend, duel wins, ganks, being ganked, falling to your death and Prepare. Godlike takes turns between three lines and Humiliation between three. Multikills and secrets use the Male voice.
 - **BIG GAME HUNTER!** Kill a player 10+ levels above you (or a ??) for its own callout and announcer line, with "You took down a level 60 <name>!" in chat. As sure as the gank checks: their level was seen in the last few minutes and they're a player. Friends on 1.9.0 see it in their feed too. Switch it off under Announcer > Callouts; it's on the Sound board.
 - **Kudos emoji:** ☠️ is gone (💀 is enough), and 😭 (posted in chat as "Noooo!") and 👏 ("Well played!") are new: ten emoji, two rows of five. A ☠️ from an older version still shows.
 - **Muting is easier and covers everything:** a **Mute** button next to each player on the Guild board (and **Unmute**), and a muted player's Kudos and help requests are hidden too, not just their kills and deaths. The Friends page says how to mute.

@@ -46,7 +46,7 @@ local function stub(name)
     if k == "IsEnabled" then return function() return true end end
     if k == "GetFontString" or k == "GetNormalTexture" or k == "GetHighlightTexture" or k == "GetPushedTexture" or k == "GetDisabledTexture" or k == "GetCheckedTexture" or k == "GetThumbTexture" or k == "GetFontObject" or k == "GetScrollChild" then
       return function(self) self["__" .. k] = self["__" .. k] or stub(k); return self["__" .. k] end end
-    if type(k) == "string" and k:match("^Create") then return function(self, ...) local c = stub(k); c.__parent = self; return c end end
+    if type(k) == "string" and k:match("^Create") then return function(self, ...) local c = stub(k); c.__parent = self; if k == "CreateFontString" then FONTSTRINGS[#FONTSTRINGS + 1] = c end; return c end end
     if type(k) == "string" and k:match("^%u") then return function() end end
     return nil
   end })
@@ -60,6 +60,7 @@ end })
 UIParent = stub("UIParent"); Minimap = stub("Minimap"); WorldFrame = stub("WorldFrame")
 GameTooltip = stub("GameTooltip")
 ALLFRAMES = {}
+FONTSTRINGS = {} -- every font string made, to find text shown on screen
 function CreateFrame(kind, name, parent) local f = stub(kind); f.__gname = name; f.__parent = parent; if name then rawset(_G, name, f) end ALLFRAMES[#ALLFRAMES + 1] = f return f end
 function CreateFont(n) local f = stub("Font"); rawset(_G, n, f); return f end
 issecretvalue = nil
@@ -322,6 +323,33 @@ step("kudos: offer, send, chat post, receive", function()
   SlashCmdList.SPICYKILLSTREAKS("kudos"); SlashCmdList.SPICYKILLSTREAKS("kudos")
   kudos.clear()
   P.kudos.give, P.kudos.chat = false, false
+end)
+step("zealot pack: taunts on screen, standard text in chat, its own sounds", function()
+  local P = ns.core.db().profile
+  local sp = ns.core.special
+  local saved = { P.soundpack, P.dochat, P.doscreen, P.dosound, P.humiliationvoice }
+  P.soundpack, P.dochat, P.doscreen, P.dosound, P.humiliationvoice = "zealot", true, true, true, "pack"
+  ns.core.db().global.snoozeUntil = 0
+  P.mutebg, P.mutedungeon, P.muteraid = false, false, false
+  local said, played = {}, {}
+  local oldPrint, oldPSF = print, PlaySoundFile
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  local before = #FONTSTRINGS
+  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  ns.core.announce("RAMPAGE!", "rank", 3)
+  ns.core.announce("GODLIKE!", "rank", 6, "DEATH WARRANT ENFORCED!")
+  ns.core.playHumiliation(); ns.core.playHumiliation()
+  print, PlaySoundFile = oldPrint, oldPSF
+  local shown = {}
+  for _, f in ipairs(FONTSTRINGS) do if f.__text then shown[#shown + 1] = f.__text end end
+  shown = table.concat(shown, "|")
+  local out = table.concat(said, "\n")
+  assert(out:find("RAMPAGE!") and not out:find("JUSTICE"), "chat keeps the standard text: " .. out)
+  assert(shown:find("HIS JUSTICE IS SWIFT!", 1, true) and shown:find("GODLIKE!", 1, true), shown)
+  assert(shown:find("DEATH WARRANT ENFORCED!", 1, true), shown)
+  assert(played[1]:find("zealot\\humiliation%.ogg$") and played[#played]:find("zealot\\humiliation2%.ogg$"), table.concat(played, " "))
+  P.soundpack, P.dochat, P.doscreen, P.dosound, P.humiliationvoice = unpack(saved)
 end)
 step("gank line at most once a minute, Headshot and Ownage in between", function()
   local played = {}

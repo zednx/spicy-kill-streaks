@@ -22,7 +22,7 @@ local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- there falls back to sounds\
 -- "humiliation" only has humiliation (the default humiliation voice).
 local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "baby\\", flamboyant = "flamboyant\\",
-	humiliation = "humiliation\\", custom = "custom\\" }
+	zealot = "zealot\\", humiliation = "humiliation\\", custom = "custom\\" }
 -- Files a voice pack does not ship; these are played from sounds\ instead
 local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
@@ -102,7 +102,7 @@ local defaults = {
 		soundchannel = "Master",
 		doprepare = false,
 		dodeathsound = true, -- "humiliation" when we die
-		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / flamboyant / custom
+		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / flamboyant / zealot / custom
 		-- text
 		dochat = true,
 		doscreen = true,
@@ -619,7 +619,14 @@ end -- do
 -- "Humiliation" in the voice picked for it (Sounds tab), which can differ from the main pack
 local function playHumiliation()
 	local voice = db.profile.humiliationvoice
-	playSound(SOUND_HUMILIATION, (voice and voice ~= "pack") and voice or nil)
+	local pack = (voice and voice ~= "pack") and voice or db.profile.soundpack
+	local rotation = SPECIAL.HUMILIATION_ROTATION[pack]
+	local file = SOUND_HUMILIATION
+	if rotation then
+		SPECIAL.humiliationIndex = (SPECIAL.humiliationIndex or 0) % #rotation + 1
+		file = rotation[SPECIAL.humiliationIndex]
+	end
+	playSound(file, pack)
 end
 
 -- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8, which then
@@ -669,7 +676,28 @@ SPECIAL.PACK_TEXT = {
 SPECIAL.TOP_ROTATION = {
 	flamboyant = { { file = "godlike.ogg", text = "SUPER STAR!" }, { file = "monsterkill.ogg", text = "DIVA!" },
 		{ file = "ultrakill.ogg", text = "FABULOUS!" } },
+	zealot = { { file = "godlike.ogg", text = "GODLIKE!" },
+		{ file = "godlike2.ogg", text = "GODLIKE!", taunt = "DEATH WARRANT ENFORCED!" },
+		{ file = "godlike3.ogg", text = "GODLIKE!", taunt = "ABSOLUTION FOR THE SOULS OF THE WRETCHED!" } },
 }
+-- Voice packs whose lines are taunts: the taunt is the big callout, with the standard name above
+-- it (smaller). The log and chat keep the standard text.
+SPECIAL.PACK_TAUNTS = {
+	zealot = {
+		["HEADSHOT!"] = "ONE SHOT, ONE KILL!", ["FIRST BLOOD!"] = "MEET YOUR MAKER!",
+		["KILLING SPREE!"] = "I AM BUT AN INSTRUMENT OF DEATH!", ["RAMPAGE!"] = "HIS JUSTICE IS SWIFT!",
+		["DOMINATING!"] = "MADE IN HIS IMAGE, DESTROYED IN HIS NAME!", ["UNSTOPPABLE!"] = "THY WILL BE DONE!",
+		["WICKED SICK!"] = "ATONEMENT AND FIERY WRATH!",
+		["GODLIKE!"] = "AND THE ANGEL OF DEATH SPREAD HIS WINGS UPON THE BLAST!",
+		["RETRIBUTION!"] = "SMOTE DOWN IN THE NAME OF VENGEANCE!", ["GRUDGE SETTLED!"] = "YOUR DAY OF JUDGEMENT IS AT HAND!",
+		["NEMESIS SLAIN!"] = "VENGEANCE SHALL BE MINE!", ["BIG GAME HUNTER!"] = "DEPART AND EMBRACE THE AFTERLIFE!",
+		["MEAT'S BACK ON THE MENU!"] = "IT WAS HIS WILL!",
+	},
+}
+-- Moments only some packs have a line for (playSound returns false elsewhere, so the usual sound plays)
+SPECIAL.comebackSound, SPECIAL.duelWinSound, SPECIAL.avengedSound = "comeback.ogg", "duelwin.ogg", "avenged.ogg"
+-- Packs with a few Humiliation clips, taken in turn
+SPECIAL.HUMILIATION_ROTATION = { zealot = { "humiliation.ogg", "humiliation2.ogg", "humiliation3.ogg" } }
 SPECIAL.RAINBOW = { "ff3b30", "ff9500", "ffcc00", "34c759", "32ade6", "af52de" }
 
 -- "BIG BEAR!" with every letter in the next rainbow colour
@@ -885,6 +913,7 @@ local TEXT_STYLES = {
 	multi = { size = 42, punch = 3.2, life = 3.2, pulse = true },
 	death = { size = 26, punch = 1, life = 2.6, sink = true },
 	other = { size = 20, punch = 1.6, life = 2.4 },
+	taunt = { size = 30, punch = 2.6, life = 3.4 }, -- a voice pack's own words (Zealot), under the standard callout
 	kudos = { size = 18, punch = 1.3, life = 2.2 }, -- a kudos a friend sent us: visible, not spicy
 }
 SPECIAL.KUDOS_COLOR = { 1, 0.82, 0.3 }
@@ -928,7 +957,7 @@ end
 
 local function fancyText(text, kind, level)
 	local style = TEXT_STYLES[kind] or TEXT_STYLES.kill
-	if kind == "rank" or kind == "kill" then level = SPECIAL.LEVEL[level] or level end
+	if kind == "rank" or kind == "kill" or kind == "taunt" then level = SPECIAL.LEVEL[level] or level end
 	local color = (kind == "multi" and MULTI_COLOR) or (kind == "death" and DEATH_COLOR)
 		or (kind == "other" and OTHER_COLOR) or RANK_COLORS[level or 1] or RANK_COLORS[1]
 	if kind == "kudos" then style, color = SPECIAL.kudosStyle(level) end
@@ -1238,7 +1267,8 @@ local function showText(text, kind, level)
 end
 
 -- One line of news: the log, the chat window and the screen
-local function announce(text, kind, level)
+-- taunt: the pack's own words for it (SPECIAL.PACK_TAUNTS), if not the usual ones
+local function announce(text, kind, level, taunt)
 	-- A pack with its own words: its callout text, in rainbow letters on screen and in chat
 	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
 	if packText then
@@ -1258,7 +1288,15 @@ local function announce(text, kind, level)
 		while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
 	end
 	if db.profile.dochat then chat(text) end
-	if db.profile.doscreen then showText(text, kind, level) end
+	local taunts = kind == "rank" and SPECIAL.PACK_TAUNTS[db.profile.soundpack]
+	taunt = taunts and (taunt or taunts[text])
+	if db.profile.doscreen and taunt then
+		-- the standard name first, so the taunt (pushing it up) sits under it
+		showText(text, "kill", level)
+		showText(taunt, "taunt", level)
+	elseif db.profile.doscreen then
+		showText(text, kind, level)
+	end
 end
 
 -- Effect previews: the effects and sounds only, no log, chat or stats
@@ -1505,11 +1543,14 @@ local function registerKill(victim, isDuel, notGank)
 	local rank = nil
 	if retribution then
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
-		announce(grudge and (grudge.nemesis and "NEMESIS SLAIN!" or "GRUDGE SETTLED!") or "RETRIBUTION!", "rank", grudge and 5 or 4)
+		announce(grudge and (grudge.nemesis and "NEMESIS SLAIN!" or "GRUDGE SETTLED!") or "RETRIBUTION!", "rank", grudge and 5 or 4,
+			avenged and not grudge and "SWEET RAPTURE!" or nil)
 		if avenged then announce("You avenged " .. avenged.who .. "!", "other") end
 		if grudge then
 			-- the KOS list's own lines (a surprise); Retribution if a pack can't play them
 			if not playSound(grudge.nemesis and SPECIAL.nemesisSound or SPECIAL.grudgeSound) then playSound(SPECIAL.retribution) end
+		elseif avenged and playSound(SPECIAL.avengedSound) then
+			-- (a pack with its own line for avenging a friend)
 		elseif not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
 			playSound(SPECIAL.retribution)
 		end
@@ -1534,7 +1575,7 @@ local function registerKill(victim, isDuel, notGank)
 		celebrate("multi", multi)
 	elseif comeback then
 		announce("MEAT'S BACK ON THE MENU!", "rank", 3)
-		if not playSound(SPECIAL.MEAT) then playSound(SPECIAL.headshot) end
+		if not (playSound(SPECIAL.comebackSound) or playSound(SPECIAL.MEAT)) then playSound(SPECIAL.headshot) end
 		celebrate("rank", 3)
 	elseif firstBlood then
 		-- The first kill of the day; afterwards a streak's first kill is a Headshot
@@ -1555,8 +1596,10 @@ local function registerKill(victim, isDuel, notGank)
 			SPECIAL.rotationIndex = (SPECIAL.rotationIndex or 0) % #rotation + 1
 			local pick = rotation[SPECIAL.rotationIndex]
 			playSound(pick.file)
-			announce(pick.text, "rank", rank)
+			announce(pick.text, "rank", rank, pick.taunt)
 			celebrate("rank", rank)
+		elseif isDuel and playSound(SPECIAL.duelWinSound) then
+			-- (a pack with its own line for a duel win)
 		elseif rank then
 			playSound(RANK_SOUNDS[rank])
 		end
@@ -3656,7 +3699,7 @@ local function buildSetup()
 		"Choose the announcer. Click a voice to hear it.",
 		function(page, refreshers)
 			local packs = { { "male", "Male" }, { "female", "Female" }, { "sexy", "Sexy" }, { "baby", "Baby" },
-				{ "flamboyant", "Flamboyant" } }
+				{ "flamboyant", "Flamboyant" }, { "zealot", "Zealot" } }
 			local buttons = {}
 			for i, pack in ipairs(packs) do
 				local b = makeButton(page, pack[2], 100, function()
@@ -4017,7 +4060,7 @@ local function buildOptions()
 						.. "/sks snooze off to undo). Text and effects still show.", 8),
 					soundpack = {
 						type = "select", name = "Voice pack", order = 2,
-						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)" },
+						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)", zealot = "Zealot (UT3)" },
 						desc = "Flamboyant also changes the callout text to match, in rainbow letters.",
 						get = function() return db.profile.soundpack end,
 						set = function(_, value) db.profile.soundpack = value end,
@@ -4035,7 +4078,7 @@ local function buildOptions()
 						desc = "Each voice pack has its own recording. \"Custom\" plays sounds\\custom\\humiliation.ogg if you add one.",
 						values = {
 							humiliation = "Humiliation (default)", pack = "Same as the voice pack", male = "Male",
-							female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", custom = "Custom file",
+							female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", custom = "Custom file",
 						},
 						get = function() return db.profile.humiliationvoice end,
 						set = function(_, value)
@@ -4441,6 +4484,7 @@ SPECIAL.ns.core = {
 	special = SPECIAL,
 	chat = chat,
 	playSound = playSound,
+	announce = announce, playHumiliation = playHumiliation,
 	preview = preview,
 	runTest = runTest,
 	versionCheck = versionCheck,
