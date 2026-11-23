@@ -192,7 +192,8 @@ step("patch notes: newest open, a click opens another, /sks news", function()
   SlashCmdList.SPICYKILLSTREAKS("news")
   assert(ns.ui.current == "news")
   local out = shownText()
-  assert(out:find(ns.patchNotes[1].new[1][2], 1, true), "newest notes not open")
+  local newest = ns.patchNotes[1]
+  assert(out:find((newest.new or newest.fixed)[1][2], 1, true), "newest notes not open")
   assert(not out:find(ns.patchNotes[2].summary, 1, true), "older notes should start closed")
   -- click the second version's header
   local second
