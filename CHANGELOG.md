@@ -2,6 +2,7 @@
 
 ## v1.10.1
 
+- **Settings:** buttons next to a dropdown or text box (Play, Add...) line up with the box instead of its label.
 - **Zealot:** the taunt now shows under the callout in game, smaller and in white, like in the live preview (it was as big as the callout).
 
 ## v1.10.0

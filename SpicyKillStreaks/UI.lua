@@ -286,7 +286,7 @@ local function dropdown(label, list, order, get, set)
 		end)
 	end)
 	refresh()
-	return { frame = f, height = 48, refresh = refresh }
+	return { frame = f, height = 48, refresh = refresh, labelled = true }
 end
 
 -- A slider with its value on the right
@@ -356,12 +356,12 @@ local function edit(label, get, set)
 	e:SetScript("OnEscapePressed", function(self) self:SetText(get() or "") self:ClearFocus() end)
 	local function refresh() e:SetText(get() or "") end
 	refresh()
-	return { frame = f, height = 48, refresh = refresh }
+	return { frame = f, height = 48, refresh = refresh, labelled = true }
 end
 
 local function button(label, onClick, kind)
 	local b = makeButton(UIParent, label, onClick, kind)
-	return { frame = b, height = 30, stretch = true }
+	return { frame = b, height = 30, stretch = true, button = true }
 end
 
 -- Text that wraps to the card's width
@@ -408,22 +408,33 @@ local function layoutCard(frame, card, width)
 		y = y + 28
 	end
 	local x, rowHeight, used = 0, 0, 0
+	-- A button in a row with a labelled field (dropdown, text box) lines up with the field's box,
+	-- below its label: which rows have one
+	local labelledRow, row, rowUsed = {}, 1, 0
+	for _, item in ipairs(card.items) do
+		if rowUsed + item.width > 1.001 then row, rowUsed = row + 1, 0 end
+		rowUsed = rowUsed + item.width
+		if item.labelled then labelledRow[row] = true end
+	end
+	row = 1
 	for _, item in ipairs(card.items) do
 		local w = math.floor(inner * item.width - (item.width < 1 and ITEM_GAP_X * (1 - item.width) or 0))
 		if used + item.width > 1.001 then
 			y = y + rowHeight + ITEM_GAP_Y
 			x, rowHeight, used = 0, 0, 0
+			row = row + 1
 		end
 		local f = item.frame
 		f:SetParent(frame)
 		f:ClearAllPoints()
-		f:SetPoint("TOPLEFT", frame, "TOPLEFT", CARD_PAD + x, -y)
+		local drop = (item.button and labelledRow[row]) and 16 or 0
+		f:SetPoint("TOPLEFT", frame, "TOPLEFT", CARD_PAD + x, -(y + drop))
 		local h = item.fit and item.fit(w) or item.height or 24
 		f:SetSize(w, h)
 		f:Show()
 		x = x + w + ITEM_GAP_X
 		used = used + item.width
-		rowHeight = math.max(rowHeight, h)
+		rowHeight = math.max(rowHeight, h + drop)
 	end
 	return y + rowHeight + CARD_PAD
 end

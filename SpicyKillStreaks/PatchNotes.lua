@@ -8,6 +8,7 @@ ns.patchNotes = {
 		version = "1.10.1", date = "2026-11-23",
 		fixed = {
 			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },
+			{ "Settings", "Play and Add buttons line up with the box next to them" },
 		},
 	},
 	{
