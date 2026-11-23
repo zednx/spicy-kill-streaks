@@ -20,6 +20,7 @@ The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp
 - `COMBAT_LOG_EVENT_UNFILTERED` is blocked for addons.
 - `PARTY_KILL(attackerGUID, targetGUID)` works outside instances with readable GUIDs and names the exact killing blow. It may be secret in some content: check `issecretvalue` before comparing.
 - Enemy health is a secret value in combat, so "finish him" mostly can't work.
+- Addon whispers (`SendAddonMessage(..., "WHISPER", name)`) work outside instances (the guild's `V!` answers arrive by whisper). Battlegrounds/arenas lock all addon messages (result 11).
 - Characters have a family name: `UnitName("player")` can differ from the addon-message sender. Sync messages carry the sender's GUID for that reason.
 - `.toc` files must be UTF-8 **without** a BOM.
 
