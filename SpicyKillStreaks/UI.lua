@@ -602,20 +602,28 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c = newCard("Callouts")
 	c:add(ptoggle("doheadshot", "Headshot", "Your first kill of a streak"), 0.5)
 	c:add(ptoggle("dofirstblood", "First Blood", "Your first kill of the day"), 0.5)
-	c:add(ptoggle("doretribution", "Retribution", "Kill someone who killed you in the last hour"), 0.5)
-	c:add(ptoggle("docomeback", "Comeback", nil), 0.5)
-	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
-	c:add(ptoggle("dobiggame", "Big Game Hunter", "You kill a player 10+ levels above you (or ??)"), 0.5)
-	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
-	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
-	c:add(ptoggle("doflagcap", "Flag captures", "\"FLAG CAPTURED!\" when you capture a flag"), 0.5)
-	c:add(ptoggle("doflagsounds", "Flag sounds", "Flags taken, dropped, returned and captured"), 0.5)
-	c:add(ptoggle("dobgsummary", "Battleground summary", "At the end of a match: your killing blows and best streak, to share or not"), 0.5)
+	c:add(ptoggle("doretribution", "Retribution", "Killing someone who killed you in the last hour"), 0.5)
+	c:add(ptoggle("dobiggame", "Big Game Hunter", "Killing a player 10+ levels above you"), 0.5)
+	c:add(ptoggle("dopancake", "Pancake", "Dying from a fall or drowning"), 0.5)
+	c:add(ptoggle("docomeback", "Comeback", "A surprise"), 0.5)
+	cards[#cards + 1] = c
+
+	c = newCard("Ganks")
+	c:add(ptoggle("dogank", "Shame ganks", "Killing a player 10+ levels below you"), 0.5)
+	c:add(ptoggle("doganked", "Got ganked", "Killed by a player 10+ levels above you"), 0.5)
+	cards[#cards + 1] = c
+
+	c = newCard("Battlegrounds")
+	c:add(ptoggle("dobgguess", "Kills (best guess)", "The game hides killing blows; may count a party member's"), 0.5)
+	c:add(ptoggle("dobgsummary", "Match summary", "Your killing blows and best streak at the end"), 0.5)
+	c:add(ptoggle("doflagcap", "Flag captures", "\"FLAG CAPTURED!\" when you capture one"), 0.5)
+	c:add(ptoggle("doflagsounds", "Flag sounds", "Taken, dropped, returned and captured"), 0.5)
 	c:add(button("Preview the summary", function() SlashCmdList.SPICYKILLSTREAKS("summary") end), 0.5)
-	c:add(ptoggle("dobgguess", "Battleground kills (best guess)",
-		"WoW Forever hides killing blows there; may now and then count a party member's"), 0.5)
+	cards[#cards + 1] = c
+
+	c = newCard("Streaks")
+	c:add(ptoggle("dozonechange", "Reset when changing zone", nil), 0.5)
 	c:add(ptoggle("dopve", "Count NPC kills", "Spammy, handy for trying it out"), 0.5)
-	c:add(ptoggle("dozonechange", "Reset streaks when changing zone", nil), 1)
 	cards[#cards + 1] = c
 
 	c = newCard("Streak ladder")
