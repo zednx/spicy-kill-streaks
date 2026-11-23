@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.2
+
+- **The Kudos popup fades out in combat** and comes back after the fight, without the cards that ran out meanwhile. Kudos you get during a fight still flash in your combat text. Switch it off with **Hide in combat** on the Kudos page.
+
 ## v1.8.1
 
 - The setup's sharing step has a third choice: **Share with my friends** (friends list and Battle.net friends on your realm), next to party and guild.

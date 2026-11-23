@@ -832,7 +832,12 @@ sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to frie
 	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 220 end,
 		function(v) if ns.kudos then ns.kudos.setWidth(v) else P().kudos.width = v end end), 0.5)
 	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
-		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 1)
+		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 0.5)
+	c:add(toggle("Hide in combat", "Fades out when a fight starts, back after (kudos you get still flash)",
+		function() return P().kudos.combathide end, function(v)
+			P().kudos.combathide = v
+			if not v and ns.kudos then ns.kudos.fadeHolder(1) end
+		end), 0.5)
 	c:add(para("Move it any time: mouse over the spot where cards appear and drag the handle.", 12, COLORS.muted), 1)
 	c:add(button("Unlock to move", function()
 		if not ns.kudos then return end

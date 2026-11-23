@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.8.1"
+local VERSION = "1.8.2"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -170,6 +170,7 @@ local defaults = {
 			scale = 0.85,    -- the popup's size
 			width = 220,     -- the cards' width (wider fits longer names and text)
 			growup = false,  -- new cards stack downwards from that point (true: upwards)
+			combathide = true, -- the whole popup fades out in combat and back in after
 			got = 0,         -- kudos received in total (flair)
 		},
 		-- stats

@@ -763,6 +763,30 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   F.forget()
   runTimers(); runTimers()
 end)
+step("kudos popup fades out in combat and back after, without expired cards", function()
+  local kudos, P = ns.kudos, ns.core.db().profile
+  local clock = 5000
+  local oldTime = GetTime
+  GetTime = function() return clock end
+  P.kudos.combathide = true
+  kudos.clear(); kudos.preview()
+  local holder = rawget(_G, "SpicyKillStreaksKudos")
+  local fader
+  for _, f in ipairs(ALLFRAMES) do if f.__scripts.OnUpdate and not f.__parent and f.__events == nil and f ~= holder then fader = fader or f end end
+  holder.__alpha = 1
+  holder.GetAlpha = function(self) return self.__alpha end
+  holder.SetAlpha = function(self, a) self.__alpha = a end
+  holder:Show()
+  fire("PLAYER_REGEN_DISABLED")
+  for _ = 1, 20 do for _, f in ipairs(ALLFRAMES) do if f.__shown and f.__scripts.OnUpdate and f.__parent == nil and f ~= holder then f.__scripts.OnUpdate(f, 0.05) end end end
+  assert(holder.__alpha == 0 and not holder.__shown, "popup not hidden in combat: alpha " .. tostring(holder.__alpha))
+  local before = #kudos.rows
+  clock = clock + 60 -- every card ran out meanwhile
+  fire("PLAYER_REGEN_ENABLED")
+  assert(holder.__shown and #kudos.rows < before, "popup not back, or expired cards kept")
+  GetTime = oldTime
+  kudos.clear()
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

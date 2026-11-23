@@ -349,6 +349,7 @@ end
 -- Slide in, then after `seconds` fade out and go; with a timer bar along the bottom when bar is set
 local function expireAfter(row, seconds, bar)
 	row.left, row.total = seconds, seconds
+	row.endAt = GetTime() + seconds -- (for cards that ran out while the popup was hidden in combat)
 	row.bar:SetShown(bar and true or false)
 	row:SetScript("OnUpdate", function(self, elapsed)
 		elapsed = elapsed or 0
@@ -721,6 +722,52 @@ end
 function kudos.previewDeath()
 	kudos.showGot("Panda", emoji("pray"), "death", 1, { kind = "D" }, true)
 end
+
+-- Hidden in combat (cfg().combathide): the whole popup fades out when combat starts, and back
+-- in after it, without the cards that ran out meanwhile (hidden frames don't count down)
+local FADE_TIME = 0.3
+local fader = CreateFrame("Frame")
+local fadeTo, fading
+fader:SetScript("OnUpdate", function(self, elapsed)
+	if not holder or not fadeTo then self:Hide() return end
+	local a = holder:GetAlpha() or 1
+	local step = (elapsed or 0) / FADE_TIME
+	a = fadeTo > a and math.min(a + step, fadeTo) or math.max(a - step, fadeTo)
+	holder:SetAlpha(a)
+	if a == fadeTo then
+		if fadeTo == 0 then holder:Hide() end
+		fadeTo = nil
+		self:Hide()
+	end
+end)
+fader:Hide()
+
+local function fadeHolder(target)
+	if not holder then return end
+	if target > 0 then
+		-- back: drop what ran out while hidden, then fade in
+		local now = GetTime()
+		for i = #rows, 1, -1 do
+			if rows[i].endAt and rows[i].endAt <= now then removeRow(rows[i]) end
+		end
+		holder:Show()
+	end
+	fadeTo = target
+	fader:Show()
+end
+kudos.fadeHolder = fadeHolder
+
+local combat = CreateFrame("Frame")
+combat:RegisterEvent("PLAYER_REGEN_DISABLED")
+combat:RegisterEvent("PLAYER_REGEN_ENABLED")
+combat:SetScript("OnEvent", function(_, event)
+	if not (ns.core and ns.core.db()) then return end
+	if event == "PLAYER_REGEN_DISABLED" then
+		if cfg().combathide then fadeHolder(0) end
+	else
+		fadeHolder(1)
+	end
+end)
 
 function kudos.clear()
 	while #rows > 0 do removeRow(rows[1]) end
