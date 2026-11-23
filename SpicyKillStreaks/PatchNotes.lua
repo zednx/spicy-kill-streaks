@@ -5,6 +5,12 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.10.1", date = "2026-11-23",
+		fixed = {
+			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },
+		},
+	},
+	{
 		version = "1.10.0", date = "2026-11-23",
 		summary = "Add your target to the KOS list, pick a sighting sound, and keep your streak through a /reload.",
 		new = {
@@ -14,7 +20,6 @@ ns.patchNotes = {
 		},
 		fixed = {
 			{ "Streaks", "Your kill streak survives a /reload or a quick relog" },
-			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },
 		},
 	},
 	{
