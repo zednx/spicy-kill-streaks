@@ -173,7 +173,7 @@ end)
 step("core exported", function() assert(ns.core and ns.core.db(), "no core/db") end)
 step("minimap button made", function() assert(rawget(_G, "SpicyKillStreaksMinimapButton"), "no minimap button") end)
 step("/sks opens the new window", function() SlashCmdList.SPICYKILLSTREAKS(""); assert(rawget(_G, "SpicyKillStreaksWindow").__shown, "window not shown") end)
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about" }) do
   step("section " .. id, function() ns.ui.show(id) end)
 end
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
@@ -195,7 +195,7 @@ ns.core.openClassic = function() end
 ns.core.openStats = function() end
 -- Click every control on every page: switches, dropdowns (and the rows of their lists), sliders,
 -- text boxes and buttons
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about" }) do
   step("every control on " .. id, function()
     ns.ui.open()
     local before = #ALLFRAMES
@@ -814,6 +814,62 @@ step("kudos popup fades out in combat and back after, cards paused", function()
   assert(holder.__shown and #kudos.rows == before, "popup not back, or cards dropped after combat")
   GetTime = oldTime
   kudos.clear()
+end)
+step("KOS list: offer, nemesis, payback, typed name confirmed on sight, sighting alert", function()
+  local core, K, kudos = ns.core, ns.kos, ns.kudos
+  local P = core.db().profile
+  core.db().global.kos, core.db().global.rivals = {}, {}
+  P.kos.enabled, P.kos.offer, P.kos.nemesis, P.kos.sightings, P.kos.sightsound = true, true, true, true, true
+  P.dochat, P.doretribution = true, true
+  kudos.clear()
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  -- killed twice by Orcbro: "Add to KOS?"
+  K.onDeath("Orcbro", "Player-1-0777", 60)
+  assert(#kudos.rows == 0, "offered after one death")
+  K.onDeath("Orcbro", "Player-1-0777", 60)
+  assert(#kudos.rows == 1, "no Add to KOS card after two deaths")
+  local addButton
+  for _, f in ipairs(ALLFRAMES) do if f.__parent == kudos.rows[1] and f.text and f.text.__text == "Add to KOS" then addButton = f end end
+  assert(addButton, "no Add to KOS button"); addButton.__scripts.OnClick(addButton)
+  local e = K.entry("Player-1-0777")
+  assert(e and e.name == "Orcbro" and e.killedMe == 2, "not added with the tally")
+  -- three in a row by Brute: nemesis, by itself
+  for _ = 1, 3 do K.onDeath("Brute", "Player-1-0888", 61) end
+  assert(K.entry("Player-1-0888") and K.entry("Player-1-0888").nemesis, "no nemesis after 3 deaths in a row")
+  -- payback: killing the nemesis is NEMESIS SLAIN!
+  local oldInfo = GetPlayerInfoByGUID
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Brute" end
+  said = {}
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0888")
+  GetPlayerInfoByGUID = oldInfo
+  assert(table.concat(said, "\n"):find("NEMESIS SLAIN"), "no NEMESIS SLAIN: " .. table.concat(said, " | "))
+  assert(K.entry("Player-1-0888").iKilled == 1, "kill not tallied")
+  -- typed name: unconfirmed, then confirmed when seen
+  SlashCmdList.SPICYKILLSTREAKS("kos Sneaky Pete")
+  assert(core.db().global.kos["name:sneakypete"] and core.db().global.kos["name:sneakypete"].unconfirmed, "typed name not added")
+  local saved = { UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName, UnitLevel }
+  UnitExists = function() return true end; UnitIsPlayer = function() return true end; UnitCanAttack = function() return true end
+  UnitGUID = function(u) if u == "player" then return "Player-1-0001" end return "Player-1-0999" end
+  GetUnitName = function() return "Sneaky Pete" end; UnitLevel = function() return 58 end
+  kudos.clear()
+  K.sight("target")
+  local yes
+  for _, f in ipairs(ALLFRAMES) do if kudos.rows[1] and f.__parent == kudos.rows[1] and f.text and f.text.__text == "Yes" then yes = f end end
+  assert(yes, "no confirm card for a typed name"); yes.__scripts.OnClick(yes)
+  assert(K.entry("Player-1-0999") and not core.db().global.kos["name:sneakypete"], "typed name not linked to the player")
+  -- a sighting of a listed player: an alert
+  said = {}
+  GetUnitName = function() return "Orcbro" end
+  UnitGUID = function(u) if u == "player" then return "Player-1-0001" end return "Player-1-0777" end
+  K.sight("mouseover")
+  assert(table.concat(said, "\n"):find("KOS: Orcbro %(58%) nearby"), "no sighting alert: " .. table.concat(said, " | "))
+  UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName, UnitLevel = unpack(saved)
+  print = oldPrint
+  ns.ui.open("kos"); ns.ui.show("kos", true)
+  kudos.clear()
+  runTimers(); runTimers()
 end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)

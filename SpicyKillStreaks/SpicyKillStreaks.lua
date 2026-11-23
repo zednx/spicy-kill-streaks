@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.8.3"
+local VERSION = "1.9.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -159,6 +159,14 @@ local defaults = {
 			location = false, -- include our map position in a request (the zone is always in it)
 			chat = false,     -- also post the request as a normal chat line
 			sound = true,     -- the raid warning sound for a friend's request
+		},
+		-- KOS list and nemeses (Kos.lua)
+		kos = {
+			enabled = true,    -- tally rivals, payback for players on the list
+			offer = true,      -- "Add to KOS?" after a player kills us for the second time
+			nemesis = true,    -- 3 deaths in a row to one player: they become our nemesis
+			sightings = true,  -- an alert when a listed player is our target, mouseover or on a nameplate
+			sightsound = true, -- the raid warning sound with a sighting
 		},
 		-- Kudos (Kudos.lua): reactions to friends' kills and deaths
 		kudos = {
@@ -1463,6 +1471,10 @@ local function registerKill(victim, isDuel, notGank)
 		-- (A comeback leaves First Blood for the next kill)
 		firstBlood = not comeback and SPECIAL.firstOfDay() and profile.dofirstblood
 	end
+	-- Someone on our KOS list (Kos.lua, matched by GUID): payback, a Retribution with no time limit
+	local grudge = not isDuel and not testing and SPECIAL.ns.kos and SPECIAL.lastVictimGUID
+		and SPECIAL.ns.kos.onKill(victim, SPECIAL.lastVictimGUID)
+	if grudge then retribution = true end
 	-- The killer of a friend who asked us for help (Aid.lua): avenging them is a Retribution too
 	local avenged = not isDuel and not testing and not retribution and SPECIAL.ns.aid and SPECIAL.ns.aid.takeAvenge(victim)
 	if avenged then
@@ -1478,7 +1490,7 @@ local function registerKill(victim, isDuel, notGank)
 	local rank = nil
 	if retribution then
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
-		announce("RETRIBUTION!", "rank", 4)
+		announce(grudge and (grudge.nemesis and "NEMESIS SLAIN!" or "GRUDGE SETTLED!") or "RETRIBUTION!", "rank", grudge and 5 or 4)
 		if avenged then announce("You avenged " .. avenged.who .. "!", "other") end
 		if not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
 			playSound(SPECIAL.retribution)
@@ -1603,6 +1615,10 @@ local function registerDeath(killer, isDuel, killerGUID)
 	if testing then return end
 
 	syncSendDeath(killer, isDuel, gankedBy and true or false)
+	-- Killed by a player: the KOS tally, nemeses and "Add to KOS?" (Kos.lua)
+	if not isDuel and killer ~= SPECIAL.UNKNOWN_KILLER and SPECIAL.ns.kos then
+		pcall(SPECIAL.ns.kos.onDeath, killer, killerGUID, Levels.of(killer))
+	end
 	-- Killed by a player: offer to ask friends for help (Aid.lua; not from battlegrounds or arenas)
 	if not isDuel and killer ~= SPECIAL.UNKNOWN_KILLER and usableString(killerGUID) and strsub(killerGUID, 1, 7) == "Player-"
 		and SPECIAL.ns.aid then
@@ -2983,7 +2999,10 @@ local function creditKill(guid, name)
 	if credited[guid] then return end
 	credited[guid] = true
 	debugPrint("kill: credited", guid, "name", name or "none")
+	-- (the victim's GUID, for the KOS list's exact match)
+	SPECIAL.lastVictimGUID = guid
 	registerKill(name, false)
+	SPECIAL.lastVictimGUID = nil
 end
 
 local function isPlayerGUID(guid)
@@ -4241,9 +4260,9 @@ end
 
 local optionsCategory
 
-local function openOptions()
+local function openOptions(page)
 	if SPECIAL.ns.ui and SPECIAL.ns.ui.open then
-		local ok, err = pcall(SPECIAL.ns.ui.open)
+		local ok, err = pcall(SPECIAL.ns.ui.open, page)
 		if ok then return end
 		chat("The settings window failed to open (" .. tostring(err) .. "); showing the classic options.")
 	end
@@ -4309,6 +4328,15 @@ local function initialize()
 				chat((on and "Muted " or "Unmuted ") .. name .. ".")
 			else
 				chat("Usage: /sks mute <name>  or  /sks unmute <name>")
+			end
+		elseif command == "kos" or strmatch(command, "^kos%s") then
+			-- /sks kos <name>: add a player by name (unconfirmed until seen); /sks kos: the KOS page
+			local name = strtrim((strmatch(text, "^%s*%a+%s+(.+)$") or ""))
+			if name == "" then
+				openOptions("kos")
+			elseif SPECIAL.ns.kos then
+				local ok, why = SPECIAL.ns.kos.addByName(name)
+				chat(ok and (name .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
 			end
 		elseif command == "friends" then
 			-- Every friend the addon can see, and why any is left out (Friends.lua)

@@ -41,7 +41,7 @@ jobs:
       - name: Syntax check
         run: |
           sudo apt-get update && sudo apt-get install -y lua5.1
-          luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua SpicyKillStreaks/UI.lua SpicyKillStreaks/Kudos.lua SpicyKillStreaks/Aid.lua SpicyKillStreaks/Friends.lua
+          luac5.1 -p SpicyKillStreaks/SpicyKillStreaks.lua SpicyKillStreaks/UI.lua SpicyKillStreaks/Kudos.lua SpicyKillStreaks/Aid.lua SpicyKillStreaks/Friends.lua SpicyKillStreaks/Kos.lua
 
       - name: Build the zip
         env:

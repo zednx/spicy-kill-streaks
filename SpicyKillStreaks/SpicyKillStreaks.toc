@@ -2,7 +2,7 @@
 ## Title: Spicy Kill Streaks
 ## Notes: Announcer voices, combat text and sparkles for your killing blows, kill streaks and multikills.
 ## Author: zednx (based on dG KillShot by Lance Inman)
-## Version: 1.8.3
+## Version: 1.9.0
 ## SavedVariables: SpicyKillStreaksDB
 ## IconTexture: Interface\AddOns\SpicyKillStreaks\Media\Chilli
 ## X-Website: https://github.com/zednx/spicy-kill-streaks
@@ -19,3 +19,4 @@ UI.lua
 Kudos.lua
 Aid.lua
 Friends.lua
+Kos.lua

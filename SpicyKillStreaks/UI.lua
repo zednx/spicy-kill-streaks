@@ -855,6 +855,63 @@ sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to frie
 	return cards
 end, dynamic = true }
 
+sections[#sections + 1] = { id = "kos", label = "KOS list", hint = "Grudges and nemeses", build = function()
+	local cards = {}
+	local K = ns.kos
+	local function kt(key, label, desc)
+		return toggle(label, desc, function() return P().kos[key] end, function(v) P().kos[key] = v end)
+	end
+	local c = newCard(nil)
+	c:add(para("Your kill-on-sight list: players who keep killing you. Kill one for |cffffd100GRUDGE SETTLED!|r "
+		.. "(|cffffd100NEMESIS SLAIN!|r for a nemesis). Players are matched exactly, never by name alone.", 13), 1)
+	cards[#cards + 1] = c
+
+	c = newCard("Settings")
+	c:add(kt("enabled", "KOS list and payback", nil), 0.5)
+	c:add(kt("offer", "Offer \"Add to KOS\"", "After a player kills you twice"), 0.5)
+	c:add(kt("nemesis", "Nemeses", "3 deaths in a row to one player adds them by itself"), 0.5)
+	c:add(kt("sightings", "Sighting alerts", "When a listed player is your target, mouseover or nameplate"), 0.5)
+	c:add(kt("sightsound", "Raid warning sound for a sighting", nil), 1)
+	cards[#cards + 1] = c
+	if not K then return cards end
+
+	c = newCard("Add a player")
+	local typed = ""
+	c:add(edit("Name (then Add, or Enter)", function() return typed end, function(v) typed = v or "" end), 0.7)
+	c:add(button("Add", function()
+		local ok, why = K.addByName(typed)
+		core().chat(ok and (typed .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
+		if ok then typed = "" C_Timer.After(0, function() ui.show("kos", true) end) end
+	end, "primary"), 0.3)
+	c:add(para("A typed name is |cff9a8f86unconfirmed|r until you see a player with that name and say it's them; "
+		.. "only then does payback play for them.", 12, COLORS.muted), 1)
+	cards[#cards + 1] = c
+
+	c = newCard("On your list")
+	local list = K.sorted()
+	if #list == 0 then c:add(para("Nobody yet.", 12, COLORS.muted), 1) end
+	for _, item in ipairs(list) do
+		local e = item.entry
+		local tag = e.nemesis and "|cffff5544Nemesis|r" or (e.unconfirmed and "|cff9a8f86unconfirmed|r" or "|cffff8a4aKOS|r")
+		c:add(para((e.name or "?") .. "  " .. tag .. "\n|cff9a8f86killed you " .. (e.killedMe or 0) .. ", you killed them "
+			.. (e.iKilled or 0) .. "|r", 12), 0.7)
+		c:add(button("Remove", function() K.remove(item.key) ui.show("kos", true) end), 0.3)
+	end
+	cards[#cards + 1] = c
+
+	local rivals = K.rivals(8)
+	if #rivals > 0 then
+		c = newCard("Rivals (not on the list)")
+		for _, r in ipairs(rivals) do
+			c:add(para((r.rival.name or "?") .. "\n|cff9a8f86killed you " .. (r.rival.killedMe or 0) .. ", you killed them "
+				.. (r.rival.iKilled or 0) .. "|r", 12), 0.7)
+			c:add(button("Add to KOS", function() K.add(r.guid, r.rival.name) ui.show("kos", true) end), 0.3)
+		end
+		cards[#cards + 1] = c
+	end
+	return cards
+end, dynamic = true }
+
 sections[#sections + 1] = { id = "board", label = "Guild board", hint = "This month's top killers", build = function()
 	local cards = {}
 	local c = newCard("Guild board, " .. date("%B"))
@@ -1226,10 +1283,10 @@ local function buildWindow()
 	end)
 end
 
-function ui.open()
+function ui.open(page)
 	if not win then buildWindow() end
 	win:Show()
-	ui.show(current or "announcer")
+	ui.show(type(page) == "string" and page or current or "announcer")
 end
 
 -- ---------------------------------------------------------------------------------------------
