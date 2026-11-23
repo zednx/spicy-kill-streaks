@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.8.2"
+local VERSION = "1.8.3"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -4309,6 +4309,12 @@ local function initialize()
 				chat((on and "Muted " or "Unmuted ") .. name .. ".")
 			else
 				chat("Usage: /sks mute <name>  or  /sks unmute <name>")
+			end
+		elseif command == "friends" then
+			-- Every friend the addon can see, and why any is left out (Friends.lua)
+			if SPECIAL.ns.friends then
+				SPECIAL.ns.friends.forget()
+				for _, line in ipairs(SPECIAL.ns.friends.explain()) do chat(line) end
 			end
 		elseif command == "aid" then
 			-- Previews: our "Need help!" card and a friend's request

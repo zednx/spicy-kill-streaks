@@ -91,23 +91,8 @@ function friends.online()
 		end)
 	end
 	-- Battle.net friends in this game, on our realm (or a connected one) and faction
-	if C_BattleNet and C_BattleNet.GetFriendAccountInfo and type(BNGetNumFriends) == "function" then
-		local faction, realm = myFaction(), myRealm()
-		pcall(function()
-			for i = 1, BNGetNumFriends() or 0 do
-				local account = C_BattleNet.GetFriendAccountInfo(i)
-				local game = type(account) == "table" and account.gameAccountInfo
-				if type(game) == "table" and game.isOnline == true and usable(game.characterName)
-					and game.clientProgram == (type(BNET_CLIENT_WOW) == "string" and BNET_CLIENT_WOW or "WoW")
-					and (type(WOW_PROJECT_ID) ~= "number" or game.wowProjectID == nil or game.wowProjectID == WOW_PROJECT_ID)
-					and (faction == nil or game.factionName == faction) and realmOk(game.realmName) then
-					local target = game.characterName
-					local theirRealm = game.realmName:gsub("%s", "")
-					if strlower(theirRealm) ~= strlower(realm) then target = target .. "-" .. theirRealm end
-					add(target, game.characterName, true)
-				end
-			end
-		end)
+	for _, game in ipairs(friends.bnetGames()) do
+		if not friends.whyNot(game) then add(friends.bnetTarget(game), game.characterName, true) end
 	end
 	table.sort(list, function(a, b) return a.key < b.key end)
 	cache, cachedAt = list, now
@@ -115,6 +100,89 @@ function friends.online()
 end
 
 function friends.forget() cache = nil end
+
+-- Every Battle.net friend's game account (online or not), as the client gives them
+function friends.bnetGames()
+	local games = {}
+	if not (C_BattleNet and C_BattleNet.GetFriendAccountInfo and type(BNGetNumFriends) == "function") then return games end
+	pcall(function()
+		for i = 1, BNGetNumFriends() or 0 do
+			local account = C_BattleNet.GetFriendAccountInfo(i)
+			local game = type(account) == "table" and account.gameAccountInfo
+			if type(game) == "table" then games[#games + 1] = game end
+		end
+	end)
+	return games
+end
+
+local function myRealmID()
+	if type(GetRealmID) ~= "function" then return nil end
+	local ok, id = pcall(GetRealmID)
+	return ok and type(id) == "number" and id or nil
+end
+
+-- Is a Battle.net friend's character on our realm (or a connected one)? By ID, name or display name
+local function sameRealm(game)
+	local id = myRealmID()
+	if id and type(game.realmID) == "number" and game.realmID == id then return true end
+	return realmOk(game.realmName) or realmOk(game.realmDisplayName)
+end
+
+-- Why a Battle.net friend isn't someone we can whisper, or nil when they are
+function friends.whyNot(game)
+	if game.isOnline ~= true then return "offline" end
+	local wow = type(BNET_CLIENT_WOW) == "string" and BNET_CLIENT_WOW or "WoW"
+	if game.clientProgram ~= wow then return "not in WoW (" .. tostring(game.clientProgram) .. ")" end
+	if type(WOW_PROJECT_ID) == "number" and type(game.wowProjectID) == "number" and game.wowProjectID ~= WOW_PROJECT_ID then
+		return "another WoW version (project " .. tostring(game.wowProjectID) .. ", ours " .. WOW_PROJECT_ID .. ")"
+	end
+	if not usable(game.characterName) then return "no character name" end
+	local faction = myFaction()
+	if faction and usable(game.factionName) and game.factionName ~= faction then return "other faction (" .. game.factionName .. ")" end
+	if not sameRealm(game) then
+		return "other realm (" .. tostring(game.realmName or game.realmDisplayName) .. " / id " .. tostring(game.realmID) .. ")"
+	end
+	return nil
+end
+
+-- The name to whisper a Battle.net friend's character by (with the realm when it's not ours)
+function friends.bnetTarget(game)
+	local target = game.characterName
+	local theirRealm = usable(game.realmName) and game.realmName:gsub("%s", "") or nil
+	if theirRealm and strlower(theirRealm) ~= strlower(myRealm()) then target = target .. "-" .. theirRealm end
+	return target
+end
+
+-- /sks friends: every friend the addon can see, and why any is left out
+function friends.explain()
+	local lines = {}
+	local function say(text) lines[#lines + 1] = text end
+	say("We are " .. tostring(myFaction()) .. " on " .. tostring(myRealm()) .. " (realm id " .. tostring(myRealmID())
+		.. "), WoW project " .. tostring(WOW_PROJECT_ID) .. ".")
+	local n = 0
+	if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
+		pcall(function()
+			for i = 1, C_FriendList.GetNumFriends() or 0 do
+				local info = C_FriendList.GetFriendInfoByIndex(i)
+				if type(info) == "table" then
+					n = n + 1
+					say("Friends list: " .. tostring(info.name) .. " - " .. (info.connected and "online, included" or "offline"))
+				end
+			end
+		end)
+	end
+	if n == 0 then say("Friends list: empty (or not readable).") end
+	local games = friends.bnetGames()
+	if #games == 0 then say("Battle.net: no friends (or not readable).") end
+	for _, game in ipairs(games) do
+		local why = friends.whyNot(game)
+		say("Battle.net: " .. tostring(game.characterName or "?") .. " - " .. (why or ("included, whispered as " .. friends.bnetTarget(game)))
+			.. " [program " .. tostring(game.clientProgram) .. ", project " .. tostring(game.wowProjectID) .. ", realm "
+			.. tostring(game.realmName) .. "/" .. tostring(game.realmDisplayName) .. "/" .. tostring(game.realmID)
+			.. ", faction " .. tostring(game.factionName) .. "]")
+	end
+	return lines
+end
 
 -- Is this sender one of our online friends? (with or without a realm on either side)
 function friends.isFriend(sender)

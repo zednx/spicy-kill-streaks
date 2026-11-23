@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.8.3
+
+- **Friends:** Battle.net friends on your realm are found by the realm's ID or display name too, not only its name. `/sks friends` lists every friend the addon can see and why any is left out (offline, another game or realm, other faction).
+
 ## v1.8.2
 
 - **The Kudos popup fades out in combat** and comes back after the fight. Its cards don't count down while hidden, so you can still react after the fight (friends now accept kudos up to 3 minutes after their kill). Kudos you get during a fight still flash in your combat text. Switch it off with **Hide in combat** on the Kudos page.

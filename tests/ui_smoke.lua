@@ -755,6 +755,14 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   kudos.rows[1].buttons[1].__scripts.OnClick(kudos.rows[1].buttons[1])
   assert(sent[1] == "WHISPER:Alice:R", "kudos not whispered back: " .. tostring(sent[1]))
   kudos.clear()
+  -- /sks friends explains who's in and who's out, and why
+  local said2 = {}
+  local oldPrint3 = print
+  print = function(...) said2[#said2 + 1] = table.concat({ ... }, " ") end
+  SlashCmdList.SPICYKILLSTREAKS("friends")
+  print = oldPrint3
+  local out = table.concat(said2, "\n")
+  assert(out:find("Carl %- included") and out:find("Dee %- other faction") and out:find("Eve %- not in WoW"), out)
   -- the Friends page with the list and the mute card
   ns.ui.open(); ns.ui.show("friends", true)
   C_ChatInfo.SendAddonMessage = old

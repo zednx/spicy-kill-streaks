@@ -54,6 +54,7 @@ Install from CurseForge, or download `SpicyKillStreaks-vX.Y.Z.zip` from [Release
 | `/sks classic` | The old options window |
 | `/sks kudos` | Preview the Kudos popup and drag it into place (again to lock it); `/sks kudos got` previews kudos you get |
 | `/sks aid` | Preview a help request (yours and a friend's) |
+| `/sks friends` | Which friends the addon can see, and why any is left out |
 | `/sks mute <name>` | Hide a player's shared kills and deaths (`/sks unmute <name>` to undo) |
 | `/sks summary` | A sample of the end-of-match battleground summary |
 | `/sks minimap` | Show or hide the minimap button |
