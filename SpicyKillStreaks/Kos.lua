@@ -325,6 +325,8 @@ kos.SIGHT_SOUNDS = {
 	{ key = "queue", label = "PvP queue pop", kit = "PVP_THROUGH_QUEUE" },
 	{ key = "whisper", label = "Whisper", kit = "TELL_MESSAGE" },
 	{ key = "drum", label = "Alarm drum", file = 1487136 }, -- sound/doodad/fx_alarm_drum_hit_01.ogg
+	{ key = "agony", label = "\"Eternal agony awaits you!\"", file = 543937 }, -- a creature's aggro line
+	{ key = "chime", label = "Chime", file = 4191882 }, -- sound/ui/content_tracking_objective_tracking_start
 }
 function kos.playSight(key, forced)
 	local special = core().special

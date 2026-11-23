@@ -315,9 +315,9 @@ step("KOS: an enemy target fills in Add, and is added by GUID; sighting sounds",
   PlaySound = function(id) kits[#kits + 1] = id return true end
   PlaySoundFile = function(f) files[#files + 1] = f return true end
   SOUNDKIT = { ALARM_CLOCK_WARNING_3 = 12889 }
-  K.playSight("alarm", true); K.playSight("queue", true); K.playSight("drum", true)
+  K.playSight("alarm", true); K.playSight("queue", true); K.playSight("drum", true); K.playSight("agony", true); K.playSight("chime", true)
   PlaySound, PlaySoundFile, SOUNDKIT = oldPS, oldPSF, oldKit
-  assert(kits[1] == 12889 and #kits == 1 and files[1] == 567397 and files[2] == 1487136, "kits " .. #kits .. " files " .. #files)
+  assert(kits[1] == 12889 and #kits == 1 and files[1] == 567397 and files[2] == 1487136 and files[3] == 543937 and files[4] == 4191882, "kits " .. #kits .. " files " .. #files)
 end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
