@@ -319,6 +319,20 @@ step("KOS: an enemy target fills in Add, and is added by GUID; sighting sounds",
   PlaySound, PlaySoundFile, SOUNDKIT = oldPS, oldPSF, oldKit
   assert(kits[1] == 12889 and #kits == 1 and files[1] == 567397 and files[2] == 1487136 and files[3] == 543937 and files[4] == 4191882, "kits " .. #kits .. " files " .. #files)
 end)
+step("the streak survives a /reload, not a long logout", function()
+  local sp, c = ns.core.special, ns.core.db().char
+  c.carry = { streak = 7, deaths = 0, rank = 7, at = time() - 30 }
+  sp.restoreStreak()
+  assert(ns.core.streak() == 7 and c.carry == nil, "streak not carried over")
+  sp.saveStreak() -- (what PLAYER_LOGOUT does; firing it would also run AceDB's logout clean-up)
+  assert(c.carry and c.carry.streak == 7, "streak not saved at logout")
+  c.carry.at = time() - 3600
+  sp.restoreStreak()
+  assert(ns.core.streak() == 7, "(an old save leaves the current streak as it is)")
+  c.carry = { streak = 0, deaths = 0, at = time() }
+  sp.restoreStreak()
+  assert(ns.core.streak() == 0)
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)

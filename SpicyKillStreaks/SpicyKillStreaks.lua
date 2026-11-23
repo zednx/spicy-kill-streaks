@@ -3552,6 +3552,24 @@ function events.PVP_MATCH_COMPLETE()
 	SPECIAL.matchEnd(true)
 end
 
+-- The streak survives a /reload (and a quick relog or disconnect): saved as the UI unloads, taken
+-- back at load if it is at most CARRY_FOR seconds old
+SPECIAL.CARRY_FOR = 600
+function SPECIAL.saveStreak()
+	db.char.carry = { streak = streak, deaths = deathstreak, rank = lastRank, at = time() }
+end
+function events.PLAYER_LOGOUT() SPECIAL.saveStreak() end
+function SPECIAL.restoreStreak()
+	local carry = db.char.carry
+	db.char.carry = nil
+	if type(carry) ~= "table" or type(carry.at) ~= "number" or time() - carry.at > SPECIAL.CARRY_FOR
+		or time() < carry.at then return end
+	streak = math.max(0, math.floor(tonumber(carry.streak) or 0))
+	deathstreak = math.max(0, math.floor(tonumber(carry.deaths) or 0))
+	lastRank = tonumber(carry.rank)
+	if streak > 0 then debugPrint("streak carried over:", streak) end
+end
+
 function events.ZONE_CHANGED_NEW_AREA()
 	if db.profile.dozonechange then
 		streak = 0
@@ -4453,6 +4471,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 local function initialize()
 	db = LibStub("AceDB-3.0"):New("SpicyKillStreaksDB", defaults, true)
+	SPECIAL.restoreStreak()
 
 	LibStub("AceConfigRegistry-3.0"):RegisterOptionsTable(ADDON, buildOptions)
 	local ok, _, category = pcall(function()

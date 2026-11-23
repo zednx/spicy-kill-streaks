@@ -20,6 +20,7 @@ ns.patchNotes = {
 			{ "Patch notes", "This page: what changed in each version" },
 		},
 		fixed = {
+			{ "Streaks", "Your kill streak survives a /reload or a quick relog" },
 			{ "Friends", "/sks who ends with how many players run it, even when that's nobody" },
 			{ "Guild board", "Players with a family name are on it once, not twice" },
 			{ "Tests", "Test a kill and Test death no longer change the kill streak you're on" },
