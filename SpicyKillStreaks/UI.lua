@@ -877,19 +877,46 @@ sections[#sections + 1] = { id = "kos", label = "KOS list", hint = "Grudges and 
 	c:add(kt("offer", "Offer \"Add to KOS\"", "After a player kills you twice"), 0.5)
 	c:add(kt("nemesis", "Nemeses", "3 deaths in a row to one player adds them by itself"), 0.5)
 	c:add(kt("sightings", "Sighting alerts", "When a listed player is your target, mouseover or nameplate"), 0.5)
-	c:add(kt("sightsound", "Raid warning sound for a sighting", nil), 1)
+	if K then
+		local list, order = { none = "None" }, { "none" }
+		for _, snd in ipairs(K.SIGHT_SOUNDS) do list[snd.key] = snd.label; order[#order + 1] = snd.key end
+		c:add(dropdown("Sighting sound", list, order, function()
+			return P().kos.sightsound and (P().kos.sightkit or "raidwarning") or "none"
+		end, function(v)
+			P().kos.sightsound = v ~= "none"
+			if v ~= "none" then P().kos.sightkit = v; K.playSight(v, true) end
+		end), 0.7)
+		c:add(button("Play", function() if P().kos.sightsound then K.playSight(P().kos.sightkit, true) end end), 0.3)
+	end
 	cards[#cards + 1] = c
 	if not K then return cards end
 
 	c = newCard("Add a player")
-	local typed = ""
+	-- An enemy player in our target: their name is filled in, and Add uses their exact ID
+	local targetGUID, targetName = K.targetEnemy()
+	local typed = targetName or ""
 	c:add(edit("Name (then Add, or Enter)", function() return typed end, function(v) typed = v or "" end), 0.7)
 	c:add(button("Add", function()
-		local ok, why = K.addByName(typed)
-		core().chat(ok and (typed .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
+		local ok, why
+		if targetGUID and typed == targetName then
+			if K.entry(targetGUID) then
+				ok, why = false, targetName .. " is already on your list"
+			else
+				ok = K.add(targetGUID, targetName) ~= nil
+			end
+			core().chat(ok and (targetName .. " is on your KOS list.") or ("Not added: " .. tostring(why) .. "."))
+		else
+			ok, why = K.addByName(typed)
+			core().chat(ok and (typed .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
+		end
 		if ok then typed = "" C_Timer.After(0, function() ui.show("kos", true) end) end
 	end, "primary"), 0.3)
-	c:add(para("A typed name is |cff9a8f86unconfirmed|r until you see a player with that name and say it's them; "
+	-- A new target while this page is open: fill in the new name
+	K.onTarget = function()
+		if ui.current == "kos" and win and win:IsShown() then ui.show("kos", true, true) end
+	end
+	c:add(para("Target an enemy player to fill in their name: they're added for sure. "
+		.. "A typed name is |cff9a8f86unconfirmed|r until you see a player with that name and say it's them; "
 		.. "only then does payback play for them.", 12, COLORS.muted), 1)
 	cards[#cards + 1] = c
 

@@ -17,6 +17,8 @@
   - **Nemesis:** a player who kills you 3 times in a row (without you killing them back) becomes your nemesis by themselves: "<name> IS NOW YOUR NEMESIS!", and "Your nemesis <name> strikes again!" after that.
   - **Payback:** killing someone on the list plays **GRUDGE SETTLED!** (**NEMESIS SLAIN!** for a nemesis), each with its own announcer line (a surprise) and the big effects, with no time limit.
   - **Sightings:** when a listed player is your target, mouseover or on a nameplate: "KOS: <name> (60) nearby!" with the raid warning sound (once every 2 minutes per player).
+  - **Target an enemy player** and their name is already filled in on the KOS page: **Add** puts them on the list for sure (by their unique ID).
+  - **Sighting sound:** pick Raid warning, Boss warning, Alarm clock, Ready check, PvP queue pop, Whisper or None, with a Play button.
   - Add anyone by name with `/sks kos <name>` or on the page. A typed name stays *unconfirmed* until you see a player with that name and confirm it's them; only then does payback play.
   - The page lists everyone on it with kills each way, and your other rivals with an **Add to KOS** button. Players are always matched exactly (by their unique ID), never by name alone.
 

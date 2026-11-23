@@ -167,7 +167,8 @@ local defaults = {
 			offer = true,      -- "Add to KOS?" after a player kills us for the second time
 			nemesis = true,    -- 3 deaths in a row to one player: they become our nemesis
 			sightings = true,  -- an alert when a listed player is our target, mouseover or on a nameplate
-			sightsound = true, -- the raid warning sound with a sighting
+			sightsound = true, -- a sound with a sighting
+			sightkit = "raidwarning", -- which one (Kos.lua SIGHT_SOUNDS)
 		},
 		-- Kudos (Kudos.lua): reactions to friends' kills and deaths
 		kudos = {
@@ -568,6 +569,7 @@ local function soundMuted()
 	if profile.muteraid and instanceType == "raid" then return "raid" end
 	return nil
 end
+SPECIAL.soundMuted = soundMuted
 
 function playSound(file, pack)
 	if not file then return end

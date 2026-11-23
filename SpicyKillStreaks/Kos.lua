@@ -299,12 +299,7 @@ function kos.sight(unit)
 			.. (level and (" (" .. (level < 0 and "??" or level) .. ")") or "") .. " nearby!"
 		core().showText(label, "death")
 		core().chat(label)
-		if cfg().sightsound then
-			local special = core().special
-			special.soundOnce = true
-			pcall(core().playSound, 567397) -- the game's raid warning
-			special.soundOnce = false
-		end
+		if cfg().sightsound then kos.playSight(cfg().sightkit) end
 		return
 	end
 	-- an unconfirmed typed name: "possibly", and ask
@@ -320,6 +315,41 @@ function kos.sight(unit)
 	end
 end
 
+-- Sighting sounds: the game's own, by sound kit name (looked up when played: a client without
+-- one plays the raid warning instead)
+kos.SIGHT_SOUNDS = {
+	{ key = "raidwarning", label = "Raid warning" },
+	{ key = "bosswarning", label = "Boss warning", kit = "RAID_BOSS_EMOTE_WARNING" },
+	{ key = "alarm", label = "Alarm clock", kit = "ALARM_CLOCK_WARNING_3" },
+	{ key = "readycheck", label = "Ready check", kit = "READY_CHECK" },
+	{ key = "queue", label = "PvP queue pop", kit = "PVP_THROUGH_QUEUE" },
+	{ key = "whisper", label = "Whisper", kit = "TELL_MESSAGE" },
+}
+function kos.playSight(key, forced)
+	local special = core().special
+	if not forced and (not core().db().profile.dosound or special.soundMuted()) then return end
+	local kit
+	for _, s in ipairs(kos.SIGHT_SOUNDS) do if s.key == key then kit = s.kit end end
+	local id = kit and type(SOUNDKIT) == "table" and SOUNDKIT[kit]
+	if type(id) == "number" then
+		local ok, played = pcall(PlaySound, id, core().db().profile.soundchannel or "Master")
+		if ok and played ~= false then return end
+	end
+	-- the game's raid warning (also when the kit is missing)
+	local ok, played = pcall(PlaySoundFile, 567397, core().db().profile.soundchannel or "Master")
+	return ok and played
+end
+
+-- The enemy player we have targeted, for the KOS page's "Add": guid, name; or nil
+function kos.targetEnemy()
+	local ok, guid, name = pcall(function()
+		if not UnitExists("target") or not UnitIsPlayer("target") or not UnitCanAttack("player", "target") then return nil end
+		return UnitGUID("target"), GetUnitName("target", true)
+	end)
+	if ok and isPlayerGUID(guid) and cleanName(name) then return guid, cleanName(name) end
+	return nil
+end
+
 local watch = CreateFrame("Frame")
 for _, event in ipairs({ "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED" }) do
 	pcall(watch.RegisterEvent, watch, event)
@@ -328,6 +358,7 @@ watch:SetScript("OnEvent", function(_, event, unit)
 	if not (ns.core and ns.core.db()) then return end
 	if event == "PLAYER_TARGET_CHANGED" then
 		kos.sight("target")
+		if kos.onTarget then pcall(kos.onTarget) end
 	elseif event == "UPDATE_MOUSEOVER_UNIT" then
 		kos.sight("mouseover")
 	elseif type(unit) == "string" and not (issecretvalue and issecretvalue(unit)) then

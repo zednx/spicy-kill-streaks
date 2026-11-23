@@ -284,6 +284,35 @@ step("guild board: one row per player, with or without the family name", functio
   assert(not F.isMuted("Cora"), "unmute")
   g.boards["Spice Guild"] = nil
 end)
+step("KOS: an enemy target fills in Add, and is added by GUID; sighting sounds", function()
+  local K = ns.kos
+  local saved = { UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName }
+  UnitExists = function(u) return u == "target" end
+  UnitIsPlayer = function(u) return u == "target" end
+  UnitCanAttack = function() return true end
+  UnitGUID = function(u) return u == "target" and "Player-1-0777" or nil end
+  GetUnitName = function(u) return u == "target" and "Grim" or nil end
+  ns.ui.open(); ns.ui.show("kos", true)
+  local add
+  for _, fs in ipairs(FONTSTRINGS) do
+    if fs.__text == "Add" and fs.__parent and fs.__parent.__scripts.OnClick then add = fs.__parent end
+  end
+  assert(add, "no Add button")
+  add.__scripts.OnClick(add); runTimers()
+  local e = K.entry("Player-1-0777")
+  assert(e and e.name == "Grim" and not e.unconfirmed, "the target wasn't added by GUID")
+  K.remove("Player-1-0777")
+  UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName = unpack(saved)
+  -- sighting sounds: a kit by name, the raid warning when the client lacks it
+  local kits, files = {}, {}
+  local oldPS, oldPSF, oldKit = PlaySound, PlaySoundFile, rawget(_G, "SOUNDKIT")
+  PlaySound = function(id) kits[#kits + 1] = id return true end
+  PlaySoundFile = function(f) files[#files + 1] = f return true end
+  SOUNDKIT = { ALARM_CLOCK_WARNING_3 = 12889 }
+  K.playSight("alarm", true); K.playSight("queue", true)
+  PlaySound, PlaySoundFile, SOUNDKIT = oldPS, oldPSF, oldKit
+  assert(kits[1] == 12889 and #kits == 1 and files[1] == 567397, "kits " .. #kits .. " files " .. #files)
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)
