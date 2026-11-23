@@ -2,6 +2,7 @@
 
 ## v1.9.0
 
+- **Test a kill and Test death leave your streak alone:** a test kill added one to the kill streak you were on, and a test death reset it to 0. They never touched your saved stats, and still don't.
 - **Show in game** (under the live preview) now shows the sample you picked (Kill, Rank, Multi, Payback, Godlike or Gank), with its text, colours and sound, in your voice pack's words. Before, only three of them matched.
 - **Patch notes in game:** click **Patch notes** next to the version at the top of the settings window (or `/sks news`, or About > Patch notes) to see what changed in each version; click a version to open or close it. After an update, one chat line says where to find them.
 - **Zealot voice pack:** holy-warrior taunts. The taunt is the big callout ("HIS JUSTICE IS SWIFT!") with the usual name above it ("RAMPAGE!"); chat and the log keep the usual names. Its own lines for First Blood, Headshot, every rank, Retribution, GRUDGE SETTLED!, NEMESIS SLAIN!, BIG GAME HUNTER!, comebacks, avenging a friend, duel wins, ganks, being ganked, falling to your death and Prepare. Godlike takes turns between three lines and Humiliation between three. Multikills and secrets use the Male voice.

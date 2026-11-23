@@ -19,6 +19,7 @@ ns.patchNotes = {
 			{ "Patch notes", "This page: what changed in each version" },
 		},
 		fixed = {
+			{ "Tests", "Test a kill and Test death no longer change the kill streak you're on" },
 			{ "Preview", "Show in game shows the sample you picked, in your voice pack's words" },
 			{ "Muting", "A muted player's Kudos and help requests are hidden too" },
 			{ "Friends", "Friends who are also guildmates aren't whispered while you share with the guild" },

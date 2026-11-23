@@ -3534,6 +3534,11 @@ end
 -- Tests: work anywhere, change no statistics, send nothing to other players
 -- ---------------------------------------------------------------------------------------------
 local function runTest(what)
+	-- A test leaves the real streak alone: the kill or death runs, then the streak state comes back
+	local saved = { streak, deathstreak, multikill, lastKillTime, lastRank, SPECIAL.rotationIndex }
+	local function restore()
+		streak, deathstreak, multikill, lastKillTime, lastRank, SPECIAL.rotationIndex = unpack(saved, 1, 6)
+	end
 	if what == "kill" then
 		-- Feed the real scoreboard code a made-up scoreboard: a first reading (the baseline), then
 		-- one more killing blow for us and one more death for "Test-Victim", delivered twice the
@@ -3550,12 +3555,14 @@ local function runTest(what)
 		end)
 		testScore = nil
 		testing = false
+		restore()
 		kbBaseline, enemyDeaths = savedBaseline, savedDeaths
 		if not ok then chat("Test kill failed: " .. tostring(err)) end
 	elseif what == "death" then
 		testing = true
 		local ok, err = pcall(registerDeath, "Test-Killer", false)
 		testing = false
+		restore()
 		if not ok then chat("Test death failed: " .. tostring(err)) end
 	elseif what == "prepare" then
 		playSound(SOUND_PREPARE)
@@ -4505,6 +4512,7 @@ SPECIAL.ns.core = {
 	chat = chat,
 	playSound = playSound,
 	announce = announce, playHumiliation = playHumiliation,
+	streak = function() return streak, deathstreak end,
 	preview = preview,
 	runTest = runTest,
 	versionCheck = versionCheck,
