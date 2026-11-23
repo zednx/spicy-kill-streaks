@@ -682,8 +682,8 @@ SPECIAL.TOP_ROTATION = {
 		{ file = "godlike2.ogg", text = "GODLIKE!", taunt = "DEATH WARRANT ENFORCED!" },
 		{ file = "godlike3.ogg", text = "GODLIKE!", taunt = "ABSOLUTION FOR THE SOULS OF THE WRETCHED!" } },
 }
--- Voice packs whose lines are taunts: the taunt is the big callout, with the standard name above
--- it (smaller). The log and chat keep the standard text.
+-- Voice packs whose lines are taunts: the usual callout, with the taunt under it (smaller, in white).
+-- The log and chat keep the standard text.
 SPECIAL.PACK_TAUNTS = {
 	zealot = {
 		["HEADSHOT!"] = "ONE SHOT, ONE KILL!", ["FIRST BLOOD!"] = "MEET YOUR MAKER!",
@@ -915,7 +915,7 @@ local TEXT_STYLES = {
 	multi = { size = 42, punch = 3.2, life = 3.2, pulse = true },
 	death = { size = 26, punch = 1, life = 2.6, sink = true },
 	other = { size = 20, punch = 1.6, life = 2.4 },
-	taunt = { size = 30, punch = 2.6, life = 3.4 }, -- a voice pack's own words (Zealot), under the standard callout
+	taunt = { size = 22, punch = 1.8, life = 3.0 }, -- a voice pack's own words (Zealot): white, under the callout
 	kudos = { size = 18, punch = 1.3, life = 2.2 }, -- a kudos a friend sent us: visible, not spicy
 }
 SPECIAL.KUDOS_COLOR = { 1, 0.82, 0.3 }
@@ -1271,15 +1271,16 @@ local function showText(text, kind, level)
 end
 
 -- A callout on screen: a pack's own words in rainbow letters (SPECIAL.PACK_TEXT), or the usual
--- name with the pack's taunt under it (SPECIAL.PACK_TAUNTS). taunt: the words, if not the usual ones
+-- callout with the pack's taunt under it, smaller and white (SPECIAL.PACK_TAUNTS). taunt: the words,
+-- if not the usual ones
 function SPECIAL.screenCallout(text, kind, level, taunt)
 	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
 	if packText then return showText(SPECIAL.rainbow(packText[text] or text), kind, level) end
 	local taunts = kind == "rank" and SPECIAL.PACK_TAUNTS[db.profile.soundpack]
 	taunt = taunts and (taunt or taunts[text])
 	if taunt then
-		-- the usual name first, so the taunt (pushing it up) sits under it
-		showText(text, "kill", level)
+		-- the callout first, so the taunt (pushing it up) sits under it
+		showText(text, kind, level)
 		showText(taunt, "taunt", level)
 	else
 		showText(text, kind, level)

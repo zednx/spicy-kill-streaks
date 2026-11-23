@@ -14,6 +14,7 @@ ns.patchNotes = {
 		},
 		fixed = {
 			{ "Streaks", "Your kill streak survives a /reload or a quick relog" },
+			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },
 		},
 	},
 	{

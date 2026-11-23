@@ -5,6 +5,7 @@
 - **KOS list: add your target.** Target an enemy player and their name is already filled in on the KOS page: **Add** puts them on the list for sure (by their unique ID). `/sks kos <their name>` does the same.
 - **KOS sighting sound:** pick Raid warning, Boss warning, Alarm clock, Ready check, PvP queue pop, Whisper, Alarm drum, Chime, "Eternal agony awaits you!" or None, with a Play button (KOS list page).
 - **Tidier Announcer page:** the callout switches are split into Callouts, Ganks, Battlegrounds and Streaks, with shorter descriptions.
+- **Zealot:** the taunt now shows under the callout in game, smaller and in white, like in the live preview (it was as big as the callout).
 - **Your kill streak survives a `/reload`** (and a disconnect or quick relog, within 10 minutes). Before, reloading the UI started it again from 0.
 
 ## v1.9.0
