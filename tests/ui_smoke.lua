@@ -255,6 +255,35 @@ step("test kills and deaths leave the real streak alone", function()
   after, deathsAfter = ns.core.streak()
   assert(after == before and deathsAfter == deathsBefore, "a test death changed the streak")
 end)
+step("guild board: one row per player, with or without the family name", function()
+  local sp = ns.core.special
+  local g = ns.core.db().global
+  -- a board saved before 1.9.0, with the same player twice
+  g.boards = g.boards or {}
+  g.boards["Spice Guild"] = { month = sp.monthKey(), players = {
+    ["Cora"] = { best = 10, kills = 37, deaths = 22 }, ["Cora Nado"] = { best = 9, kills = 39, deaths = 23 } } }
+  local board = sp.board()
+  local n = 0
+  for _ in pairs(board.players) do n = n + 1 end
+  assert(n == 1, "expected one Cora, got " .. n)
+  local e = board.players["Cora"]
+  assert(e.best == 10 and e.kills == 39 and e.deaths == 23 and e.name == "Cora Nado", "merge kept the highest and the full name")
+  -- live: a first name only, then the full name with a realm
+  sp.boardNote("Rook", 3, 1, 4)
+  sp.boardNote("Rook Revels-SomeRealm", 5, 2, 4)
+  sp.boardNote("Rook Revels", 5, 2, 4)
+  local rows = 0
+  for _, entry in ipairs(sp.top(50)) do if entry.name:find("^Rook") then rows = rows + 1; assert(entry.name == "Rook Revels" or entry.name == "Rook", entry.name) end end
+  assert(rows <= 2, "Rook listed " .. rows .. " times")
+  assert(board.players["Rook"].name == "Rook Revels" and board.players["Rook"].best == 5)
+  -- a mute by either name covers both
+  local F = ns.friends
+  F.mute("Cora", true)
+  assert(F.isMuted("Cora Nado") and F.isMuted("Cora-SomeRealm"), "mute by first name")
+  F.mute("Cora Nado", false)
+  assert(not F.isMuted("Cora"), "unmute")
+  g.boards["Spice Guild"] = nil
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)

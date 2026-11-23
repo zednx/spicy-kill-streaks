@@ -2252,6 +2252,25 @@ function SPECIAL.guildName()
 	return ok and usableString(name) and name or nil
 end
 
+-- The key a player is kept under on the board: the first name (and realm, if any). WoW Forever
+-- characters have a family name, which some messages carry ("Cora Nado") and some don't ("Cora").
+function SPECIAL.boardKey(name)
+	if not usableString(name) then return nil end
+	local first = strmatch(name, "^([^%s%-]+)")
+	if not first then return nil end
+	local realm = strmatch(name, "%-([^%s%-]+)$")
+	return realm and (first .. "-" .. realm) or first
+end
+
+-- An entry's name to show: the fullest one seen (with the family name), without the realm
+function SPECIAL.boardShown(key, entry)
+	return entry and entry.name or key
+end
+function SPECIAL.boardNameSeen(entry, name)
+	local plain = strmatch(name, "^([^%-]+)") or name
+	if not entry.name or (strfind(plain, " ", 1, true) and not strfind(entry.name, " ", 1, true)) then entry.name = plain end
+end
+
 -- This month's board for our guild (a new month starts an empty one)
 function SPECIAL.board()
 	local guild = SPECIAL.guildName()
@@ -2259,8 +2278,28 @@ function SPECIAL.board()
 	db.global.boards = db.global.boards or {}
 	local board = db.global.boards[guild]
 	if not board or board.month ~= SPECIAL.monthKey() then
-		board = { month = SPECIAL.monthKey(), players = {} }
+		board = { month = SPECIAL.monthKey(), players = {}, keyed = true }
 		db.global.boards[guild] = board
+	end
+	if not board.keyed then
+		-- Before 1.9.0 one player could be on it twice ("Cora" and "Cora Nado"): merge them
+		local merged = {}
+		for name, entry in pairs(board.players) do
+			local key = SPECIAL.boardKey(name)
+			if key then
+				local into = merged[key]
+				if not into then
+					into = { best = 0, kills = 0, deaths = 0 }
+					merged[key] = into
+				end
+				into.best = math.max(into.best, entry.best or 0)
+				into.kills = math.max(into.kills, entry.kills or 0)
+				into.deaths = math.max(into.deaths, entry.deaths or 0)
+				into.at = math.max(into.at or 0, entry.at or 0)
+				SPECIAL.boardNameSeen(into, name)
+			end
+		end
+		board.players, board.keyed = merged, true
 	end
 	return board
 end
@@ -2273,14 +2312,17 @@ function SPECIAL.boardNote(name, best, kills, deaths)
 	if not best or best < 0 or best > 999 then return end
 	if kills and (kills < 0 or kills > 99999) then kills = nil end
 	if deaths and (deaths < 0 or deaths > 99999) then deaths = nil end
-	local entry = board.players[name]
+	local key = SPECIAL.boardKey(name)
+	if not key then return end
+	local entry = board.players[key]
 	if not entry then
 		local count = 0
 		for _ in pairs(board.players) do count = count + 1 end
 		if count >= SPECIAL.BOARD_MAX then return end
 		entry = { best = 0, kills = 0, deaths = 0 }
-		board.players[name] = entry
+		board.players[key] = entry
 	end
+	SPECIAL.boardNameSeen(entry, name)
 	entry.best = math.max(entry.best, math.floor(best))
 	if kills then entry.kills = math.max(entry.kills, math.floor(kills)) end
 	if deaths then entry.deaths = math.max(entry.deaths or 0, math.floor(deaths)) end
@@ -2326,6 +2368,8 @@ end
 
 -- Note what a board message said, for the "only send what's higher" check
 function SPECIAL.boardSaw(name, best, kills, deaths)
+	name = SPECIAL.boardKey(name)
+	if not name then return end
 	local seen = SPECIAL.boardSeen[name]
 	if not seen then
 		seen = { best = 0, kills = 0, deaths = 0 }
@@ -2341,13 +2385,13 @@ function SPECIAL.boardEntries(onlyHigher)
 	local board = SPECIAL.board()
 	if not board then return {} end
 	local list = {}
-	for name, entry in pairs(board.players) do
-		if not SPECIAL.isMe(name) then
-			local seen = SPECIAL.boardSeen[name]
+	for key, entry in pairs(board.players) do
+		if not SPECIAL.isMe(key) then
+			local seen = SPECIAL.boardSeen[key]
 			local higher = not seen or entry.best > seen.best or (entry.kills or 0) > seen.kills
 				or (entry.deaths or 0) > seen.deaths
 			if not onlyHigher or higher then
-				list[#list + 1] = { name = name, best = entry.best, kills = entry.kills or 0, deaths = entry.deaths or 0 }
+				list[#list + 1] = { name = SPECIAL.boardShown(key, entry), best = entry.best, kills = entry.kills or 0, deaths = entry.deaths or 0 }
 			end
 		end
 	end
@@ -2430,13 +2474,16 @@ function SPECIAL.top(count)
 	local board = SPECIAL.board()
 	if not board then return {} end
 	local m = SPECIAL.myMonth()
-	if playerName and ((m.monthBest or 0) > 0 or (m.monthDeaths or 0) > 0) then
-		board.players[playerName] = { best = m.monthBest or 0, kills = m.monthKills or 0, deaths = m.monthDeaths or 0, at = time() }
+	local myKey = SPECIAL.boardKey(playerName)
+	if myKey and ((m.monthBest or 0) > 0 or (m.monthDeaths or 0) > 0) then
+		local old = board.players[myKey]
+		board.players[myKey] = { best = m.monthBest or 0, kills = m.monthKills or 0, deaths = m.monthDeaths or 0, at = time(),
+			name = old and old.name }
 	end
 	local list = {}
-	for name, entry in pairs(board.players) do
+	for key, entry in pairs(board.players) do
 		if entry.best > 0 then
-			list[#list + 1] = { name = name, best = entry.best, kills = entry.kills, deaths = entry.deaths or 0 }
+			list[#list + 1] = { name = SPECIAL.boardShown(key, entry), best = entry.best, kills = entry.kills, deaths = entry.deaths or 0 }
 		end
 	end
 	table.sort(list, function(a, b)
@@ -2454,8 +2501,8 @@ function SPECIAL.topDeaths(count)
 	if not board then return {} end
 	SPECIAL.top(1) -- refreshes our own entry
 	local list = {}
-	for name, entry in pairs(board.players) do
-		if (entry.deaths or 0) > 0 then list[#list + 1] = { name = name, deaths = entry.deaths } end
+	for key, entry in pairs(board.players) do
+		if (entry.deaths or 0) > 0 then list[#list + 1] = { name = SPECIAL.boardShown(key, entry), deaths = entry.deaths } end
 	end
 	table.sort(list, function(a, b)
 		if a.deaths ~= b.deaths then return a.deaths > b.deaths end
@@ -2572,7 +2619,7 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 			-- A guildmate died: one more death this month (their own count, when it comes, wins if higher)
 			local who = safeText(shortName(sender))
 			local board = who and SPECIAL.board()
-			local entry = board and board.players[who]
+			local entry = board and who and board.players[SPECIAL.boardKey(who) or who]
 			SPECIAL.boardNote(who, entry and entry.best or 0, nil, ((entry and entry.deaths) or 0) + 1)
 		end
 	elseif kind == "V?" then

@@ -236,18 +236,27 @@ end
 friends.mutedList = muted
 
 -- Muted: on the mute list, or a friend whose kills we chose not to show
+-- A mute's key: the first name in lower case (WoW Forever names may carry a family name or not)
+local function muteKey(name)
+	if not usable(name) then return nil end
+	local first = strmatch(name, "^([^%s%-]+)")
+	return first and strlower(first) or nil
+end
+
 function friends.isMuted(sender)
 	local key = shortKey(sender)
 	if not key then return false end
-	if muted()[key] then return true end
+	if muted()[key] or muted()[muteKey(sender) or key] then return true end
 	local p = prefs()[key]
 	return p ~= nil and p.show == false
 end
 
 function friends.mute(name, on)
-	local key = shortKey(name)
-	if not key then return false end
-	muted()[key] = on and (name:gsub("%-.*$", "")) or nil
+	local key, first = shortKey(name), muteKey(name)
+	if not key or not first then return false end
+	-- (also clears a mute saved before 1.9.0 under the whole name)
+	muted()[key] = nil
+	muted()[first] = on and (name:gsub("%-.*$", "")) or nil
 	return true
 end
 
