@@ -1560,7 +1560,7 @@ local function registerKill(victim, isDuel, notGank)
 		or (not isDuel and profile.shotkill)
 		or (profile.shotstreak and newRecord)
 		or (profile.shotmultikill and multi > 0)
-	if shot then later(SPECIAL.takeScreenshot) end
+	if shot then SPECIAL.screenshotSoon() end
 end
 
 local function resetStreakOnDeath()
@@ -1610,9 +1610,9 @@ local function registerDeath(killer, isDuel, killerGUID)
 		if profile.duelemoteloss ~= "none" then
 			social("emote", profile.duelemoteloss, killer)
 		end
-		if profile.shotduelloss then later(SPECIAL.takeScreenshot) end
+		if profile.shotduelloss then SPECIAL.screenshotSoon() end
 	elseif profile.shotdeath then
-		later(SPECIAL.takeScreenshot)
+		SPECIAL.screenshotSoon()
 	end
 end
 
@@ -1639,6 +1639,8 @@ function SPECIAL.registerGank(victim)
 	syncSendKill("K", victim, streak, 0, 0, true)
 	local times = count(profile.kills, victim)
 	if profile.dochat then chat("You have ganked " .. victim .. " " .. times .. " times. " .. flair) end
+	-- (a gank is a kill too: "Every kill" screenshots it)
+	if profile.shotkill then SPECIAL.screenshotSoon() end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -3233,7 +3235,13 @@ function SPECIAL.bgSystem(message)
 	if db.profile.doscreen then celebrate("rank", 5) end
 end
 
--- Screenshots (the kill/duel/record settings), with what happened written to the debug log
+-- Screenshots (the kill/duel/record settings), with what happened written to the debug log.
+-- Taken a moment after the kill (as other addons on WoW Forever do), so the callout and
+-- sparkles are in the picture.
+SPECIAL.SCREENSHOT_DELAY = 0.8
+function SPECIAL.screenshotSoon()
+	C_Timer.After(SPECIAL.SCREENSHOT_DELAY, SPECIAL.takeScreenshot)
+end
 function SPECIAL.takeScreenshot()
 	if type(Screenshot) ~= "function" then debugPrint("screenshot: no Screenshot() on this client") return end
 	local ok, err = pcall(Screenshot)

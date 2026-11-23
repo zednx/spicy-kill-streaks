@@ -2,6 +2,7 @@
 
 ## v1.7.1
 
+- **Kill screenshots:** ganks now take one too when "Every kill" is on (they didn't), and every kill screenshot waits a moment so your callout and sparkles are in the picture.
 - Debug log: screenshots now write whether the call worked and whether the game reports the screenshot as taken or failed (for tracking down kill screenshots not being taken).
 
 ## v1.7.0

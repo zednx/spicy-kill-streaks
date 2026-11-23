@@ -654,6 +654,17 @@ step("flag sounds from the battleground's lines", function()
   played = {}; fire("CHAT_MSG_BG_SYSTEM_HORDE", "Something else happened."); assert(#played == 0, "played for an unrelated line")
   PlaySoundFile = old
 end)
+step("screenshots: every kill, ganks too, a moment later", function()
+  local sp, P = ns.core.special, ns.core.db().profile
+  local shots = 0
+  local old = Screenshot
+  Screenshot = function() shots = shots + 1 end
+  P.shotkill = true
+  sp.registerGank("Lowbie"); assert(shots == 0, "taken at once, not a moment later")
+  runTimers(); assert(shots == 1, "no screenshot for a gank")
+  Screenshot = old
+  P.shotkill = false
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end
