@@ -431,7 +431,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Lists the settings use
 -- ---------------------------------------------------------------------------------------------
-local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)", zealot = "Zealot (UT3)" }
+local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot" }
 local PACK_ORDER = { "male", "female", "sexy", "baby", "flamboyant", "zealot" }
 local HUMILIATION = {
 	humiliation = "Humiliation (classic)", pack = "Same as the voice pack", male = "Male", female = "Female",
@@ -1483,7 +1483,7 @@ STEPS[1] = {
 	build = function(page)
 		local cards = cardRow(page, 3, 10, 200, 260)
 		local info = {
-			{ title = "Voices", desc = "Five announcer packs, from Unreal Tournament to the Flamboyant Heroes of Newerth announcer.",
+			{ title = "Voices", desc = "Six announcer packs, from the classic announcer to Flamboyant and Zealot.",
 				sample = "GODLIKE!", sampleColor = { 0.34, 0.89, 1 }, sampleFont = fontInfo("bangers"), sampleSize = 30 },
 			{ title = "Flair", desc = "Big callouts in a font you pick, sparkle bursts and screen flashes. Or keep it quiet.",
 				sample = "RAMPAGE!", sampleColor = { 1, 0.35, 0.1 }, sampleFont = fontInfo("luckiest"), sampleSize = 30 },
@@ -1498,12 +1498,12 @@ STEPS[1] = {
 }
 
 local VOICE_INFO = {
-	{ key = "male", title = "Male", desc = "The classic Unreal Tournament announcer", sample = "KILLING SPREE!" },
+	{ key = "male", title = "Male", desc = "The classic arena announcer", sample = "KILLING SPREE!" },
 	{ key = "female", title = "Female", desc = "Cool and sharp", sample = "KILLING SPREE!" },
 	{ key = "sexy", title = "Sexy", desc = "Breathy and sultry", sample = "KILLING SPREE!" },
 	{ key = "baby", title = "Baby", desc = "Silly", sample = "KILLING SPREE!" },
-	{ key = "flamboyant", title = "Flamboyant", desc = "Heroes of Newerth, with rainbow callouts", sample = "HOMICIDAL!", rainbow = true },
-	{ key = "zealot", title = "Zealot", desc = "Unreal Tournament 3's holy-warrior taunts", sample = "INSTRUMENT OF DEATH!", sampleSize = 14 },
+	{ key = "flamboyant", title = "Flamboyant", desc = "Fabulous, with rainbow callouts", sample = "HOMICIDAL!", rainbow = true },
+	{ key = "zealot", title = "Zealot", desc = "Holy-warrior taunts, as callouts too", sample = "INSTRUMENT OF DEATH!", sampleSize = 14 },
 }
 STEPS[2] = {
 	title = "Pick a voice",

@@ -12,7 +12,7 @@ ns.patchNotes = {
 			{ "KOS list", "A player who kills you 3 times in a row becomes your nemesis: NEMESIS SLAIN! when you get them back" },
 			{ "KOS list", "After a player kills you twice, a card offers Add to KOS; or /sks kos <name>" },
 			{ "KOS list", "A warning when a listed player is your target, mouseover or on a nameplate" },
-			{ "Zealot", "A new voice pack: Unreal Tournament 3's holy-warrior taunts, as callouts too" },
+			{ "Zealot", "A new voice pack of holy-warrior taunts, as callouts too" },
 			{ "Callouts", "BIG GAME HUNTER! for killing a player 10+ levels above you" },
 			{ "Kudos", "New emoji: crying and clapping (the second skull is gone)" },
 			{ "Guild board", "Mute and Unmute buttons next to each player" },

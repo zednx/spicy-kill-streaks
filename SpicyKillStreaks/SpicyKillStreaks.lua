@@ -4067,7 +4067,7 @@ local function buildOptions()
 						.. "/sks snooze off to undo). Text and effects still show.", 8),
 					soundpack = {
 						type = "select", name = "Voice pack", order = 2,
-						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant (HoN)", zealot = "Zealot (UT3)" },
+						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot" },
 						desc = "Flamboyant also changes the callout text to match, in rainbow letters.",
 						get = function() return db.profile.soundpack end,
 						set = function(_, value) db.profile.soundpack = value end,
