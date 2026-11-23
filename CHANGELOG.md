@@ -2,7 +2,7 @@
 
 ## v1.8.3
 
-- **Friends:** WoW Forever doesn't tell addons which realm a Battle.net friend is on, so those friends now show in the list too, and are shared with once they've answered **Who runs it?** (which proves they're reachable; with My friends on, the addon asks them at login). Where a realm is given, it's matched by ID or display name too. `/sks friends` lists every friend the addon can see and why any is left out (offline, another game or realm, other faction).
+- **Friends:** your kills now go to **every online friend who runs Spicy Kill Streaks** (no limit of 10), and only to them. With My friends on, the addon finds them by itself: it asks at login and when a friend comes online (each friend at most every 5 minutes). The Friends page lists just the friends with Spicy Kill Streaks. Battle.net friends count too, even though WoW Forever doesn't tell addons which realm they're on: answering proves they're reachable. `/sks friends` lists every friend the addon can see and why any is left out (offline, another game or realm, other faction).
 
 ## v1.8.2
 

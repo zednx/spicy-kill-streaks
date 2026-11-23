@@ -702,6 +702,13 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   P.sync.sharefriends, P.sync.shareparty, P.sync.shareguild = false, false, false
   F.broadcast("K\tx"); assert(#sent == 0, "sent with sharing off")
   P.sync.sharefriends = true
+  -- nobody has answered yet: nobody gets it
+  F.broadcast("K\tx"); assert(#sent == 0, "sent to friends who haven't said they run it")
+  -- Alice, Bob and Carl run it (Bob answered by asking us); Bob is switched off
+  for _, who in ipairs({ "Alice", "Bob", "Carl" }) do
+    fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.3", "1", "Player-1-0060" }, "\t"), "WHISPER", who)
+  end
+  sent = {}
   F.setPref("Bob", "share", false)
   F.broadcast("K\tx")
   assert(#sent == 2 and sent[1] == "WHISPER:Alice:K" and sent[2] == "WHISPER:Carl:K", table.concat(sent, " "))
@@ -762,6 +769,12 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   kudos.rows[1].buttons[1].__scripts.OnClick(kudos.rows[1].buttons[1])
   assert(sent[1] == "WHISPER:Alice:R", "kudos not whispered back: " .. tostring(sent[1]))
   kudos.clear()
+  -- finding friends by itself: asks only those who haven't said they run it, not again too soon
+  sent = {}; F.askedAt = {}
+  F.askNew()
+  local asked = {}
+  for _, m in ipairs(sent) do asked[#asked + 1] = m end
+  assert(#asked == 0, "asked friends who already answered: " .. table.concat(asked, " "))
   -- /sks friends explains who's in and who's out, and why
   local said2 = {}
   local oldPrint3 = print

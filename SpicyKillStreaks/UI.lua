@@ -758,22 +758,20 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party, gu
 	-- Online friends: who runs it, and per friend "Share with them" / "Show their kills"
 	local F = ns.friends
 	if F then
-		c = newCard("Friends online")
-		local list = F.online()
-		if #list == 0 then
-			c:add(para("No friends online on your realm and faction right now.", 12, COLORS.muted), 1)
-		else
-			c:add(para("Ask who runs Spicy Kill Streaks to fill in the status. Switch a friend off to stop sharing "
-				.. "with them, or to stop showing their kills.", 12, COLORS.muted), 0.7)
-			c:add(button("Who runs it?", function()
-				local asked = F.check()
-				core().chat("Asked " .. asked .. " online friend" .. (asked == 1 and "" or "s") .. " whether they run it.")
-				C_Timer.After(3, function() ui.show("friends", true) end)
-			end), 0.3)
+		c = newCard("Friends with Spicy Kill Streaks")
+		local list = F.withSKS()
+		c:add(para(#list == 0 and "No online friends with Spicy Kill Streaks found yet. They're found by themselves when "
+			.. "My friends is on (at login and when a friend comes online), or press Who runs it?."
+			or "Switch a friend off to stop sharing with them, or to stop showing their kills.", 12, COLORS.muted), 0.7)
+		c:add(button("Who runs it?", function()
+			local asked = F.check()
+			core().chat("Asked " .. asked .. " online friend" .. (asked == 1 and "" or "s") .. " whether they run it.")
+			C_Timer.After(3, function() ui.show("friends", true) end)
+		end), 0.3)
+		do
 			for _, f in ipairs(list) do
 				local st = F.status[(strsplit("-", f.key))]
-				local status = st and ("|cff5aff7aSKS " .. (st.version or "?") .. "|r" .. (st.sharing and " · sharing" or " · not sharing"))
-					or (f.unconfirmed and "|cff9a8f86realm unknown: shared with once they answer|r" or "|cff9a8f86not checked / no SKS|r")
+				local status = "|cff5aff7aSKS " .. (st.version or "?") .. "|r" .. (st.sharing and " · sharing" or " · not sharing")
 				c:add(para(f.label .. (f.bnet and " |cff9a8f86(Battle.net)|r" or "") .. "\n" .. status, 12), 0.4)
 				c:add(toggle("Share with them", nil, function() return F.pref(f.name).share end,
 					function(v) F.setPref(f.name, "share", v) end), 0.3)

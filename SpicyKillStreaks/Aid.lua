@@ -99,7 +99,7 @@ end
 local function anyoneToAsk()
 	if #shareChannels() > 0 then return true end
 	local f = ns.friends
-	return f and core().db().profile.sync.sharefriends and #f.online() > 0 or false
+	return f and core().db().profile.sync.sharefriends and #f.withSKS() > 0 or false
 end
 
 -- Send back to whoever a request came from: their channel, or a whisper for a friend

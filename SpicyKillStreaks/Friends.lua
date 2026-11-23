@@ -1,6 +1,7 @@
 -- Spicy Kill Streaks: sharing with friends. Characters on your friends list, and Battle.net friends
 -- playing WoW Forever on your realm (or a connected one) and faction, get your kills and deaths
--- (and Kudos and help requests) as addon whispers, one each, at most MAX_SEND per message. Off by
+-- (and Kudos and help requests) as addon whispers: only the friends who run it (they've answered
+-- our "do you run it?", asked at login and when a friend comes online). Off by
 -- default ("Share with my friends"). Nothing is sent from battlegrounds or arenas.
 --
 -- Per friend: "Share with them" and "Show their kills" (mute). Muted names (friends or anyone in
@@ -18,7 +19,6 @@ local function core() return ns.core end
 local function sync() return ns.core.db().profile.sync end
 local function gdb() return ns.core.db().global end
 
-local MAX_SEND = 10     -- friends whispered per message
 local LIST_FOR = 5      -- seconds the online-friends list is kept before reading it again
 
 local function usable(value)
@@ -265,16 +265,22 @@ local function inOurGroup(name)
 	return false
 end
 
--- A message to every online friend we share with (kills, deaths, help requests)
+-- The online friends who run it (they've answered "do you run it?", or asked us)
+function friends.withSKS()
+	local list = {}
+	for _, f in ipairs(friends.online()) do
+		if friends.status[(strsplit("-", f.key))] then list[#list + 1] = f end
+	end
+	return list
+end
+
+-- A message to every online friend with the addon that we share with (kills, deaths, help
+-- requests). Friends without it get nothing, so there's no need for a cap.
 function friends.broadcast(message)
 	if not sync().sharefriends or core().inPvP() then return end
-	local sent = 0
-	for _, f in ipairs(friends.online()) do
-		if sent >= MAX_SEND then break end
-		local reachable = not f.unconfirmed or friends.status[(strsplit("-", f.key))] ~= nil
-		if reachable and friends.pref(f.name).share and not inOurGroup(f.name) then
+	for _, f in ipairs(friends.withSKS()) do
+		if friends.pref(f.name).share and not inOurGroup(f.name) then
 			core().sendAddonMessage(message, "WHISPER", f.name)
-			sent = sent + 1
 		end
 	end
 end
@@ -289,6 +295,7 @@ end
 -- "Do you run it?" for the Friends list
 -- ---------------------------------------------------------------------------------------------
 friends.status = {} -- short key -> { version, sharing = bool, at = GetTime() }
+friends.askedAt = {} -- key -> GetTime(): when we last asked that friend
 
 local function hello(kind)
 	return table.concat({ kind, core().VERSION, sync().sharefriends and "1" or "0", core().playerGUID() or "" }, "\t")
@@ -301,8 +308,8 @@ function friends.check(announce)
 	friends.announceUntil = announce and GetTime() + 8 or nil
 	local asked = 0
 	for _, f in ipairs(friends.online()) do
-		if asked >= 50 then break end
 		core().sendAddonMessage(hello("F?"), "WHISPER", f.name)
+		friends.askedAt[f.key] = GetTime()
 		asked = asked + 1
 	end
 	return asked
@@ -325,17 +332,33 @@ function friends.receive(sender, channel, fields)
 	if friends.onStatus then pcall(friends.onStatus) end
 end
 
--- At login, with sharing on: ask the friends whose realm we can't tell, so they can be confirmed
--- (an answer means they're reachable and run it). The others need no question to be shared with.
-local login = CreateFrame("Frame")
-login:RegisterEvent("PLAYER_LOGIN")
-login:SetScript("OnEvent", function()
-	C_Timer.After(15, function()
-		if not (ns.core and ns.core.db()) or not sync().sharefriends or core().inPvP() then return end
-		friends.forget()
-		for _, f in ipairs(friends.online()) do
-			if f.unconfirmed then core().sendAddonMessage(hello("F?"), "WHISPER", f.name) end
+-- With sharing on, find out which friends run it: at login, and when a friend comes online (each
+-- friend asked at most every 5 minutes). Their answer (or their own question to us) marks them.
+local ASK_AGAIN = 300
+function friends.askNew()
+	if not (ns.core and ns.core.db()) or not sync().sharefriends or core().inPvP() then return end
+	friends.forget()
+	local now = GetTime()
+	for _, f in ipairs(friends.online()) do
+		local short = (strsplit("-", f.key))
+		if not friends.status[short] and (not friends.askedAt[f.key] or now - friends.askedAt[f.key] >= ASK_AGAIN) then
+			friends.askedAt[f.key] = now
+			core().sendAddonMessage(hello("F?"), "WHISPER", f.name)
 		end
+	end
+end
+
+local watch = CreateFrame("Frame")
+watch:RegisterEvent("PLAYER_LOGIN")
+for _, event in ipairs({ "BN_FRIEND_ACCOUNT_ONLINE", "FRIENDLIST_UPDATE" }) do pcall(watch.RegisterEvent, watch, event) end
+local askPending = false
+watch:SetScript("OnEvent", function(_, event)
+	if askPending then return end
+	askPending = true
+	-- after login give the game a moment; a friend coming online, a few seconds
+	C_Timer.After(event == "PLAYER_LOGIN" and 15 or 5, function()
+		askPending = false
+		friends.askNew()
 	end)
 end)
 
