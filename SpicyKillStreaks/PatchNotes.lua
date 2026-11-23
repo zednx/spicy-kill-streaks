@@ -5,14 +5,25 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.10.0", date = "2026-11-23",
+		summary = "Add your target to the KOS list, pick a sighting sound, and keep your streak through a /reload.",
+		new = {
+			{ "KOS list", "Target an enemy player and Add (or /sks kos <name>) adds them, matched exactly" },
+			{ "KOS list", "Pick the sighting sound: alarm drum, chime, a boss line and more" },
+			{ "Announcer", "The callout switches are sorted into Callouts, Ganks, Battlegrounds and Streaks" },
+		},
+		fixed = {
+			{ "Streaks", "Your kill streak survives a /reload or a quick relog" },
+		},
+	},
+	{
 		version = "1.9.0", date = "2026-11-23",
 		summary = "A KOS list with nemeses, the Zealot voice pack, BIG GAME HUNTER and patch notes in game.",
 		new = {
 			{ "KOS list", "Your kill-on-sight list, on its own page. Kill someone on it for GRUDGE SETTLED!" },
 			{ "KOS list", "A player who kills you 3 times in a row becomes your nemesis: NEMESIS SLAIN! when you get them back" },
 			{ "KOS list", "After a player kills you twice, a card offers Add to KOS; or /sks kos <name>" },
-			{ "KOS list", "A warning when a listed player is your target, mouseover or on a nameplate, with a choice of sounds" },
-			{ "KOS list", "Target an enemy player and Add (or /sks kos <name>) adds them, matched exactly" },
+			{ "KOS list", "A warning when a listed player is your target, mouseover or on a nameplate" },
 			{ "Zealot", "A new voice pack of holy-warrior taunts, as callouts too" },
 			{ "Callouts", "BIG GAME HUNTER! for killing a player 10+ levels above you" },
 			{ "Kudos", "New emoji: crying and clapping (the second skull is gone)" },
@@ -20,7 +31,6 @@ ns.patchNotes = {
 			{ "Patch notes", "This page: what changed in each version" },
 		},
 		fixed = {
-			{ "Streaks", "Your kill streak survives a /reload or a quick relog" },
 			{ "Friends", "/sks who ends with how many players run it, even when that's nobody" },
 			{ "Guild board", "Players with a family name are on it once, not twice" },
 			{ "Tests", "Test a kill and Test death no longer change the kill streak you're on" },

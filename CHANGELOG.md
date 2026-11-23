@@ -1,8 +1,14 @@
 # Changelog
 
+## v1.10.0
+
+- **KOS list: add your target.** Target an enemy player and their name is already filled in on the KOS page: **Add** puts them on the list for sure (by their unique ID). `/sks kos <their name>` does the same.
+- **KOS sighting sound:** pick Raid warning, Boss warning, Alarm clock, Ready check, PvP queue pop, Whisper, Alarm drum, Chime, "Eternal agony awaits you!" or None, with a Play button (KOS list page).
+- **Tidier Announcer page:** the callout switches are split into Callouts, Ganks, Battlegrounds and Streaks, with shorter descriptions.
+- **Your kill streak survives a `/reload`** (and a disconnect or quick relog, within 10 minutes). Before, reloading the UI started it again from 0.
+
 ## v1.9.0
 
-- **Your kill streak survives a `/reload`** (and a disconnect or quick relog, within 10 minutes). Before, reloading the UI started it again from 0.
 - **`/sks who` says when it's done:** once everyone had time to answer, one line with how many other players run it ("Done: 3 other players run Spicy Kill Streaks."), or that nobody did. Friends' answers count too.
 - **Guild board: one row per player.** A guildmate could be on it twice, once with their family name ("Cora Nado") and once without ("Cora"), as different messages name them differently. The board now keeps one row per player, shows the full name, and merges the doubles it already has (keeping the higher numbers). Muting someone covers them with or without the family name too.
 - **Test a kill and Test death leave your streak alone:** a test kill added one to the kill streak you were on, and a test death reset it to 0. They never touched your saved stats, and still don't.
@@ -18,8 +24,6 @@
   - **Nemesis:** a player who kills you 3 times in a row (without you killing them back) becomes your nemesis by themselves: "<name> IS NOW YOUR NEMESIS!", and "Your nemesis <name> strikes again!" after that.
   - **Payback:** killing someone on the list plays **GRUDGE SETTLED!** (**NEMESIS SLAIN!** for a nemesis), each with its own announcer line (a surprise) and the big effects, with no time limit.
   - **Sightings:** when a listed player is your target, mouseover or on a nameplate: "KOS: <name> (60) nearby!" with the raid warning sound (once every 2 minutes per player).
-  - **Target an enemy player** and their name is already filled in on the KOS page: **Add** puts them on the list for sure (by their unique ID). `/sks kos <their name>` does the same.
-  - **Sighting sound:** pick Raid warning, Boss warning, Alarm clock, Ready check, PvP queue pop, Whisper, Alarm drum, Chime, "Eternal agony awaits you!" or None, with a Play button.
   - Add anyone by name with `/sks kos <name>` or on the page. A typed name stays *unconfirmed* until you see a player with that name and confirm it's them; only then does payback play.
   - The page lists everyone on it with kills each way, and your other rivals with an **Add to KOS** button. Players are always matched exactly (by their unique ID), never by name alone.
 
