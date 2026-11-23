@@ -858,9 +858,17 @@ step("KOS list: offer, nemesis, payback, typed name confirmed on sight, sighting
   local oldInfo = GetPlayerInfoByGUID
   GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Brute" end
   said = {}
+  local played = {}
+  local oldPSF = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  P.dosound = true
   fire("PARTY_KILL", "Player-1-0001", "Player-1-0888")
+  PlaySoundFile = oldPSF
   GetPlayerInfoByGUID = oldInfo
   assert(table.concat(said, "\n"):find("NEMESIS SLAIN"), "no NEMESIS SLAIN: " .. table.concat(said, " | "))
+  local nemesisSound = false
+  for _, f in ipairs(played) do if f:find("nemesis%.ogg$") then nemesisSound = true end end
+  assert(nemesisSound, "the nemesis line didn't play: " .. table.concat(played, " "))
   assert(K.entry("Player-1-0888").iKilled == 1, "kill not tallied")
   -- typed name: unconfirmed, then confirmed when seen
   SlashCmdList.SPICYKILLSTREAKS("kos Sneaky Pete")

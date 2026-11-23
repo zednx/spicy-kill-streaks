@@ -644,6 +644,8 @@ end
 -- Ganking a run of players within this many seconds: the 3rd and the 5th play a secret line
 -- instead of the gank sound (the run starts again after the 5th)
 SPECIAL.GANK_RUN_WINDOW = 300
+-- Payback for the KOS list (Kos.lua): a player on it, and a nemesis (surprises: not on the Sound board)
+SPECIAL.grudgeSound, SPECIAL.nemesisSound = "grudge.ogg", "nemesis.ogg"
 SPECIAL.GANK_RUN_SOUNDS = { [3] = "secretgank.ogg", [5] = "secret30.ogg" }
 SPECIAL.GANK_RUN = 5
 -- Now and then Retribution is a surprise instead (a game sound, by file ID)
@@ -1492,10 +1494,13 @@ local function registerKill(victim, isDuel, notGank)
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
 		announce(grudge and (grudge.nemesis and "NEMESIS SLAIN!" or "GRUDGE SETTLED!") or "RETRIBUTION!", "rank", grudge and 5 or 4)
 		if avenged then announce("You avenged " .. avenged.who .. "!", "other") end
-		if not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
+		if grudge then
+			-- the KOS list's own lines (a surprise); Retribution if a pack can't play them
+			if not playSound(grudge.nemesis and SPECIAL.nemesisSound or SPECIAL.grudgeSound) then playSound(SPECIAL.retribution) end
+		elseif not (math.random() < SPECIAL.CANDLE_CHANCE and playSound(SPECIAL.CANDLE)) then
 			playSound(SPECIAL.retribution)
 		end
-		celebrate("rank", 4)
+		celebrate("rank", grudge and 5 or 4)
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif SPECIAL.secretFor(streak) and not isDuel then
 		-- A secret rank: its own sound and the big effects, but no callout text. It wins over a
