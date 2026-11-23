@@ -773,7 +773,7 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party, gu
 			for _, f in ipairs(list) do
 				local st = F.status[(strsplit("-", f.key))]
 				local status = st and ("|cff5aff7aSKS " .. (st.version or "?") .. "|r" .. (st.sharing and " · sharing" or " · not sharing"))
-					or "|cff9a8f86not checked / no SKS|r"
+					or (f.unconfirmed and "|cff9a8f86realm unknown: shared with once they answer|r" or "|cff9a8f86not checked / no SKS|r")
 				c:add(para(f.label .. (f.bnet and " |cff9a8f86(Battle.net)|r" or "") .. "\n" .. status, 12), 0.4)
 				c:add(toggle("Share with them", nil, function() return F.pref(f.name).share end,
 					function(v) F.setPref(f.name, "share", v) end), 0.3)

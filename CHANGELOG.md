@@ -2,7 +2,7 @@
 
 ## v1.8.3
 
-- **Friends:** Battle.net friends on your realm are found by the realm's ID or display name too, not only its name. `/sks friends` lists every friend the addon can see and why any is left out (offline, another game or realm, other faction).
+- **Friends:** WoW Forever doesn't tell addons which realm a Battle.net friend is on, so those friends now show in the list too, and are shared with once they've answered **Who runs it?** (which proves they're reachable; with My friends on, the addon asks them at login). Where a realm is given, it's matched by ID or display name too. `/sks friends` lists every friend the addon can see and why any is left out (offline, another game or realm, other faction).
 
 ## v1.8.2
 

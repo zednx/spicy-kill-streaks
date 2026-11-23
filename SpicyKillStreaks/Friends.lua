@@ -75,11 +75,11 @@ function friends.online()
 	local now = GetTime()
 	if cache and cachedAt and now - cachedAt < LIST_FOR then return cache end
 	local list, seen = {}, {}
-	local function add(name, label, bnet)
+	local function add(name, label, bnet, unconfirmed)
 		local key = keyOf(name)
 		if not key or seen[key] then return end
 		seen[key] = true
-		list[#list + 1] = { name = name, label = label or name, bnet = bnet, key = key }
+		list[#list + 1] = { name = name, label = label or name, bnet = bnet, key = key, unconfirmed = unconfirmed }
 	end
 	-- the friends list
 	if C_FriendList and C_FriendList.GetNumFriends and C_FriendList.GetFriendInfoByIndex then
@@ -92,7 +92,12 @@ function friends.online()
 	end
 	-- Battle.net friends in this game, on our realm (or a connected one) and faction
 	for _, game in ipairs(friends.bnetGames()) do
-		if not friends.whyNot(game) then add(friends.bnetTarget(game), game.characterName, true) end
+		local why = friends.whyNot(game)
+		if not why or why == "realm unknown" then
+			-- WoW Forever doesn't say which realm a Battle.net friend is on: such a friend is only
+			-- shared with once they've answered our "do you run it?" (so they're reachable)
+			add(friends.bnetTarget(game), game.characterName, true, why == "realm unknown")
+		end
 	end
 	table.sort(list, function(a, b) return a.key < b.key end)
 	cache, cachedAt = list, now
@@ -139,6 +144,7 @@ function friends.whyNot(game)
 	if not usable(game.characterName) then return "no character name" end
 	local faction = myFaction()
 	if faction and usable(game.factionName) and game.factionName ~= faction then return "other faction (" .. game.factionName .. ")" end
+	if game.realmName == nil and game.realmDisplayName == nil and game.realmID == nil then return "realm unknown" end
 	if not sameRealm(game) then
 		return "other realm (" .. tostring(game.realmName or game.realmDisplayName) .. " / id " .. tostring(game.realmID) .. ")"
 	end
@@ -176,6 +182,11 @@ function friends.explain()
 	if #games == 0 then say("Battle.net: no friends (or not readable).") end
 	for _, game in ipairs(games) do
 		local why = friends.whyNot(game)
+		local key = shortKey(friends.bnetTarget(game) or "")
+		if why == "realm unknown" then
+			why = friends.status[key or ""] and "realm not given, but they answered: included"
+				or "realm not given: included once they answer Who runs it? (asked at login)"
+		end
 		say("Battle.net: " .. tostring(game.characterName or "?") .. " - " .. (why or ("included, whispered as " .. friends.bnetTarget(game)))
 			.. " [program " .. tostring(game.clientProgram) .. ", project " .. tostring(game.wowProjectID) .. ", realm "
 			.. tostring(game.realmName) .. "/" .. tostring(game.realmDisplayName) .. "/" .. tostring(game.realmID)
@@ -260,7 +271,8 @@ function friends.broadcast(message)
 	local sent = 0
 	for _, f in ipairs(friends.online()) do
 		if sent >= MAX_SEND then break end
-		if friends.pref(f.name).share and not inOurGroup(f.name) then
+		local reachable = not f.unconfirmed or friends.status[(strsplit("-", f.key))] ~= nil
+		if reachable and friends.pref(f.name).share and not inOurGroup(f.name) then
 			core().sendAddonMessage(message, "WHISPER", f.name)
 			sent = sent + 1
 		end
@@ -312,6 +324,20 @@ function friends.receive(sender, channel, fields)
 	end
 	if friends.onStatus then pcall(friends.onStatus) end
 end
+
+-- At login, with sharing on: ask the friends whose realm we can't tell, so they can be confirmed
+-- (an answer means they're reachable and run it). The others need no question to be shared with.
+local login = CreateFrame("Frame")
+login:RegisterEvent("PLAYER_LOGIN")
+login:SetScript("OnEvent", function()
+	C_Timer.After(15, function()
+		if not (ns.core and ns.core.db()) or not sync().sharefriends or core().inPvP() then return end
+		friends.forget()
+		for _, f in ipairs(friends.online()) do
+			if f.unconfirmed then core().sendAddonMessage(hello("F?"), "WHISPER", f.name) end
+		end
+	end)
+end)
 
 -- Should a whispered kill or death be shown? Only from a friend, and not when muted
 function friends.acceptsFeed(sender)

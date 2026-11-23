@@ -679,12 +679,13 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   }
   GetNormalizedRealmName = function() return "MyRealm" end
   WOW_PROJECT_ID = 99
-  BNGetNumFriends = function() return 3 end
+  BNGetNumFriends = function() return 4 end
   C_BattleNet = { GetFriendAccountInfo = function(i)
     local games = {
       { isOnline = true, clientProgram = "WoW", wowProjectID = 99, characterName = "Carl", realmName = "MyRealm", factionName = "Horde" },
       { isOnline = true, clientProgram = "WoW", wowProjectID = 99, characterName = "Dee", realmName = "MyRealm", factionName = "Alliance" },
       { isOnline = true, clientProgram = "App", characterName = "Eve", realmName = "MyRealm", factionName = "Horde" },
+      { isOnline = true, clientProgram = "WoW", wowProjectID = 99, characterName = "Fay", factionName = "Horde" }, -- no realm given
     }
     return { gameAccountInfo = games[i] }
   end }
@@ -692,7 +693,7 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   local list = F.online()
   local names = {}
   for _, f in ipairs(list) do names[#names + 1] = f.name end
-  assert(table.concat(names, ",") == "Alice,Bob,Carl", "online friends: " .. table.concat(names, ","))
+  assert(table.concat(names, ",") == "Alice,Bob,Carl,Fay", "online friends: " .. table.concat(names, ","))
   -- sharing: off by default, then one whisper per friend we share with
   assert(core.defaults.profile.sync.sharefriends == false, "sharing with friends should be off by default")
   local sent = {}
@@ -704,6 +705,12 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   F.setPref("Bob", "share", false)
   F.broadcast("K\tx")
   assert(#sent == 2 and sent[1] == "WHISPER:Alice:K" and sent[2] == "WHISPER:Carl:K", table.concat(sent, " "))
+  -- Fay's realm is unknown: shared with once she has answered
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.3", "1", "Player-1-0050" }, "\t"), "WHISPER", "Fay")
+  sent = {}; F.broadcast("K\tx")
+  local toFay = false
+  for _, m in ipairs(sent) do if m == "WHISPER:Fay:K" then toFay = true end end
+  assert(toFay, "an answered friend with an unknown realm wasn't shared with: " .. table.concat(sent, " "))
   F.setPref("Bob", "share", true)
   assert(F.pref("Bob").share, "share not back on")
   -- a whispered kill: shown from a friend, ignored from a stranger, ignored when muted
@@ -727,7 +734,7 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   print = oldPrint
   -- status: we ask, a friend answers, and we answer their question
   sent = {}
-  assert(F.check() == 3, "didn't ask every online friend")
+  assert(F.check() == 4, "didn't ask every online friend")
   fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "1", "Player-1-0043" }, "\t"), "WHISPER", "Alice")
   assert(F.status.alice and F.status.alice.version == "1.8.0" and F.status.alice.sharing, "status not saved")
   -- /sks who asks friends too, and prints their answers
@@ -735,7 +742,7 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   SlashCmdList.SPICYKILLSTREAKS("who")
   local whispered = 0
   for _, m in ipairs(sent) do if m:find("^WHISPER:") then whispered = whispered + 1 end end
-  assert(whispered == 3, "/sks who didn't ask the online friends: " .. table.concat(sent, " "))
+  assert(whispered == 4, "/sks who didn't ask the online friends: " .. table.concat(sent, " "))
   local said = {}
   local oldPrint2 = print
   print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
