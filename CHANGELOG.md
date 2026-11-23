@@ -2,7 +2,7 @@
 
 ## v1.8.2
 
-- **The Kudos popup fades out in combat** and comes back after the fight, without the cards that ran out meanwhile. Kudos you get during a fight still flash in your combat text. Switch it off with **Hide in combat** on the Kudos page.
+- **The Kudos popup fades out in combat** and comes back after the fight. Its cards don't count down while hidden, so you can still react after the fight (friends now accept kudos up to 3 minutes after their kill). Kudos you get during a fight still flash in your combat text. Switch it off with **Hide in combat** on the Kudos page.
 
 ## v1.8.1
 

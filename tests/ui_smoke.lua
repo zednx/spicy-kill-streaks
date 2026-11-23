@@ -763,7 +763,7 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   F.forget()
   runTimers(); runTimers()
 end)
-step("kudos popup fades out in combat and back after, without expired cards", function()
+step("kudos popup fades out in combat and back after, cards paused", function()
   local kudos, P = ns.kudos, ns.core.db().profile
   local clock = 5000
   local oldTime = GetTime
@@ -781,9 +781,9 @@ step("kudos popup fades out in combat and back after, without expired cards", fu
   for _ = 1, 20 do for _, f in ipairs(ALLFRAMES) do if f.__shown and f.__scripts.OnUpdate and f.__parent == nil and f ~= holder then f.__scripts.OnUpdate(f, 0.05) end end end
   assert(holder.__alpha == 0 and not holder.__shown, "popup not hidden in combat: alpha " .. tostring(holder.__alpha))
   local before = #kudos.rows
-  clock = clock + 60 -- every card ran out meanwhile
+  clock = clock + 60 -- a long fight: the cards wait for us
   fire("PLAYER_REGEN_ENABLED")
-  assert(holder.__shown and #kudos.rows < before, "popup not back, or expired cards kept")
+  assert(holder.__shown and #kudos.rows == before, "popup not back, or cards dropped after combat")
   GetTime = oldTime
   kudos.clear()
 end)

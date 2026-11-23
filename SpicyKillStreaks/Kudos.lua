@@ -19,7 +19,7 @@ local function kit() return ns.ui and ns.ui.kit end
 
 local SHOW_FOR = 20        -- seconds a friend's kill or death stays offered
 local GOT_FOR = 6          -- seconds a kudos we got stays on screen
-local ACCEPT_FOR = 45      -- kudos are accepted this long after our own kill or death
+local ACCEPT_FOR = 180      -- kudos are accepted this long after our own kill or death (a friend may react after a fight)
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 3       -- cards on screen at once (the oldest goes)
 local ROW_W = 220        -- the default card width: the nine emoji go in two rows (5 + 4)
@@ -349,7 +349,6 @@ end
 -- Slide in, then after `seconds` fade out and go; with a timer bar along the bottom when bar is set
 local function expireAfter(row, seconds, bar)
 	row.left, row.total = seconds, seconds
-	row.endAt = GetTime() + seconds -- (for cards that ran out while the popup was hidden in combat)
 	row.bar:SetShown(bar and true or false)
 	row:SetScript("OnUpdate", function(self, elapsed)
 		elapsed = elapsed or 0
@@ -724,7 +723,8 @@ function kudos.previewDeath()
 end
 
 -- Hidden in combat (cfg().combathide): the whole popup fades out when combat starts, and back
--- in after it, without the cards that ran out meanwhile (hidden frames don't count down)
+-- in after it. Cards don't count down while hidden (hidden frames don't run their timers), so
+-- they pick up where they left off.
 local FADE_TIME = 0.3
 local fader = CreateFrame("Frame")
 local fadeTo, fading
@@ -744,14 +744,7 @@ fader:Hide()
 
 local function fadeHolder(target)
 	if not holder then return end
-	if target > 0 then
-		-- back: drop what ran out while hidden, then fade in
-		local now = GetTime()
-		for i = #rows, 1, -1 do
-			if rows[i].endAt and rows[i].endAt <= now then removeRow(rows[i]) end
-		end
-		holder:Show()
-	end
+	if target > 0 then holder:Show() end
 	fadeTo = target
 	fader:Show()
 end
