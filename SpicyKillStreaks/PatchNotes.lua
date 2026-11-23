@@ -19,6 +19,7 @@ ns.patchNotes = {
 			{ "Patch notes", "This page: what changed in each version" },
 		},
 		fixed = {
+			{ "Friends", "/sks who ends with how many players run it, even when that's nobody" },
 			{ "Guild board", "Players with a family name are on it once, not twice" },
 			{ "Tests", "Test a kill and Test death no longer change the kill streak you're on" },
 			{ "Preview", "Show in game shows the sample you picked, in your voice pack's words" },

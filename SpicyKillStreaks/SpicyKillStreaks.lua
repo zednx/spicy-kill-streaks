@@ -1933,13 +1933,15 @@ end
 -- Answers to our own "who runs it?" question: { names = { [name] = version }, quiet = bool }.
 -- quiet: collect them for one summary line (the login count) instead of a line per answer.
 local census
+SPECIAL.WHO_WAIT = 6 -- seconds /sks who waits for answers before saying how many came
 
 local function versionCheck()
 	if not registerPrefix() then
 		chat("Addon messages are not available on this client.")
 		return
 	end
-	census = { names = {}, quiet = false }
+	local mine = { names = {}, quiet = false }
+	census = mine
 	-- Online friends too (Friends.lua): they answer by whisper, and say whether they share
 	local friendsOnline = SPECIAL.ns.friends and not (inBG or inArena) and #SPECIAL.ns.friends.online() or 0
 	chat("Asking your group, guild" .. (friendsOnline > 0 and " and online friends" or "") .. " who runs " .. TITLE .. "...")
@@ -1947,10 +1949,28 @@ local function versionCheck()
 	local message = "V?\t" .. VERSION .. "\t" .. SPECIAL.statsFields()
 	if groupChannel() then sendAddonMessage(message, groupChannel()) end
 	if inGuild() then sendAddonMessage(message, "GUILD") end
-	if friendsOnline > 0 then SPECIAL.ns.friends.check(true) end
+	local asked = friendsOnline > 0 and SPECIAL.ns.friends.check(true) or 0
 	if not (groupChannel() or inGuild()) and friendsOnline == 0 then
 		chat("You are not in a group or guild and no friends are online, so nobody can answer.")
+		census = nil
+		return
 	end
+	-- Once everyone had time to answer (friends are asked 2 seconds apart): the total, even 0
+	C_Timer.After(SPECIAL.WHO_WAIT + asked * 2, function()
+		if census ~= mine then return end -- another check took over
+		census = nil
+		local n = 0
+		for _ in pairs(mine.names) do n = n + 1 end
+		if n == 0 then
+			chat("Done: nobody else online runs " .. TITLE .. " (or nobody answered).")
+		else
+			chat("Done: " .. n .. (n == 1 and " other player runs " or " other players run ") .. TITLE .. ".")
+		end
+	end)
+end
+-- A friend's answer to /sks who (Friends.lua), counted with the rest
+function SPECIAL.whoAnswer(who, version)
+	if census and who and not census.names[who] then census.names[who] = version or "?" end
 end
 
 local function sendTestSync()

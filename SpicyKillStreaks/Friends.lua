@@ -384,6 +384,7 @@ function friends.receive(sender, channel, fields)
 	if key then friends.status[key] = { version = version or "?", sharing = fields[3] == "1", at = GetTime() } end
 	if fields[1] == "F!" and friends.announceUntil and GetTime() <= friends.announceUntil then
 		local who = core().safeText(core().shortName(sender)) or "A friend"
+		if core().special.whoAnswer then core().special.whoAnswer((who:gsub("%-.*$", "")), version) end
 		core().chat(who:gsub("%-.*$", "") .. " (friend) runs " .. core().TITLE .. " " .. (version or "?")
 			.. (fields[3] == "1" and ", sharing with friends." or ", not sharing with friends."))
 	end

@@ -2,6 +2,7 @@
 
 ## v1.9.0
 
+- **`/sks who` says when it's done:** once everyone had time to answer, one line with how many other players run it ("Done: 3 other players run Spicy Kill Streaks."), or that nobody did. Friends' answers count too.
 - **Guild board: one row per player.** A guildmate could be on it twice, once with their family name ("Cora Nado") and once without ("Cora"), as different messages name them differently. The board now keeps one row per player, shows the full name, and merges the doubles it already has (keeping the higher numbers). Muting someone covers them with or without the family name too.
 - **Test a kill and Test death leave your streak alone:** a test kill added one to the kill streak you were on, and a test death reset it to 0. They never touched your saved stats, and still don't.
 - **Show in game** (under the live preview) now shows the sample you picked (Kill, Rank, Multi, Payback, Godlike or Gank), with its text, colours and sound, in your voice pack's words. Before, only three of them matched.

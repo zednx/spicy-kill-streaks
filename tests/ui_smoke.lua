@@ -893,6 +893,18 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "0", "Player-1-0045" }, "\t"), "WHISPER", "Carl")
   print = oldPrint2
   assert(table.concat(said, "\n"):find("Carl %(friend%) runs"), "friend's answer not printed")
+  -- when the asking is done, one line with the count: 1 here (Carl), then 0 when nobody answers
+  said = {}
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  SlashCmdList.SPICYKILLSTREAKS("who")
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "0", "Player-1-0045" }, "\t"), "WHISPER", "Carl")
+  for _ = 1, 10 do runTimers() end
+  assert(table.concat(said, "\n"):find("Done: 1 other player runs", 1, true), "no count at the end: " .. table.concat(said, " / "))
+  said = {}
+  SlashCmdList.SPICYKILLSTREAKS("who")
+  for _ = 1, 10 do runTimers() end
+  print = oldPrint2
+  assert(table.concat(said, "\n"):find("Done: nobody else", 1, true), "no line for 0 answers: " .. table.concat(said, " / "))
   sent = {}
   fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F?", "1.8.0", "0", "Player-1-0044" }, "\t"), "WHISPER", "Bob")
   assert(sent[1] == "WHISPER:Bob:F", "didn't answer a friend's question: " .. tostring(sent[1]))
