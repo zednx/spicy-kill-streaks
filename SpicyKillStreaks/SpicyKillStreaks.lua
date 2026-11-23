@@ -3510,6 +3510,13 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 			if not db.global.setup1Done then openSetup() end
 		end)
 	end
+	-- After an update: one line pointing at the patch notes (a new install doesn't need it)
+	if db.global.notesSeen ~= VERSION then
+		if db.global.setup1Done then
+			chat("Updated to " .. VERSION .. ". See what's new: |cffffd100/sks news|r")
+		end
+		db.global.notesSeen = VERSION
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -3794,7 +3801,7 @@ local function buildSetup()
 	addStep("You're ready!",
 		"|cffffd100/sks|r  all options\n|cffffd100/sks preview|r  show off the effects\n"
 		.. "|cffffd100/sks test kill|r  simulate a kill\n|cffffd100/sks unlock|r  move the text\n"
-		.. "|cffffd100/sks setup|r  this setup again",
+		.. "|cffffd100/sks setup|r  this setup again\n|cffffd100/sks news|r  what's new in each version",
 		function(page)
 			makeButton(page, "Simulate a kill", 140, function() runTest("kill") end):SetPoint("TOPLEFT", 0, 0)
 		end)
@@ -4420,6 +4427,8 @@ local function initialize()
 				local ok, why = SPECIAL.ns.kos.addByName(name)
 				chat(ok and (name .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
 			end
+		elseif command == "news" or command == "notes" then
+			openOptions("news")
 		elseif command == "friends" then
 			-- Every friend the addon can see, and why any is left out (Friends.lua)
 			if SPECIAL.ns.friends then

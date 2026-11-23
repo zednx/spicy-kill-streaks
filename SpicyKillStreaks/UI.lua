@@ -1085,7 +1085,61 @@ sections[#sections + 1] = { id = "about", label = "About", hint = "Who made it, 
 	c:add(button("Run the setup again", function() win:Hide() ui.openSetup() end, "primary"), 0.33)
 	c:add(button("Classic options window", function() win:Hide() core().openClassic() end), 0.33)
 	c:add(button("Stats", function() win:Hide() core().openStats() end), 0.33)
+	c:add(button("Patch notes", function() ui.show("news") end), 0.33)
 	cards[#cards + 1] = c
+	return cards
+end }
+
+-- Patch notes (PatchNotes.lua): not in the list on the left; the header's "Patch notes" link
+-- opens it. Each version is a card that opens and closes; the newest starts open.
+local notesOpen = {}
+local function noteHeader(v, open)
+	local b = CreateFrame("Button", nil, UIParent)
+	local icon = b:CreateTexture(nil, "ARTWORK")
+	icon:SetSize(16, 16)
+	icon:SetPoint("LEFT")
+	icon:SetTexture(open and "Interface\\Buttons\\UI-MinusButton-Up" or "Interface\\Buttons\\UI-PlusButton-Up")
+	local title = text(b, 17)
+	title:SetPoint("LEFT", icon, "RIGHT", 10, 0)
+	title:SetText(core().TITLE .. " " .. v.version)
+	local when = text(b, 12, COLORS.muted)
+	when:SetPoint("RIGHT")
+	when:SetJustifyH("RIGHT")
+	when:SetText(v.date or "")
+	local hl = b:CreateTexture(nil, "HIGHLIGHT")
+	hl:SetAllPoints()
+	hl:SetColorTexture(1, 1, 1, 0.03)
+	b:SetScript("OnClick", function()
+		notesOpen[v.version] = not open
+		ui.show("news", true, true)
+	end)
+	return { frame = b, height = 26 }
+end
+
+sections[#sections + 1] = { id = "news", label = "Patch notes", hint = "What changed", hidden = true, dynamic = true, build = function()
+	local cards = {}
+	local c = newCard("Patch notes")
+	c:add(para("What changed in each version. Click a version to open or close it.", 13, COLORS.muted), 1)
+	cards[1] = c
+	for i, v in ipairs(ns.patchNotes or {}) do
+		local open = notesOpen[v.version]
+		if open == nil then open = i == 1 end
+		c = newCard(nil)
+		c:add(noteHeader(v, open), 1)
+		if open then
+			if v.summary then c:add(para(v.summary, 13, COLORS.gold), 1) end
+			for _, group in ipairs({ { "New", v.new }, { "Changed", v.changed }, { "Fixed", v.fixed } }) do
+				if group[2] and #group[2] > 0 then
+					c:add(gap(2), 1)
+					c:add(para(group[1], 14), 1)
+					for _, line in ipairs(group[2]) do
+						c:add(para("|cffff8a4a" .. line[1] .. "|r  -  " .. line[2], 13), 1)
+					end
+				end
+			end
+		end
+		cards[#cards + 1] = c
+	end
 	return cards
 end }
 
@@ -1139,8 +1193,9 @@ local function updateScrollbar()
 	scroll.thumb:Show()
 end
 
--- rebuild: build the page again (its numbers changed)
-function ui.show(id, rebuild)
+-- rebuild: build the page again (its numbers changed); keepScroll: stay where the page was scrolled to
+function ui.show(id, rebuild, keepScroll)
+	local scrolled = keepScroll and scroll and scroll:GetVerticalScroll() or 0
 	current = id
 	ui.current = id
 	closePopup()
@@ -1157,6 +1212,13 @@ function ui.show(id, rebuild)
 		end
 	end
 	scroll:SetVerticalScroll(0)
+	if scrolled > 0 then
+		-- (the new page's height is known a frame later)
+		C_Timer.After(0, function()
+			scroll:SetVerticalScroll(math.min(scrolled, scroll:GetVerticalScrollRange() or 0))
+			updateScrollbar()
+		end)
+	end
 	C_Timer.After(0, updateScrollbar)
 	refreshPreview()
 end
@@ -1208,6 +1270,17 @@ local function buildWindow()
 	local version = text(win, 12, COLORS.muted)
 	version:SetPoint("BOTTOMLEFT", name, "BOTTOMRIGHT", 10, 4)
 	version:SetText("v" .. core().VERSION)
+	-- "Patch notes" next to the version, like a link
+	local notes = CreateFrame("Button", nil, win)
+	notes.label = text(notes, 12, COLORS.gold)
+	notes.label:SetPoint("LEFT")
+	notes.label:SetText("·  Patch notes")
+	notes:SetSize(90, 16)
+	notes:SetPoint("LEFT", version, "RIGHT", 6, 0)
+	notes:SetScript("OnEnter", function() notes.label:SetTextColor(1, 1, 1) end)
+	notes:SetScript("OnLeave", function() notes.label:SetTextColor(COLORS.gold[1], COLORS.gold[2], COLORS.gold[3]) end)
+	notes:SetScript("OnClick", function() ui.show("news") end)
+	win.notesLink = notes
 
 	local close = makeClose(win, function() win:Hide() end)
 	close:SetPoint("TOPRIGHT", -8, -14)
@@ -1226,29 +1299,33 @@ local function buildWindow()
 	nav:SetBackdrop({ bgFile = WHITE })
 	nav:SetBackdropColor(0.07, 0.058, 0.048, 1)
 	navButtons = {}
-	for i, s in ipairs(sections) do
-		local b = CreateFrame("Button", nil, nav)
-		b:SetSize(NAV_W - 16, 46)
-		b:SetPoint("TOPLEFT", 8, -12 - (i - 1) * 50)
-		b.bg = b:CreateTexture(nil, "BACKGROUND")
-		b.bg:SetAllPoints()
-		b.bar = b:CreateTexture(nil, "ARTWORK")
-		b.bar:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 1)
-		b.bar:SetPoint("TOPLEFT")
-		b.bar:SetPoint("BOTTOMLEFT")
-		b.bar:SetWidth(3)
-		local hl = b:CreateTexture(nil, "HIGHLIGHT")
-		hl:SetAllPoints()
-		hl:SetColorTexture(1, 1, 1, 0.04)
-		b.name = text(b, 14)
-		b.name:SetPoint("TOPLEFT", 14, -8)
-		b.name:SetText(s.label)
-		local hint = text(b, 11, COLORS.muted)
-		hint:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -4)
-		hint:SetText(s.hint)
-		b.id = s.id
-		b:SetScript("OnClick", function() ui.show(s.id) end)
-		navButtons[#navButtons + 1] = b
+	local i = 0
+	for _, s in ipairs(sections) do
+		if not s.hidden then
+			i = i + 1
+			local b = CreateFrame("Button", nil, nav)
+			b:SetSize(NAV_W - 16, 46)
+			b:SetPoint("TOPLEFT", 8, -12 - (i - 1) * 50)
+			b.bg = b:CreateTexture(nil, "BACKGROUND")
+			b.bg:SetAllPoints()
+			b.bar = b:CreateTexture(nil, "ARTWORK")
+			b.bar:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 1)
+			b.bar:SetPoint("TOPLEFT")
+			b.bar:SetPoint("BOTTOMLEFT")
+			b.bar:SetWidth(3)
+			local hl = b:CreateTexture(nil, "HIGHLIGHT")
+			hl:SetAllPoints()
+			hl:SetColorTexture(1, 1, 1, 0.04)
+			b.name = text(b, 14)
+			b.name:SetPoint("TOPLEFT", 14, -8)
+			b.name:SetText(s.label)
+			local hint = text(b, 11, COLORS.muted)
+			hint:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -4)
+			hint:SetText(s.hint)
+			b.id = s.id
+			b:SetScript("OnClick", function() ui.show(s.id) end)
+			navButtons[#navButtons + 1] = b
+		end
 	end
 	win.snoozeText = text(nav, 12, COLORS.gold)
 	win.snoozeText:SetPoint("BOTTOMLEFT", 16, 16)

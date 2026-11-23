@@ -20,3 +20,4 @@ Kudos.lua
 Aid.lua
 Friends.lua
 Kos.lua
+PatchNotes.lua

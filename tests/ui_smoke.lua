@@ -174,9 +174,45 @@ end)
 step("core exported", function() assert(ns.core and ns.core.db(), "no core/db") end)
 step("minimap button made", function() assert(rawget(_G, "SpicyKillStreaksMinimapButton"), "no minimap button") end)
 step("/sks opens the new window", function() SlashCmdList.SPICYKILLSTREAKS(""); assert(rawget(_G, "SpicyKillStreaksWindow").__shown, "window not shown") end)
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about", "news" }) do
   step("section " .. id, function() ns.ui.show(id) end)
 end
+step("patch notes: newest open, a click opens another, /sks news", function()
+  assert(ns.patchNotes and ns.patchNotes[1].version == ns.core.VERSION, "PatchNotes.lua has no entry for " .. ns.core.VERSION)
+  local function shownText()
+    local out = {}
+    for _, f in ipairs(FONTSTRINGS) do if f.__text then out[#out + 1] = f.__text end end
+    return table.concat(out, "|")
+  end
+  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  SlashCmdList.SPICYKILLSTREAKS("news")
+  assert(ns.ui.current == "news")
+  local out = shownText()
+  assert(out:find(ns.patchNotes[1].new[1][2], 1, true), "newest notes not open")
+  assert(not out:find(ns.patchNotes[2].summary, 1, true), "older notes should start closed")
+  -- click the second version's header
+  local second
+  for _, fs in ipairs(FONTSTRINGS) do
+    if fs.__text == ns.core.TITLE .. " " .. ns.patchNotes[2].version then second = fs.__parent end
+  end
+  assert(second and second.__scripts.OnClick, "no header for " .. ns.patchNotes[2].version)
+  for _, f in ipairs(FONTSTRINGS) do f.__text = nil end
+  second.__scripts.OnClick(second); runTimers()
+  assert(shownText():find(ns.patchNotes[2].summary, 1, true), "a click should open it")
+end)
+step("an update says where the patch notes are, once", function()
+  local g = ns.core.db().global
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  g.notesSeen = "1.8.3"
+  fire("PLAYER_ENTERING_WORLD", false, false); fire("PLAYER_ENTERING_WORLD", false, false)
+  print = oldPrint
+  local n = 0
+  for _, line in ipairs(said) do if line:find("/sks news", 1, true) then n = n + 1 end end
+  assert(n == 1, "expected one patch notes line, got " .. n)
+  assert(g.notesSeen == ns.core.VERSION)
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)
@@ -196,7 +232,7 @@ ns.core.openClassic = function() end
 ns.core.openStats = function() end
 -- Click every control on every page: switches, dropdowns (and the rows of their lists), sliders,
 -- text boxes and buttons
-for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about" }) do
+for _, id in ipairs({ "announcer", "sound", "screen", "friends", "kudos", "kos", "board", "extras", "soundboard", "about", "news" }) do
   step("every control on " .. id, function()
     ns.ui.open()
     local before = #ALLFRAMES

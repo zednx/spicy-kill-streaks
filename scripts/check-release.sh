@@ -3,6 +3,7 @@
 #   scripts/check-release.sh versions   the .toc and the Lua VERSION agree
 #   scripts/check-release.sh 1.2.0      also: the tag matches, it is higher than the last
 #                                       release, and CHANGELOG.md has a filled-in section
+#                                       and PatchNotes.lua lists it
 set -euo pipefail
 toc=$(sed -n 's/^## Version: *//p' SpicyKillStreaks/SpicyKillStreaks.toc | tr -d '\r')
 lua=$(sed -n 's/^local VERSION = "\(.*\)"/\1/p' SpicyKillStreaks/SpicyKillStreaks.lua | tr -d '\r')
@@ -28,5 +29,8 @@ if [ -z "$(echo "$section" | tr -d '[:space:]')" ]; then
 fi
 if echo "$section" | grep -q "TODO"; then
   echo "::error::CHANGELOG.md '## v$v' still has a TODO"; exit 1
+fi
+if ! grep -q "version = \"$v\"" SpicyKillStreaks/PatchNotes.lua; then
+  echo "::error::SpicyKillStreaks/PatchNotes.lua has no notes for $v (the in-game Patch notes page)"; exit 1
 fi
 echo "Release $v OK (previous: ${prev:-none})"
