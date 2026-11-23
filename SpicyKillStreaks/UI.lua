@@ -1503,6 +1503,7 @@ local VOICE_INFO = {
 	{ key = "sexy", title = "Sexy", desc = "Breathy and sultry", sample = "KILLING SPREE!" },
 	{ key = "baby", title = "Baby", desc = "Silly", sample = "KILLING SPREE!" },
 	{ key = "flamboyant", title = "Flamboyant", desc = "Heroes of Newerth, with rainbow callouts", sample = "HOMICIDAL!", rainbow = true },
+	{ key = "zealot", title = "Zealot", desc = "Unreal Tournament 3's holy-warrior taunts", sample = "INSTRUMENT OF DEATH!", sampleSize = 14 },
 }
 STEPS[2] = {
 	title = "Pick a voice",
@@ -1510,13 +1511,15 @@ STEPS[2] = {
 	primary = "Next",
 	hint = "More voice settings (Humiliation, mute, snooze) are under Sound in /sks.",
 	build = function(page)
-		local cards = cardRow(page, #VOICE_INFO, 10, 200, 190)
+		-- two rows of three
+		local cards = cardRow(page, 3, 0, 138, 190)
+		for _, b in ipairs(cardRow(page, #VOICE_INFO - 3, 152, 138, 190)) do cards[#cards + 1] = b end
 		return function()
 			for i, b in ipairs(cards) do
 				local v = VOICE_INFO[i]
 				setCard(b, {
 					title = v.title, desc = v.desc,
-					sample = v.rainbow and S().rainbow(v.sample) or v.sample, sampleSize = 18,
+					sample = v.rainbow and S().rainbow(v.sample) or v.sample, sampleSize = v.sampleSize or 18,
 					sampleColor = { 1, 0.6, 0.15 }, sampleFont = S().fontPath(P().fx.font),
 					badge = P().soundpack == v.key and "|cffffd100Selected|r" or nil,
 				}, P().soundpack == v.key)
