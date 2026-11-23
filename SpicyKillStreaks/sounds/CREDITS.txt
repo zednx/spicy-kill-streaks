@@ -34,6 +34,10 @@ flag_blue_*.ogg, flag_red_*.ogg (taken, dropped, returned, scores)
   Added for Spicy Kill Streaks 1.7.0 from files supplied by the author: Unreal Tournament style
   capture-the-flag announcer lines. Source: to be confirmed.
 
+biggame.ogg
+  Added for Spicy Kill Streaks 1.9.0 from a file supplied by the author: an announcer line.
+  Source: to be confirmed.
+
 grudge.ogg, nemesis.ogg
   Added for Spicy Kill Streaks 1.9.0 from files supplied by the author: Unreal Tournament 3
   reward announcer lines ((c) Epic Games), the same announcer as retribution.ogg. (What they say

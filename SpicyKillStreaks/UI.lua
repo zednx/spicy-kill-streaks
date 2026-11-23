@@ -601,6 +601,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	c:add(ptoggle("doretribution", "Retribution", "Kill someone who killed you in the last hour"), 0.5)
 	c:add(ptoggle("docomeback", "Comeback", nil), 0.5)
 	c:add(ptoggle("dopancake", "Pancake", "You or a friend die from falling or drowning"), 0.5)
+	c:add(ptoggle("dobiggame", "Big Game Hunter", "You kill a player 10+ levels above you (or ??)"), 0.5)
 	c:add(ptoggle("dogank", "Shame ganks", "You kill a player 10+ levels below you"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "A player 10+ levels above you (or ??) kills you"), 0.5)
 	c:add(ptoggle("doflagcap", "Flag captures", "\"FLAG CAPTURED!\" when you capture a flag"), 0.5)

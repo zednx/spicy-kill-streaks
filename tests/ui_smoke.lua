@@ -914,6 +914,38 @@ step("muting covers kudos and help requests too, and the guild board has Mute bu
   assert(muteButton, "no Mute button on the guild board")
   kudos.clear()
 end)
+step("big game hunter: a player 10+ levels above us", function()
+  local core = ns.core
+  local P = core.db().profile
+  P.dobiggame, P.dochat, P.dosound = true, true, true
+  local saved = { UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance }
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  UnitExists = function(u) return u == "target" or u == "player" end
+  UnitName = function(u) if u == "target" then return "Giant" end return "Tester" end
+  UnitLevel = function(u) if u == "target" then return 60 end return 48 end
+  UnitIsPlayer = function(u) return u == "target" end
+  fire("PLAYER_TARGET_CHANGED")
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Giant" end
+  local said, played, sent = {}, {}, {}
+  local oldPrint, oldPSF, oldSend = print, PlaySoundFile, C_ChatInfo.SendAddonMessage
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel) sent[#sent + 1] = msg return 0 end
+  P.sync.shareguild = true
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0444")
+  runTimers(); runTimers()
+  print, PlaySoundFile, C_ChatInfo.SendAddonMessage = oldPrint, oldPSF, oldSend
+  UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance = unpack(saved)
+  local out = table.concat(said, "\n")
+  assert(out:find("BIG GAME HUNTER") and out:find("level 60 Giant"), out)
+  local heard = false
+  for _, f in ipairs(played) do if f:find("biggame%.ogg$") then heard = true end end
+  assert(heard, "no big game sound: " .. table.concat(played, " "))
+  local flagged = false
+  for _, m in ipairs(sent) do if m:find("^K\t.-\tGiant\t.-\tB\tPlayer") then flagged = true end end
+  assert(flagged, "the kill wasn't shared as big game: " .. table.concat(sent, " | "))
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

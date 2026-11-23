@@ -57,6 +57,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
   - *Retribution* when you kill someone who killed you in the last hour. And now and then, something else...
   - *Comeback*: your first kill after dying 3+ times in a row gets a surprise
   - *Pancake* when you (or a friend) die from falling or drowning
+  - **BIG GAME HUNTER!** for killing a player 10+ levels above you
   - **Ganks**: kill a player 10+ levels below you and get shamed instead ("Bully!"), with no streak credit. Die to someone 10+ levels above you and the Peon says it for you.
 - **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer: *Cherry Poppah*, *Rainbow Warrior*, *Unicorn Stampede*... with rainbow callouts to match). Pick a separate voice for *Humiliation*, or drop in your own sound files.
 - **Only your killing blows count**, not kills your group finishes.

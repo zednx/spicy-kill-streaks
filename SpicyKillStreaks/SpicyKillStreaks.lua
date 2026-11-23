@@ -84,6 +84,7 @@ local defaults = {
 		doretribution = true,    -- "Retribution" for killing someone who killed you in the last hour
 		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
 		docomeback = true,       -- a surprise for the first kill after 3+ deaths in a row
+		dobiggame = true,        -- "BIG GAME HUNTER!" for killing a player 10+ levels above us (or ??)
 		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
@@ -1391,6 +1392,16 @@ function SPECIAL.gankCandidate(victim)
 	return theirs ~= nil and ours ~= nil and theirs > 0 and ours - theirs >= SPECIAL.GANK_LEVELS
 end
 
+-- Big game: our kill of a player 10+ levels above us (or "??" = -1), as sure as the gank checks
+-- (a player for sure, their level seen in the last 5 minutes). Their level, or nil.
+SPECIAL.bigGameSound = "biggame.ogg"
+function SPECIAL.bigGameLevel(victim)
+	local theirs, ours = Levels.recentPlayer(victim), Levels.player()
+	if not theirs or not ours then return nil end
+	if theirs == -1 or theirs - ours >= SPECIAL.GANK_LEVELS then return theirs end
+	return nil
+end
+
 -- The killer's level if they ganked us (a player 10+ levels above us, or "??" = -1), else nil
 function SPECIAL.gankerLevel(killer, killerGUID)
 	local key = Levels.key(killer)
@@ -1489,6 +1500,8 @@ local function registerKill(victim, isDuel, notGank)
 		pcall(SPECIAL.ns.aid.notifyAvenged, avenged, victim)
 	end
 
+	-- A player 10+ levels above us (not with a payback, which already outranks it)
+	local bigGame = not isDuel and not testing and not retribution and profile.dobiggame and SPECIAL.bigGameLevel(victim)
 	local rank = nil
 	if retribution then
 		-- Payback outranks everything: its sound plays alone, a multikill still shows its text
@@ -1501,6 +1514,13 @@ local function registerKill(victim, isDuel, notGank)
 			playSound(SPECIAL.retribution)
 		end
 		celebrate("rank", grudge and 5 or 4)
+		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
+	elseif bigGame then
+		-- A player 10+ levels above us: big game. Its own line wins over a multikill's sound.
+		announce("BIG GAME HUNTER!", "rank", 5)
+		if not playSound(SPECIAL.bigGameSound) then playSound(RANK_SOUNDS[6]) end
+		celebrate("rank", 5)
+		if profile.dochat then chat("You took down a level " .. (bigGame == -1 and "??" or bigGame) .. " " .. victim .. "!") end
 		if multi > 0 then announce(MULTI_TEXTS[multi], "multi", multi) end
 	elseif SPECIAL.secretFor(streak) and not isDuel then
 		-- A secret rank: its own sound and the big effects, but no callout text. It wins over a
@@ -1555,7 +1575,7 @@ local function registerKill(victim, isDuel, notGank)
 	if testing then return end
 
 	-- Tell other Spicy Kill Streaks users in the group and guild
-	syncSendKill(isDuel and "U" or "K", victim, streak, multi, rank, false)
+	syncSendKill(isDuel and "U" or "K", victim, streak, multi, rank, bigGame and "B" or false)
 
 	if victim ~= UNKNOWN_VICTIM then
 		local times = count(profile.kills, victim)
@@ -1811,11 +1831,12 @@ end
 -- before the GUID, so 0.1.0 readers, which take fields 3-6 and the last one, still work.
 -- Since 1.0.0 a gank flag ("G" or "-") comes after the levels, before the GUID: the sender was
 -- sure it was a gank (they killed a player 10+ levels below, or one 10+ above killed them).
+-- Since 1.9.0 "B" there means big game (they killed a player 10+ levels above them).
 syncSendKill = function(kind, victim, streakCount, multi, rank, gank)
 	SPECIAL.ownEvent("K", kind == "K" and (multi or 0) > 0 and ("m" .. multi) or (kind == "K" and (rank or 0) > 0 and ("r" .. rank)) or nil)
 	broadcast(table.concat({ kind, VERSION, cleanField(victim), tostring(streakCount or 0),
 		tostring(multi or 0), tostring(rank or 0), tostring(Levels.player() or 0), tostring(Levels.of(victim) or 0),
-		gank and "G" or "-", playerGUID or "" }, "\t"))
+		(gank == "B" and "B") or (gank and "G") or "-", playerGUID or "" }, "\t"))
 end
 
 syncSendDeath = function(killer, isDuel, ganked)
@@ -2066,6 +2087,18 @@ local function onFeedMessage(kind, sender, channel, fields)
 	end
 	SPECIAL.allyEvent({ kind = kind, sender = sender, channel = channel, who = who, other = name,
 		streak = streakCount, multi = multi, rank = rank, guid = fields[#fields] })
+	-- A friend's big game (they killed a player 10+ levels above them)
+	if kind == "K" and fields[9] == "B" and #fields >= 10 and db.profile.dobiggame then
+		local line = whoShown .. " took down a level " .. (otherLevel == -1 and "??" or (otherLevel or "?")) .. " " .. name
+			.. ": BIG GAME HUNTER!"
+		if source.feed then chat(FEED_ICONS .. line) end
+		if source.text then
+			showText(line, "other")
+			celebrate("other")
+		end
+		if source.sound then playSound(SPECIAL.bigGameSound) end
+		return
+	end
 
 	local rest
 	if kind == "U" then
@@ -3825,6 +3858,7 @@ function SPECIAL.soundBoard()
 	for _, entry in ipairs({
 		{ section = "Special moments" },
 		{ "Retribution", "You kill someone who killed you in the last hour", SPECIAL.retribution },
+		{ "Big Game Hunter", "You kill a player 10+ levels above you (or ??)", SPECIAL.bigGameSound },
 		{ "Got ganked", "A player 10+ levels above you (or ??) kills you", SPECIAL.ganked },
 		{ "Pancake", "You or a friend die from falling, drowning or lava", SPECIAL.pancake },
 		{ "Humiliation", "You die (the voice is picked under Sounds)", "humiliation" },

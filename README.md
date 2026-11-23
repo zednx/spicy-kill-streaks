@@ -15,6 +15,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
   - *Retribution* when you kill someone who killed you in the last hour (and now and then, something else...)
   - *Comeback*: your first kill after dying 3+ times in a row gets a surprise
   - *Pancake* when you (or a friend) die from falling or drowning
+  - **Big Game Hunter**: kill a player 10+ levels above you for a callout of its own
   - **Ganks**: kill a player 10+ levels below you and get shamed instead of a callout (it doesn't count towards your streak); die to one 10+ levels above you and hear "You got ganked"
 - **Voice packs**: Male, Female, Sexy, Baby and **Flamboyant** (the Heroes of Newerth announcer, with rainbow callouts). Pick a separate voice for *Humiliation*, or add your own sound files.
 - **Only your killing blows count**, not kills your group finishes.
