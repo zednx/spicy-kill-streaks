@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.7.0"
+local VERSION = "1.7.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -1560,7 +1560,7 @@ local function registerKill(victim, isDuel, notGank)
 		or (not isDuel and profile.shotkill)
 		or (profile.shotstreak and newRecord)
 		or (profile.shotmultikill and multi > 0)
-	if shot then later(Screenshot) end
+	if shot then later(SPECIAL.takeScreenshot) end
 end
 
 local function resetStreakOnDeath()
@@ -1610,9 +1610,9 @@ local function registerDeath(killer, isDuel, killerGUID)
 		if profile.duelemoteloss ~= "none" then
 			social("emote", profile.duelemoteloss, killer)
 		end
-		if profile.shotduelloss then later(Screenshot) end
+		if profile.shotduelloss then later(SPECIAL.takeScreenshot) end
 	elseif profile.shotdeath then
-		later(Screenshot)
+		later(SPECIAL.takeScreenshot)
 	end
 end
 
@@ -3232,6 +3232,15 @@ function SPECIAL.bgSystem(message)
 	announce("FLAG CAPTURED!", "rank", 5)
 	if db.profile.doscreen then celebrate("rank", 5) end
 end
+
+-- Screenshots (the kill/duel/record settings), with what happened written to the debug log
+function SPECIAL.takeScreenshot()
+	if type(Screenshot) ~= "function" then debugPrint("screenshot: no Screenshot() on this client") return end
+	local ok, err = pcall(Screenshot)
+	debugPrint("screenshot: asked", ok and "ok" or ("error: " .. tostring(err)))
+end
+function events.SCREENSHOT_SUCCEEDED() debugPrint("screenshot: the game says it succeeded") end
+function events.SCREENSHOT_FAILED() debugPrint("screenshot: the game says it FAILED") end
 
 function events.CHAT_MSG_BG_SYSTEM_ALLIANCE(message) SPECIAL.bgSystem(message) end
 function events.CHAT_MSG_BG_SYSTEM_HORDE(message) SPECIAL.bgSystem(message) end

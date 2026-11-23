@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.1
+
+- Debug log: screenshots now write whether the call worked and whether the game reports the screenshot as taken or failed (for tracking down kill screenshots not being taken).
+
 ## v1.7.0
 
 - **Flag sounds** in Warsong Gulch (and captures in Eye of the Storm): Unreal Tournament style announcer lines when a flag is taken, dropped or returned (blue = Alliance, red = Horde), and "Blue team scores!" / "Red team scores!" on a capture. Only when the battleground's own lines are readable to addons. Switch them off under Announcer > Callouts; all eight are on the Sound board.
