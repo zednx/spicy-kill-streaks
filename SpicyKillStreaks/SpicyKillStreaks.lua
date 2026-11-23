@@ -4511,8 +4511,21 @@ local function initialize()
 			if name == "" then
 				openOptions("kos")
 			elseif SPECIAL.ns.kos then
-				local ok, why = SPECIAL.ns.kos.addByName(name)
-				chat(ok and (name .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
+				local K = SPECIAL.ns.kos
+				-- The enemy player we have targeted, named (first name or full, any case): add them by ID
+				local guid, targetName = K.targetEnemy()
+				local typed = strlower(name)
+				if guid and (typed == strlower(targetName) or typed == strlower((strsplit(" ", targetName)))) then
+					if K.entry(guid) then
+						chat("Not added: " .. targetName .. " is already on your list.")
+					else
+						K.add(guid, targetName)
+						chat(targetName .. " is on your KOS list.")
+					end
+				else
+					local ok, why = K.addByName(name)
+					chat(ok and (name .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
+				end
 			end
 		elseif command == "news" or command == "notes" then
 			openOptions("news")

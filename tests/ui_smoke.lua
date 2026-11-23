@@ -302,6 +302,12 @@ step("KOS: an enemy target fills in Add, and is added by GUID; sighting sounds",
   local e = K.entry("Player-1-0777")
   assert(e and e.name == "Grim" and not e.unconfirmed, "the target wasn't added by GUID")
   K.remove("Player-1-0777")
+  -- /sks kos with the target's name (any case) adds them by GUID too
+  GetUnitName = function(u) return u == "target" and "Grim Reaper" or nil end
+  SlashCmdList.SPICYKILLSTREAKS("kos grim")
+  e = K.entry("Player-1-0777")
+  assert(e and not e.unconfirmed, "/sks kos <target> wasn't added by GUID")
+  K.remove("Player-1-0777")
   UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName = unpack(saved)
   -- sighting sounds: a kit by name, the raid warning when the client lacks it
   local kits, files = {}, {}
