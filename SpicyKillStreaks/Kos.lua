@@ -324,12 +324,17 @@ kos.SIGHT_SOUNDS = {
 	{ key = "readycheck", label = "Ready check", kit = "READY_CHECK" },
 	{ key = "queue", label = "PvP queue pop", kit = "PVP_THROUGH_QUEUE" },
 	{ key = "whisper", label = "Whisper", kit = "TELL_MESSAGE" },
+	{ key = "drum", label = "Alarm drum", file = 1487136 }, -- sound/doodad/fx_alarm_drum_hit_01.ogg
 }
 function kos.playSight(key, forced)
 	local special = core().special
 	if not forced and (not core().db().profile.dosound or special.soundMuted()) then return end
-	local kit
-	for _, s in ipairs(kos.SIGHT_SOUNDS) do if s.key == key then kit = s.kit end end
+	local kit, file
+	for _, s in ipairs(kos.SIGHT_SOUNDS) do if s.key == key then kit, file = s.kit, s.file end end
+	if file then
+		local ok, played = pcall(PlaySoundFile, file, core().db().profile.soundchannel or "Master")
+		if ok and played then return true end
+	end
 	local id = kit and type(SOUNDKIT) == "table" and SOUNDKIT[kit]
 	if type(id) == "number" then
 		local ok, played = pcall(PlaySound, id, core().db().profile.soundchannel or "Master")
