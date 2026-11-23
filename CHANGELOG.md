@@ -1,7 +1,10 @@
 # Changelog
 
-## v1.7.1
+## v1.8.0
 
+- **Share with friends:** a new **My friends** switch (Friends page, off by default) shares your kills and deaths with characters on your friends list and Battle.net friends playing on your realm (or a connected one) and faction, one hidden addon whisper each (at most 10). Their kills show with their own **Friends' kills** settings (chat, combat text, sounds, deaths), and Kudos and Request help work with friends too. Only whispers from actual friends are shown.
+- **Friends online** list on the Friends page: who's online, **Who runs it?** to see who has Spicy Kill Streaks (and whether they share), and per friend **Share with them** and **Show their kills**.
+- **Mute players:** `/sks mute <name>` hides anyone's shared kills and deaths (party, guild or friends); the Friends page lists them with Unmute buttons.
 - **Kill screenshots:** ganks now take one too when "Every kill" is on (they didn't), and every kill screenshot waits a moment so your callout and sparkles are in the picture.
 - Debug log: screenshots now write whether the call worked and whether the game reports the screenshot as taken or failed (for tracking down kill screenshots not being taken).
 

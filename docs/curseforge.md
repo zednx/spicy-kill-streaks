@@ -72,6 +72,7 @@ A brand new **settings window** with a live preview, a new **setup** (everyone s
 - **Guild board**: the month's top kill streaks and most deaths in your guild, shown at login and in the settings. Post it to guild or party chat to brag (or shame).
 - **Party and guild sync** (on by default, part of the fun): share your kills and deaths with friends who run the addon. For party members and guild members separately, choose whether their kills appear in chat, as combat text, with sound, and whether their deaths show too. At login it tells you how many guildmates are using it, and if one of them has a newer version, it tells you an update is out. Battlegrounds and arenas are just for you: nothing is shared from them, and they don't count on the guild board.
 - **Kudos**: when a friend running the addon gets a kill, or dies, send them an emoji: 😂 😃 👍 👎 🙏 ☠️ 💀 ❤️ 🎉. It pops up on their screen with a running count, or goes in party or guild chat if you prefer.
+- **Share with friends** (opt-in): your friends list and Battle.net friends on your realm and faction, with a per-friend list and a mute list.
 - **Request help** (world PvP): ganked? One click asks your party and guild for help, with who killed you and where. Friends get a card with **On my way** and a waypoint, and killing your killer earns them an **AVENGED!**
 - **Battleground summary**: at the end of a match, your killing blows and best kill streak, ready to brag about in battleground or guild chat (only if you click share).
 - **Duels**: wins count; losing or fleeing earns a *Humiliation*.

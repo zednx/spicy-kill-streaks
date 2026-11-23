@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.7.1"
+local VERSION = "1.8.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -147,6 +147,10 @@ local defaults = {
 			--   text: on-screen combat text       deaths: also show when they die
 			party = { feed = true, sound = true, text = true, deaths = false },
 			guild = { feed = true, sound = false, text = false, deaths = false },
+			-- Friends (Friends.lua): the friends list and Battle.net friends on our realm and faction.
+			-- Off by default: they see our kills and deaths even when we're not grouped.
+			sharefriends = false,
+			friends = { feed = true, sound = false, text = true, deaths = false },
 		},
 		-- Request aid (Aid.lua)
 		aid = {
@@ -1753,7 +1757,7 @@ end
 -- Send one line to the group and the guild, as far as the player opted in
 local function broadcast(message)
 	local cfg = syncConfig()
-	if not (cfg.shareparty or cfg.shareguild) then return end
+	if not (cfg.shareparty or cfg.shareguild or cfg.sharefriends) then return end
 	later(function()
 		if cfg.shareparty then
 			local channel = groupChannel()
@@ -1762,6 +1766,8 @@ local function broadcast(message)
 		if cfg.shareguild and inGuild() then
 			sendAddonMessage(message, "GUILD")
 		end
+		-- and friends we share with, one whisper each (Friends.lua)
+		if cfg.sharefriends and SPECIAL.ns.friends then SPECIAL.ns.friends.broadcast(message) end
 	end)
 end
 
@@ -1972,7 +1978,14 @@ end
 
 -- A kill, duel win, test or death from another user, shown by the settings for its source
 local function onFeedMessage(kind, sender, channel, fields)
-	local source = isGroupMember(sender, channel) and syncConfig().party or syncConfig().guild
+	-- Muted (Friends.lua): a friend whose kills we don't show, or anyone on the mute list
+	if SPECIAL.ns.friends and SPECIAL.ns.friends.isMuted(sender) then return end
+	local source
+	if channel == "WHISPER" then
+		source = syncConfig().friends
+	else
+		source = isGroupMember(sender, channel) and syncConfig().party or syncConfig().guild
+	end
 	local who = safeText(shortName(sender))
 	local name = safeText(fields[3])
 	if not who or not name then return end
@@ -2397,8 +2410,13 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" or kind == "X" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" or kind == "X" or kind == "F?" or kind == "F!" then
 		noticeVersion(sender, fields[2])
+	end
+	-- Friends asking (or answering) whether we run it (Friends.lua)
+	if kind == "F?" or kind == "F!" then
+		if SPECIAL.ns.friends then SPECIAL.ns.friends.receive(sender, channel, fields) end
+		return
 	end
 	-- A guildmate's guild board (see SPECIAL.readBoard)
 	if kind == "B" then
@@ -2426,7 +2444,9 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 	end
 	if kind == "K" or kind == "U" or kind == "T" or kind == "D" then
 		-- Kills and deaths travel by party/raid/instance or guild only
-		if channel ~= "WHISPER" then
+		-- Whispered: only from a friend (Friends.lua), and shown with the friends' settings
+		local fromFriend = channel == "WHISPER" and SPECIAL.ns.friends and SPECIAL.ns.friends.acceptsFeed(sender)
+		if channel ~= "WHISPER" or fromFriend then
 			-- Friends' sounds play a little quieter than our own
 			SPECIAL.quiet = true
 			local ok, err = pcall(onFeedMessage, kind, sender, channel, fields)
@@ -4276,6 +4296,16 @@ local function initialize()
 			db.global.minimap.hide = not db.global.minimap.hide
 			if SPECIAL.ns.ui and SPECIAL.ns.ui.updateMinimap then SPECIAL.ns.ui.updateMinimap() end
 			chat("Minimap button " .. (db.global.minimap.hide and "hidden" or "shown") .. ".")
+		elseif strmatch(command, "^mute%s") or strmatch(command, "^unmute%s") then
+			-- Mute or unmute a player's shared kills and deaths (Friends.lua). The name as typed
+			-- (the command line is lower-cased, so take it from the original text)
+			local on = strmatch(command, "^mute") ~= nil
+			local name = strtrim((strmatch(text, "^%s*%a+%s+(.+)$") or ""))
+			if SPECIAL.ns.friends and name ~= "" and SPECIAL.ns.friends.mute(name, on) then
+				chat((on and "Muted " or "Unmuted ") .. name .. ".")
+			else
+				chat("Usage: /sks mute <name>  or  /sks unmute <name>")
+			end
 		elseif command == "aid" then
 			-- Previews: our "Need help!" card and a friend's request
 			if SPECIAL.ns.aid then SPECIAL.ns.aid.previewOffer(); SPECIAL.ns.aid.previewRequest() end

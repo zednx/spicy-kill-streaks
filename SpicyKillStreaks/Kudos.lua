@@ -405,6 +405,7 @@ local lastChatPost = -CHAT_COOLDOWN
 -- The chat channel a friend's message came through, for a public post: party/raid/battleground
 -- as it is now, or the guild
 local function chatChannelFor(info)
+	if info.channel == "WHISPER" then return nil end -- a friend's kill: no public post
 	if info.channel == "GUILD" then return core().inGuild() and "GUILD" or nil end
 	return core().groupChannel()
 end
@@ -422,10 +423,14 @@ local function send(row, info, id)
 		elseif sync.shareparty then
 			channel = core().groupChannel()
 		end
-		if channel then
-			local race, sex = myRaceAndSex()
-			core().sendAddonMessage(table.concat({ "R", core().VERSION, info.guid, id, info.kind == "D" and "D" or "K",
-				faction or "-", race or "-", sex and tostring(sex) or "-", core().playerGUID() or "" }, "\t"), channel)
+		local race, sex = myRaceAndSex()
+		local message = table.concat({ "R", core().VERSION, info.guid, id, info.kind == "D" and "D" or "K",
+			faction or "-", race or "-", sex and tostring(sex) or "-", core().playerGUID() or "" }, "\t")
+		if info.channel == "WHISPER" then
+			-- a friend's kill: straight back to them (Friends.lua)
+			if ns.friends then ns.friends.reply(info.sender, message) end
+		elseif channel then
+			core().sendAddonMessage(message, channel)
 		end
 		-- A public line too, when switched on. This runs in the click itself: WoW Forever only lets
 		-- an addon post to chat from a click or key press.
@@ -488,6 +493,8 @@ function kudos.allyEvent(info)
 	local sync = core().db().profile.sync
 	if info.channel == "GUILD" then
 		if not sync.shareguild then return end
+	elseif info.channel == "WHISPER" then
+		if not sync.sharefriends then return end
 	elseif not sync.shareparty then
 		return
 	end

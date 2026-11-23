@@ -665,6 +665,92 @@ step("screenshots: every kill, ganks too, a moment later", function()
   Screenshot = old
   P.shotkill = false
 end)
+step("friends: who's online, sharing by whisper, receiving only from friends, mute, status", function()
+  local core, F, sp = ns.core, ns.friends, ns.core.special
+  local P = core.db().profile
+  local saved = { C_FriendList, C_BattleNet, BNGetNumFriends, GetNormalizedRealmName, WOW_PROJECT_ID, IsInInstance }
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  C_FriendList = {
+    GetNumFriends = function() return 3 end,
+    GetFriendInfoByIndex = function(i)
+      return ({ { name = "Alice", connected = true }, { name = "Offline", connected = false }, { name = "Bob", connected = true } })[i]
+    end,
+  }
+  GetNormalizedRealmName = function() return "MyRealm" end
+  WOW_PROJECT_ID = 99
+  BNGetNumFriends = function() return 3 end
+  C_BattleNet = { GetFriendAccountInfo = function(i)
+    local games = {
+      { isOnline = true, clientProgram = "WoW", wowProjectID = 99, characterName = "Carl", realmName = "MyRealm", factionName = "Horde" },
+      { isOnline = true, clientProgram = "WoW", wowProjectID = 99, characterName = "Dee", realmName = "MyRealm", factionName = "Alliance" },
+      { isOnline = true, clientProgram = "App", characterName = "Eve", realmName = "MyRealm", factionName = "Horde" },
+    }
+    return { gameAccountInfo = games[i] }
+  end }
+  F.forget()
+  local list = F.online()
+  local names = {}
+  for _, f in ipairs(list) do names[#names + 1] = f.name end
+  assert(table.concat(names, ",") == "Alice,Bob,Carl", "online friends: " .. table.concat(names, ","))
+  -- sharing: off by default, then one whisper per friend we share with
+  assert(core.defaults.profile.sync.sharefriends == false, "sharing with friends should be off by default")
+  local sent = {}
+  local old = C_ChatInfo.SendAddonMessage
+  C_ChatInfo.SendAddonMessage = function(_, msg, channel, target) sent[#sent + 1] = channel .. ":" .. tostring(target) .. ":" .. msg:sub(1, 1) return 0 end
+  P.sync.sharefriends, P.sync.shareparty, P.sync.shareguild = false, false, false
+  F.broadcast("K\tx"); assert(#sent == 0, "sent with sharing off")
+  P.sync.sharefriends = true
+  F.setPref("Bob", "share", false)
+  F.broadcast("K\tx")
+  assert(#sent == 2 and sent[1] == "WHISPER:Alice:K" and sent[2] == "WHISPER:Carl:K", table.concat(sent, " "))
+  F.setPref("Bob", "share", true)
+  assert(F.pref("Bob").share, "share not back on")
+  -- a whispered kill: shown from a friend, ignored from a stranger, ignored when muted
+  P.sync.friends.feed = true
+  local lines = {}
+  local oldPrint = print
+  print = function(...) lines[#lines + 1] = table.concat({ ... }, " ") end
+  local kill = function(victim, from) fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "K", core.VERSION, victim, "1", "0", "0", "60", "60", "-", "Player-1-0042" }, "\t"), "WHISPER", from) end
+  kill("Target1", "Alice")
+  local shown = table.concat(lines, "\n")
+  assert(shown:find("Target1"), "a friend's whispered kill wasn't shown")
+  lines = {}
+  kill("Target2", "Stranger")
+  assert(not table.concat(lines, "\n"):find("Target2"), "a stranger's whispered kill was shown")
+  F.mute("Alice", true); lines = {}
+  kill("Target3", "Alice")
+  assert(not table.concat(lines, "\n"):find("Target3"), "a muted friend's kill was shown")
+  SlashCmdList.SPICYKILLSTREAKS("unmute Alice"); assert(not F.isMuted("Alice"), "unmute didn't work")
+  SlashCmdList.SPICYKILLSTREAKS("mute Guildie Name"); assert(F.isMuted("Guildie Name"), "mute by slash didn't work")
+  F.mute("Guildie Name", false)
+  print = oldPrint
+  -- status: we ask, a friend answers, and we answer their question
+  sent = {}
+  assert(F.check() == 3, "didn't ask every online friend")
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F!", "1.8.0", "1", "Player-1-0043" }, "\t"), "WHISPER", "Alice")
+  assert(F.status.alice and F.status.alice.version == "1.8.0" and F.status.alice.sharing, "status not saved")
+  sent = {}
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "F?", "1.8.0", "0", "Player-1-0044" }, "\t"), "WHISPER", "Bob")
+  assert(sent[1] == "WHISPER:Bob:F", "didn't answer a friend's question: " .. tostring(sent[1]))
+  -- a Kudos reaction to a friend's kill goes back to them by whisper
+  local kudos = ns.kudos
+  kudos.clear(); P.kudos.give = true
+  kudos.allyEvent({ kind = "K", sender = "Alice", channel = "WHISPER", who = "Alice", other = "Foe", rank = 0, multi = 0,
+    streak = 1, guid = "Player-1-0042" })
+  assert(#kudos.rows == 1, "no Kudos card for a friend's kill")
+  sent = {}
+  kudos.rows[1].buttons[1].__scripts.OnClick(kudos.rows[1].buttons[1])
+  assert(sent[1] == "WHISPER:Alice:R", "kudos not whispered back: " .. tostring(sent[1]))
+  kudos.clear()
+  -- the Friends page with the list and the mute card
+  ns.ui.open(); ns.ui.show("friends", true)
+  C_ChatInfo.SendAddonMessage = old
+  C_FriendList, C_BattleNet, BNGetNumFriends, GetNormalizedRealmName, WOW_PROJECT_ID, IsInInstance = unpack(saved)
+  P.sync.sharefriends, P.sync.shareparty, P.sync.shareguild = false, true, true
+  F.forget()
+  runTimers(); runTimers()
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

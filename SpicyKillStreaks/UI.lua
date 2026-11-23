@@ -711,17 +711,20 @@ sections[#sections + 1] = { id = "screen", label = "Screen", hint = "Text, effec
 	return cards
 end }
 
-sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and guild sharing", build = function()
+sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party, guild and friends", build = function()
 	local cards = {}
 	local c = newCard("Share my kills and deaths with")
 	c:add(synctoggle({ "shareparty" }, "My party", "Also raids, battlegrounds and arenas"), 0.5)
 	c:add(synctoggle({ "shareguild" }, "My guild", "And join this month's guild board"), 0.5)
-	c:add(para("Only players running Spicy Kill Streaks see anything. Switch both off to share nothing. "
+	c:add(synctoggle({ "sharefriends" }, "My friends",
+		"Friends list, and Battle.net friends on your realm and faction (one whisper each)"), 1)
+	c:add(para("Only players running Spicy Kill Streaks see anything. Switch them all off to share nothing. "
 		.. "Battlegrounds and arenas are just for you: nothing is shared from them (Kudos included), "
 		.. "and they don't count on the guild board.", 12, COLORS.muted), 1)
 	cards[#cards + 1] = c
 
-	for _, who in ipairs({ { "party", "Party members' kills" }, { "guild", "Guild members' kills" } }) do
+	for _, who in ipairs({ { "party", "Party members' kills" }, { "guild", "Guild members' kills" },
+		{ "friends", "Friends' kills" } }) do
 		c = newCard(who[2])
 		c:add(synctoggle({ who[1], "feed" }, "Chat feed", nil), 0.25)
 		c:add(synctoggle({ who[1], "text" }, "Combat text", nil), 0.25)
@@ -751,8 +754,56 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party and
 	c:add(button("Send a test kill", function() core().sendTestSync() end), 0.3)
 	c:add(button("Who runs it?", function() core().versionCheck() end), 0.3)
 	cards[#cards + 1] = c
+
+	-- Online friends: who runs it, and per friend "Share with them" / "Show their kills"
+	local F = ns.friends
+	if F then
+		c = newCard("Friends online")
+		local list = F.online()
+		if #list == 0 then
+			c:add(para("No friends online on your realm and faction right now.", 12, COLORS.muted), 1)
+		else
+			c:add(para("Ask who runs Spicy Kill Streaks to fill in the status. Switch a friend off to stop sharing "
+				.. "with them, or to stop showing their kills.", 12, COLORS.muted), 0.7)
+			c:add(button("Who runs it?", function()
+				local asked = F.check()
+				core().chat("Asked " .. asked .. " online friend" .. (asked == 1 and "" or "s") .. " whether they run it.")
+				C_Timer.After(3, function() ui.show("friends", true) end)
+			end), 0.3)
+			for _, f in ipairs(list) do
+				local st = F.status[(strsplit("-", f.key))]
+				local status = st and ("|cff5aff7aSKS " .. (st.version or "?") .. "|r" .. (st.sharing and " · sharing" or " · not sharing"))
+					or "|cff9a8f86not checked / no SKS|r"
+				c:add(para(f.label .. (f.bnet and " |cff9a8f86(Battle.net)|r" or "") .. "\n" .. status, 12), 0.4)
+				c:add(toggle("Share with them", nil, function() return F.pref(f.name).share end,
+					function(v) F.setPref(f.name, "share", v) end), 0.3)
+				c:add(toggle("Show their kills", nil, function() return F.pref(f.name).show end,
+					function(v) F.setPref(f.name, "show", v) end), 0.3)
+			end
+		end
+		cards[#cards + 1] = c
+
+		c = newCard("Muted players")
+		local names = {}
+		for key, name in pairs(F.mutedList()) do names[#names + 1] = { key = key, name = type(name) == "string" and name or key } end
+		table.sort(names, function(a, b) return a.key < b.key end)
+		c:add(para("Their kills and deaths aren't shown, whoever they share with (party, guild or friends). "
+			.. "Mute someone with /sks mute <name>.", 12, COLORS.muted), 1)
+		if #names == 0 then
+			c:add(para("Nobody muted.", 12, COLORS.muted), 1)
+		end
+		for _, m in ipairs(names) do
+			c:add(para(m.name, 13), 0.7)
+			c:add(button("Unmute", function() F.mute(m.key, false) ui.show("friends", true) end), 0.3)
+		end
+		cards[#cards + 1] = c
+		F.onStatus = function()
+			local win = _G.SpicyKillStreaksWindow
+			if ui.current == "friends" and win and win:IsShown() then ui.show("friends", true) end
+		end
+	end
 	return cards
-end }
+end, dynamic = true }
 
 sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to friends' kills", build = function()
 	local cards = {}
@@ -1018,6 +1069,7 @@ end
 -- rebuild: build the page again (its numbers changed)
 function ui.show(id, rebuild)
 	current = id
+	ui.current = id
 	closePopup()
 	for _, b in ipairs(navButtons) do styleNav(b, b.id == id) end
 	for _, page in pairs(pages) do page:Hide() end

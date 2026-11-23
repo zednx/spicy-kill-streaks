@@ -6,7 +6,7 @@ A WoW Forever addon (interface 16001): announcer sounds, combat text and effects
 
 | Path | What |
 |---|---|
-| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (our own flat controls), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `Kudos.lua` is the Kudos popup (reactions to friends' kills and deaths, the `R` addon message), hooked in through `SPECIAL.ownEvent` / `SPECIAL.allyEvent` and `ns.kudos.receive`; `Aid.lua` is Request help (the `A`, `W` and `X` addon messages, AVENGED), using the Kudos card stack (`ns.kudos.cards`); `libs/` is Ace3 (unchanged). |
+| `SpicyKillStreaks/` | The addon. Only this folder ships. `SpicyKillStreaks.lua` is the addon's logic; `UI.lua` is the settings window, setup and minimap button (our own flat controls), talking to the logic through `ns.core` (built at the bottom of `SpicyKillStreaks.lua`); `Kudos.lua` is the Kudos popup (reactions to friends' kills and deaths, the `R` addon message), hooked in through `SPECIAL.ownEvent` / `SPECIAL.allyEvent` and `ns.kudos.receive`; `Aid.lua` is Request help (the `A`, `W` and `X` addon messages, AVENGED), using the Kudos card stack (`ns.kudos.cards`); `Friends.lua` is sharing with friends (addon whispers to the friends list and Battle.net friends on our realm and faction, the `F?`/`F!` status question, per-friend prefs and the mute list); `libs/` is Ace3 (unchanged). |
 | `tests/ui_smoke.lua` | Headless smoke test: fake WoW API, the real addon and Ace3, drives every settings page, the setup and the minimap button. `lua5.1 tests/ui_smoke.lua SpicyKillStreaks` (CI runs it). |
 | `SpicyKillStreaks/sounds/` | Voice packs (`male` = the folder itself, `female/`, `sexy/`, `baby/`, `flamboyant/`), the default Humiliation (`humiliation/`), `custom/` for players' own files (ships with only a README), and `quiet/`: 75% copies of all of them for friends' kills and deaths. **After adding or changing a sound, run `tools/make_quiet.sh`** (CI checks every sound has its quiet copy). |
 | `scripts/` | `check-release.sh`, `curseforge-upload.sh`. |
@@ -29,7 +29,7 @@ The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp
 
 - **Secret values:** never compare or do arithmetic on a value that may be secret; check `isSecret` first.
 - **Untrusted input:** everything from `CHAT_MSG_ADDON` goes through `safeText` / range checks before it is shown.
-- **Sharing:** `shareparty` / `shareguild` are on by default (since 0.2.0; the setup's "Better with friends" screen says so, and 0.1.x users see that screen once). Nothing is sent while they are off; don't add sends that bypass them.
+- **Sharing:** `shareparty` / `shareguild` are on by default (since 0.2.0; the setup's "Better with friends" screen says so, and 0.1.x users see that screen once). `sharefriends` (whispers to friends) is **off** by default. Nothing is sent while they are off; don't add sends that bypass them. Whispered messages are only accepted from friends (`ns.friends.acceptsFeed`).
 - **No personal details** (character names, account names) in code, comments or commits. One exception the user chose: the author credit **Spicy Bubbletea** (their public in-game name) in the About section and docs.
 - The GitHub owner is **zednx** (repo: `zednx/spicy-kill-streaks`).
 - Pin GitHub Actions to commit SHAs.

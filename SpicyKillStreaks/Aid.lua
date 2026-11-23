@@ -95,6 +95,29 @@ local function shareChannels()
 	return list
 end
 
+-- Anyone to ask: the group, the guild, or online friends we share with (Friends.lua)
+local function anyoneToAsk()
+	if #shareChannels() > 0 then return true end
+	local f = ns.friends
+	return f and core().db().profile.sync.sharefriends and #f.online() > 0 or false
+end
+
+-- Send back to whoever a request came from: their channel, or a whisper for a friend
+local function replyTo(req, message)
+	if req.channel == "WHISPER" then
+		if ns.friends then ns.friends.reply(req.sender, message) end
+		return
+	end
+	local sync = core().db().profile.sync
+	local channel
+	if req.channel == "GUILD" then
+		if sync.shareguild and core().inGuild() then channel = "GUILD" end
+	elseif sync.shareparty then
+		channel = core().groupChannel()
+	end
+	if channel then core().sendAddonMessage(message, channel) end
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Asking for help
 -- ---------------------------------------------------------------------------------------------
@@ -114,6 +137,7 @@ local function sendRequest(row, info)
 			field(sub), mapID and tostring(mapID) or "-", x and string.format("%.4f", x) or "-",
 			y and string.format("%.4f", y) or "-", core().playerGUID() or "" }, "\t")
 		for _, channel in ipairs(shareChannels()) do core().sendAddonMessage(message, channel) end
+		if ns.friends then ns.friends.broadcast(message) end
 		-- A public line too, when switched on (from the click itself, as WoW Forever requires)
 		if cfg().chat and now - lastChat >= CHAT_COOLDOWN then
 			local channel = core().groupChannel() or (core().inGuild() and "GUILD" or nil)
@@ -145,7 +169,7 @@ function aid.offer(info)
 	if not cfg().enabled or not cards() then return end
 	if not info.preview then
 		if core().inPvP() then return end -- nothing can be sent from battlegrounds or arenas
-		if #shareChannels() == 0 then return end -- nobody to ask
+		if not anyoneToAsk() then return end
 	end
 	local c = cards()
 	local row = withSubLine(c.newRow(80, "aid"))
@@ -178,9 +202,7 @@ local function sendOnMyWay(row, req)
 	if row.answered then return end
 	row.answered = true
 	if not req.preview and req.guid then
-		local message = table.concat({ "W", core().VERSION, req.guid, core().playerGUID() or "" }, "\t")
-		local channel = req.channel == "GUILD" and "GUILD" or core().groupChannel()
-		if channel then core().sendAddonMessage(message, channel) end
+		replyTo(req, table.concat({ "W", core().VERSION, req.guid, core().playerGUID() or "" }, "\t"))
 	end
 	if row.onMyWay then row.onMyWay:Hide() end
 	row.label:SetText("|cff9a8f86On your way to|r " .. req.who .. (req.preview and " |cff9a8f86(preview)|r" or ""))
@@ -209,6 +231,8 @@ end
 
 function aid.receive(sender, channel, fields)
 	if not cfg().receive or not cards() or #fields < 10 then return end
+	-- whispered: only from a friend, and not a muted one (Friends.lua)
+	if channel == "WHISPER" and not (ns.friends and ns.friends.acceptsFeed(sender)) then return end
 	local safe = core().safeText
 	local who = safe(core().shortName(sender))
 	local killer = safe(fields[3])
@@ -227,9 +251,9 @@ function aid.receive(sender, channel, fields)
 	local guid = fields[10]
 	if type(guid) ~= "string" or not guid:match("^Player%-[%w%-]+$") or #guid > 40 then guid = nil end
 	local req = { who = who, killer = killer, level = level, zone = safe(fields[5]) or "", sub = safe(fields[6]) or "",
-		mapID = mapID, x = x, y = y, guid = guid, channel = channel }
+		mapID = mapID, x = x, y = y, guid = guid, channel = channel, sender = sender }
 	local key = firstName(killer)
-	if key then requests[key] = { who = who, at = now, guid = guid, channel = channel } end
+	if key then requests[key] = { who = who, at = now, guid = guid, channel = channel, sender = sender } end
 	showRequest(req)
 end
 
@@ -266,16 +290,7 @@ end
 function aid.notifyAvenged(req, victim)
 	core().chat("You avenged " .. req.who .. ": " .. victim .. " is down.")
 	if not req.guid or core().inPvP() then return end
-	local sync = core().db().profile.sync
-	local channel
-	if req.channel == "GUILD" then
-		if sync.shareguild and core().inGuild() then channel = "GUILD" end
-	elseif sync.shareparty then
-		channel = core().groupChannel()
-	end
-	if channel then
-		core().sendAddonMessage(table.concat({ "X", core().VERSION, req.guid, field(victim), core().playerGUID() or "" }, "\t"), channel)
-	end
+	replyTo(req, table.concat({ "X", core().VERSION, req.guid, field(victim), core().playerGUID() or "" }, "\t"))
 end
 
 -- Shown once per killer: the friend's notice and their kill in the feed may both arrive
