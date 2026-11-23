@@ -887,6 +887,25 @@ step("KOS list: offer, nemesis, payback, typed name confirmed on sight, sighting
   kudos.clear()
   runTimers(); runTimers()
 end)
+step("muting covers kudos and help requests too, and the guild board has Mute buttons", function()
+  local core, F, kudos, sp = ns.core, ns.friends, ns.kudos, ns.core.special
+  local P = core.db().profile
+  P.kudos.receive, P.aid.receive = true, true
+  kudos.clear()
+  F.mute("Noisy", true)
+  sp.ownEvent("K", "r2")
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "R", "1.9.0", "Player-1-0001", "party", "K", "H", "Orc", "2", "Player-1-0070" }, "\t"), "GUILD", "Noisy-Realm")
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "A", "1.9.0", "Foe", "60", "Barrens", "", "-", "-", "-", "Player-1-0070" }, "\t"), "GUILD", "Noisy-Realm")
+  assert(#kudos.rows == 0, "a muted player's kudos or help request was shown")
+  F.mute("Noisy", false)
+  -- the board's Mute button
+  sp.boardNote("Pal", 4, 10, 2)
+  ns.ui.open("board"); ns.ui.show("board", true)
+  local muteButton
+  for _, f in ipairs(ALLFRAMES) do if f.text and f.text.__text == "Mute" and f.__scripts.OnClick then muteButton = f end end
+  assert(muteButton, "no Mute button on the guild board")
+  kudos.clear()
+end)
 step("debug log window", function() ns.core.debugLog.setEnabled(true); ns.core.debugLog.add("hello"); ns.core.debugLog.setEnabled(false) end)
 step("/sks minimap hides", function() ns.core.db().global.minimap.hide = false; SlashCmdList.SPICYKILLSTREAKS("minimap"); assert(ns.core.db().global.minimap.hide) end)
 for _, e in ipairs(errors) do io.write("handler error: " .. e, "\n"); failed = true end

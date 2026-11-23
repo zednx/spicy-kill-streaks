@@ -231,6 +231,7 @@ end
 
 function aid.receive(sender, channel, fields)
 	if not cfg().receive or not cards() or #fields < 10 then return end
+	if ns.friends and ns.friends.isMuted(sender) then return end -- muted: nothing from them (Friends.lua)
 	-- whispered: only from a friend, and not a muted one (Friends.lua)
 	if channel == "WHISPER" and not (ns.friends and ns.friends.acceptsFeed(sender)) then return end
 	local safe = core().safeText
@@ -260,6 +261,7 @@ end
 -- "On my way" from a friend, for our request
 function aid.receiveOnMyWay(sender, channel, fields)
 	if #fields < 4 or not cards() then return end
+	if ns.friends and ns.friends.isMuted(sender) then return end -- muted: nothing from them (Friends.lua)
 	local me = core().playerGUID()
 	if not me or fields[3] ~= me then return end
 	if not requestedAt or GetTime() - requestedAt > ANSWER_FOR then return end
@@ -317,6 +319,7 @@ end
 -- "X": a friend avenged us
 function aid.receiveAvenged(sender, channel, fields)
 	if #fields < 5 then return end
+	if ns.friends and ns.friends.isMuted(sender) then return end -- muted: nothing from them (Friends.lua)
 	local me = core().playerGUID()
 	if not me or fields[3] ~= me then return end
 	local who = core().safeText(core().shortName(sender))

@@ -527,6 +527,7 @@ end
 
 function kudos.receive(sender, channel, fields)
 	if not cfg().receive then return end
+	if ns.friends and ns.friends.isMuted(sender) then return end -- muted: nothing from them (Friends.lua)
 	if #fields < 7 then return end
 	local me = core().playerGUID()
 	if not me or fields[3] ~= me then return end -- for someone else

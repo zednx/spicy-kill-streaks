@@ -2,6 +2,7 @@
 
 ## v1.9.0
 
+- **Muting is easier and covers everything:** a **Mute** button next to each player on the Guild board (and **Unmute**), and a muted player's Kudos and help requests are hidden too, not just their kills and deaths. The Friends page says how to mute.
 - **Friends who are also guildmates** aren't whispered any more while you share with the guild (they get everything through the guild), and the "do you run it?" questions to friends go out one every 2 seconds instead of all at once at login (a burst of whispers could make the server hold back the addon's messages for a while).
 - **KOS list:** your kill-on-sight list, on its own **KOS list** page.
   - After a player kills you for the second time, a card offers **Add to KOS**.

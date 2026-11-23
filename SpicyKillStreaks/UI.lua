@@ -785,8 +785,9 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party, gu
 		local names = {}
 		for key, name in pairs(F.mutedList()) do names[#names + 1] = { key = key, name = type(name) == "string" and name or key } end
 		table.sort(names, function(a, b) return a.key < b.key end)
-		c:add(para("Their kills and deaths aren't shown, whoever they share with (party, guild or friends). "
-			.. "Mute someone with /sks mute <name>.", 12, COLORS.muted), 1)
+		c:add(para("Muted players' kills, deaths, kudos and help requests aren't shown.\n"
+			.. "To mute someone: press |cffffd100Mute|r next to them on the Guild board, or type |cffffd100/sks mute name|r.",
+			12, COLORS.muted), 1)
 		if #names == 0 then
 			c:add(para("Nobody muted.", 12, COLORS.muted), 1)
 		end
@@ -924,16 +925,27 @@ sections[#sections + 1] = { id = "board", label = "Guild board", hint = "This mo
 		c:add(para("Nobody has a kill streak this month yet. Get out there!", 14), 1)
 	else
 		local head = function(str) return para("|cffa89c90" .. str .. "|r", 11) end
-		c:add(head("PLAYER"), 0.46)
-		c:add(head("BEST STREAK"), 0.18)
-		c:add(head("KILLS"), 0.18)
-		c:add(head("DEATHS"), 0.18)
+		local F = ns.friends
+		c:add(head("PLAYER"), 0.38)
+		c:add(head("BEST STREAK"), 0.16)
+		c:add(head("KILLS"), 0.14)
+		c:add(head("DEATHS"), 0.14)
+		c:add(head(""), 0.18)
 		for i, entry in ipairs(list) do
 			local medal = (i == 1 and "ffd100") or (i == 2 and "c0c0c0") or (i == 3 and "cd7f32") or "ffffff"
-			c:add(para("|cff" .. medal .. i .. ".|r   " .. entry.name, 14), 0.46)
-			c:add(para("|cff57e3ff" .. entry.best .. "|r", 14), 0.18)
-			c:add(para(tostring(entry.kills), 14), 0.18)
-			c:add(para(tostring(entry.deaths or 0), 14), 0.18)
+			local muted = F and F.isMuted(entry.name)
+			c:add(para("|cff" .. medal .. i .. ".|r   " .. entry.name .. (muted and " |cff9a8f86(muted)|r" or ""), 14), 0.38)
+			c:add(para("|cff57e3ff" .. entry.best .. "|r", 14), 0.16)
+			c:add(para(tostring(entry.kills), 14), 0.14)
+			c:add(para(tostring(entry.deaths or 0), 14), 0.14)
+			if F and not S().isMe(entry.name) then
+				c:add(button(muted and "Unmute" or "Mute", function()
+					F.mute(entry.name, not muted)
+					ui.show("board", true)
+				end), 0.18)
+			else
+				c:add(gap(1), 0.18)
+			end
 		end
 	end
 	local deaths = S().topDeaths(3)
