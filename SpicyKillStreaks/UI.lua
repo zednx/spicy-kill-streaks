@@ -1094,8 +1094,8 @@ sections[#sections + 1] = { id = "about", label = "About", hint = "Who made it, 
 	return cards
 end }
 
--- Patch notes (PatchNotes.lua): not in the list on the left; the header's "Patch notes" link
--- opens it. Each version is a card that opens and closes; the newest starts open.
+-- Patch notes (PatchNotes.lua): at the bottom of the list on the left. Each version is a card
+-- that opens and closes; the newest starts open.
 local notesOpen = {}
 local function noteHeader(v, open)
 	local b = CreateFrame("Button", nil, UIParent)
@@ -1120,7 +1120,7 @@ local function noteHeader(v, open)
 	return { frame = b, height = 26 }
 end
 
-sections[#sections + 1] = { id = "news", label = "Patch notes", hint = "What changed", hidden = true, dynamic = true, build = function()
+sections[#sections + 1] = { id = "news", label = "Patch notes", hint = "What changed", bottom = true, dynamic = true, build = function()
 	local cards = {}
 	local c = newCard("Patch notes")
 	c:add(para("What changed in each version. Click a version to open or close it.", 13, COLORS.muted), 1)
@@ -1230,11 +1230,11 @@ end
 local function buildWindow()
 	local saved = db().global.window
 	win = CreateFrame("Frame", "SpicyKillStreaksWindow", UIParent, "BackdropTemplate")
-	win:SetSize(saved.width or WIN_W, saved.height or WIN_H)
+	win:SetSize(saved.width or WIN_W, math.max(680, saved.height or WIN_H)) -- (older versions allowed 560)
 	win:SetScale(WIN_SCALE)
 	win:SetResizable(true)
-	if win.SetResizeBounds then win:SetResizeBounds(780, 560, 1600, 1200)
-	elseif win.SetMinResize then win:SetMinResize(780, 560) end
+	if win.SetResizeBounds then win:SetResizeBounds(780, 680, 1600, 1200)
+	elseif win.SetMinResize then win:SetMinResize(780, 680) end
 	if saved.point then win:SetPoint(saved.point, UIParent, saved.point, saved.x or 0, saved.y or 0) else win:SetPoint("CENTER") end
 	win:SetFrameStrata("HIGH")
 	win:SetToplevel(true)
@@ -1274,17 +1274,6 @@ local function buildWindow()
 	local version = text(win, 12, COLORS.muted)
 	version:SetPoint("BOTTOMLEFT", name, "BOTTOMRIGHT", 10, 4)
 	version:SetText("v" .. core().VERSION)
-	-- "Patch notes" next to the version, like a link
-	local notes = CreateFrame("Button", nil, win)
-	notes.label = text(notes, 12, COLORS.gold)
-	notes.label:SetPoint("LEFT")
-	notes.label:SetText("·  Patch notes")
-	notes:SetSize(90, 16)
-	notes:SetPoint("LEFT", version, "RIGHT", 6, 0)
-	notes:SetScript("OnEnter", function() notes.label:SetTextColor(1, 1, 1) end)
-	notes:SetScript("OnLeave", function() notes.label:SetTextColor(COLORS.gold[1], COLORS.gold[2], COLORS.gold[3]) end)
-	notes:SetScript("OnClick", function() ui.show("news") end)
-	win.notesLink = notes
 
 	local close = makeClose(win, function() win:Hide() end)
 	close:SetPoint("TOPRIGHT", -8, -14)
@@ -1303,36 +1292,48 @@ local function buildWindow()
 	nav:SetBackdrop({ bgFile = WHITE })
 	nav:SetBackdropColor(0.07, 0.058, 0.048, 1)
 	navButtons = {}
-	local i = 0
+	local function navButton(s)
+		local b = CreateFrame("Button", nil, nav)
+		b:SetSize(NAV_W - 16, 46)
+		b.bg = b:CreateTexture(nil, "BACKGROUND")
+		b.bg:SetAllPoints()
+		b.bar = b:CreateTexture(nil, "ARTWORK")
+		b.bar:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 1)
+		b.bar:SetPoint("TOPLEFT")
+		b.bar:SetPoint("BOTTOMLEFT")
+		b.bar:SetWidth(3)
+		local hl = b:CreateTexture(nil, "HIGHLIGHT")
+		hl:SetAllPoints()
+		hl:SetColorTexture(1, 1, 1, 0.04)
+		b.name = text(b, 14)
+		b.name:SetPoint("TOPLEFT", 14, -8)
+		b.name:SetText(s.label)
+		local hint = text(b, 11, COLORS.muted)
+		hint:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -4)
+		hint:SetText(s.hint)
+		b.id = s.id
+		b:SetScript("OnClick", function() ui.show(s.id) end)
+		navButtons[#navButtons + 1] = b
+		return b
+	end
+	-- The pages from the top; the "bottom" ones (Patch notes) pinned to the bottom
+	local i, bottom = 0, nil
 	for _, s in ipairs(sections) do
-		if not s.hidden then
+		local b = navButton(s)
+		if s.bottom then
+			b:SetPoint("BOTTOMLEFT", 8, 12)
+			bottom = b
+		else
 			i = i + 1
-			local b = CreateFrame("Button", nil, nav)
-			b:SetSize(NAV_W - 16, 46)
 			b:SetPoint("TOPLEFT", 8, -12 - (i - 1) * 50)
-			b.bg = b:CreateTexture(nil, "BACKGROUND")
-			b.bg:SetAllPoints()
-			b.bar = b:CreateTexture(nil, "ARTWORK")
-			b.bar:SetColorTexture(COLORS.accent[1], COLORS.accent[2], COLORS.accent[3], 1)
-			b.bar:SetPoint("TOPLEFT")
-			b.bar:SetPoint("BOTTOMLEFT")
-			b.bar:SetWidth(3)
-			local hl = b:CreateTexture(nil, "HIGHLIGHT")
-			hl:SetAllPoints()
-			hl:SetColorTexture(1, 1, 1, 0.04)
-			b.name = text(b, 14)
-			b.name:SetPoint("TOPLEFT", 14, -8)
-			b.name:SetText(s.label)
-			local hint = text(b, 11, COLORS.muted)
-			hint:SetPoint("TOPLEFT", b.name, "BOTTOMLEFT", 0, -4)
-			hint:SetText(s.hint)
-			b.id = s.id
-			b:SetScript("OnClick", function() ui.show(s.id) end)
-			navButtons[#navButtons + 1] = b
 		end
 	end
 	win.snoozeText = text(nav, 12, COLORS.gold)
-	win.snoozeText:SetPoint("BOTTOMLEFT", 16, 16)
+	if bottom then
+		win.snoozeText:SetPoint("BOTTOMLEFT", bottom, "TOPLEFT", 8, 10)
+	else
+		win.snoozeText:SetPoint("BOTTOMLEFT", 16, 16)
+	end
 	win.snoozeText:SetWidth(NAV_W - 32)
 
 	buildPreview(win)
