@@ -1,6 +1,6 @@
 -- Spicy Kill Streaks: Kudos. When a party or guild member running the addon gets a kill or dies,
--- a small popup offers a reaction: one of nine emoji (laughing, smiling, thumbs up, thumbs down, praying
--- hands, skull and crossbones, skull, heart, party popper), the same for kills and deaths. The reaction travels as a hidden addon message on the channel the kill came
+-- a small popup offers a reaction: one of ten emoji (laughing, smiling, thumbs up, thumbs down, praying
+-- hands, crying, clapping, skull, heart, party popper), the same for kills and deaths. The reaction travels as a hidden addon message on the channel the kill came
 -- from, addressed to that player's GUID, so only they show it (on their own kudos popup).
 -- Optionally it is also posted as a normal chat line, which everyone sees.
 --
@@ -22,7 +22,7 @@ local GOT_FOR = 6          -- seconds a kudos we got stays on screen
 local ACCEPT_FOR = 180      -- kudos are accepted this long after our own kill or death (a friend may react after a fight)
 local CHAT_COOLDOWN = 15   -- seconds between reaction posts in chat
 local MAX_ROWS = 3       -- cards on screen at once (the oldest goes)
-local ROW_W = 220        -- the default card width: the nine emoji go in two rows (5 + 4)
+local ROW_W = 220        -- the default card width: the ten emoji go in two rows (5 + 5)
 local ROW_W_MIN, ROW_W_MAX = 180, 380
 local CHIPS_PER_LINE = 5
 local PAD = 12          -- inside the card
@@ -61,12 +61,14 @@ local REACTIONS = {
 	thumbsup = { chat = "Thumbs up!" },
 	thumbsdown = { chat = "Thumbs down!" },
 	pray = { chat = "Respect!" },       -- folded hands
-	crossbones = { chat = "RIP" },      -- skull and crossbones
+	crossbones = { chat = "RIP" },      -- skull and crossbones (1.3 - 1.9: still shown when one arrives)
+	cry = { chat = "Noooo!" },          -- loudly crying face
+	clap = { chat = "Well played!" },   -- clapping hands
 	skull = { chat = "{skull}" },
 	heart = { chat = "<3" },
 	party = { chat = "GG!" },           -- party popper
 }
-local ORDER = { "laugh", "smile", "thumbsup", "thumbsdown", "pray", "crossbones", "skull", "heart", "party" }
+local ORDER = { "laugh", "smile", "thumbsup", "thumbsdown", "clap", "pray", "cry", "skull", "heart", "party" }
 -- Text reactions from 1.1.x and 1.2.x, still shown when an older version sends one
 local LEGACY = { zug = "Zug zug!", hell = "Hell yeah!", thumbs = "Thumbs up!", rip = "RIP", f = "F" }
 local FACTION_TEXT = { H = "For the Horde!", A = "For the Alliance!" }

@@ -262,7 +262,7 @@ step("kudos: offer, send, chat post, receive", function()
   assert(#kudos.rows == 1, "no kudos row for a friend's kill")
   local row = kudos.rows[1]
   assert(row.label:GetText():find("Rampage"), row.label:GetText())
-  assert(#row.buttons == 9, "expected 9 emoji, got " .. #row.buttons)
+  assert(#row.buttons == 10, "expected 10 emoji, got " .. #row.buttons)
   row.buttons[1].__scripts.OnClick(row.buttons[1])
   assert(#addon == 1 and addon[1] == "GUILD: R\t" .. core.VERSION .. "\t" .. bob .. "\tlaugh\tK\tH\tOrc\t2\tPlayer-1-0001", addon[1])
   assert(#said == 1 and said[1] == "GUILD: LOL! (to Bob for Rampage)", said[1])
@@ -271,8 +271,8 @@ step("kudos: offer, send, chat post, receive", function()
   -- a friend's death: RIP and F
   fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "D", "1.0.1", "Orcbro", "0", "60", "60", "-", bob }, "\t"), "GUILD", "Bob-Realm")
   local drow = kudos.rows[#kudos.rows]
-  assert(#drow.buttons == 9 and drow.label:GetText():find("killed by Orcbro"), drow.label:GetText())
-  drow.buttons[7].__scripts.OnClick(drow.buttons[7])
+  assert(#drow.buttons == 10 and drow.label:GetText():find("killed by Orcbro"), drow.label:GetText())
+  drow.buttons[8].__scripts.OnClick(drow.buttons[8])
   assert(addon[2]:find("\tskull\tD\t"), addon[2])
   assert(#said == 1, "chat cooldown ignored")
   -- getting kudos: only for something we just did, once per player, only when meant for us
