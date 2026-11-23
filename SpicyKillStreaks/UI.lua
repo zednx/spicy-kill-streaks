@@ -717,7 +717,7 @@ sections[#sections + 1] = { id = "friends", label = "Friends", hint = "Party, gu
 	c:add(synctoggle({ "shareparty" }, "My party", "Also raids, battlegrounds and arenas"), 0.5)
 	c:add(synctoggle({ "shareguild" }, "My guild", "And join this month's guild board"), 0.5)
 	c:add(synctoggle({ "sharefriends" }, "My friends",
-		"Friends list, and Battle.net friends on your realm and faction (one whisper each)"), 1)
+		"Friends list, and Battle.net friends on your realm and faction"), 1)
 	c:add(para("Only players running Spicy Kill Streaks see anything. Switch them all off to share nothing. "
 		.. "Battlegrounds and arenas are just for you: nothing is shared from them (Kudos included), "
 		.. "and they don't count on the guild board.", 12, COLORS.muted), 1)
@@ -1481,14 +1481,15 @@ STEPS[4] = {
 
 STEPS[5] = {
 	title = "Better with friends",
-	subtitle = "When a party member or guildmate with the addon goes on a spree, your screen lights up too.",
+	subtitle = "When a party member, guildmate or friend with the addon goes on a spree, your screen lights up too.",
 	primary = "Next",
-	hint = "Only players running Spicy Kill Streaks see anything. Switch both off to share nothing.",
+	hint = "Only players running Spicy Kill Streaks see anything. Switch them all off to share nothing.",
 	build = function(page)
-		local cards = cardRow(page, 2, 10, 170, 320)
+		local cards = cardRow(page, 3, 10, 170, 260)
 		local info = {
 			{ key = "shareparty", title = "Share with my party", desc = "Also raids, battlegrounds and arenas" },
 			{ key = "shareguild", title = "Share with my guild", desc = "And join this month's guild board of top killers" },
+			{ key = "sharefriends", title = "Share with my friends", desc = "Friends list, and Battle.net friends on your realm" },
 		}
 		return function()
 			local sync = P().sync
