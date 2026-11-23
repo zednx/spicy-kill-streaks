@@ -747,6 +747,8 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   -- /sks who asks friends too, and prints their answers
   sent = {}
   SlashCmdList.SPICYKILLSTREAKS("who")
+  assert(#sent <= 2, "friends asked all at once, not spaced out: " .. table.concat(sent, " "))
+  for _ = 1, 10 do runTimers() end
   local whispered = 0
   for _, m in ipairs(sent) do if m:find("^WHISPER:") then whispered = whispered + 1 end end
   assert(whispered == 4, "/sks who didn't ask the online friends: " .. table.concat(sent, " "))
@@ -769,6 +771,20 @@ step("friends: who's online, sharing by whisper, receiving only from friends, mu
   kudos.rows[1].buttons[1].__scripts.OnClick(kudos.rows[1].buttons[1])
   assert(sent[1] == "WHISPER:Alice:R", "kudos not whispered back: " .. tostring(sent[1]))
   kudos.clear()
+  -- a friend who's also a guildmate: reached through the guild, never whispered (while we share with it)
+  local oldRoster, oldNum, oldInGuild = GetGuildRosterInfo, GetNumGuildMembers, IsInGuild
+  GetNumGuildMembers = function() return 1 end
+  GetGuildRosterInfo = function() return "Carl-MyRealm" end
+  IsInGuild = function() return true end
+  P.sync.shareguild = true
+  sent = {}; F.broadcast("K\tx")
+  for _, m in ipairs(sent) do assert(m ~= "WHISPER:Carl:K", "whispered a guildmate") end
+  P.sync.shareguild = false
+  sent = {}; F.broadcast("K\tx")
+  local toCarl = false
+  for _, m in ipairs(sent) do if m == "WHISPER:Carl:K" then toCarl = true end end
+  assert(toCarl, "not sharing with the guild, a guildmate friend should be whispered")
+  GetGuildRosterInfo, GetNumGuildMembers, IsInGuild = oldRoster, oldNum, oldInGuild
   -- finding friends by itself: asks only those who haven't said they run it, not again too soon
   sent = {}; F.askedAt = {}
   F.askNew()

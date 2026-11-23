@@ -2,6 +2,7 @@
 
 ## v1.9.0
 
+- **Friends who are also guildmates** aren't whispered any more while you share with the guild (they get everything through the guild), and the "do you run it?" questions to friends go out one every 2 seconds instead of all at once at login (a burst of whispers could make the server hold back the addon's messages for a while).
 - **KOS list:** your kill-on-sight list, on its own **KOS list** page.
   - After a player kills you for the second time, a card offers **Add to KOS**.
   - **Nemesis:** a player who kills you 3 times in a row (without you killing them back) becomes your nemesis by themselves: "<name> IS NOW YOUR NEMESIS!", and "Your nemesis <name> strikes again!" after that.

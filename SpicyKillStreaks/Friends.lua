@@ -255,6 +255,34 @@ end
 -- Sending
 -- ---------------------------------------------------------------------------------------------
 -- In our party or raid already (they get it through the group)
+-- Guildmates (short keys), read from the guild roster at most once a minute. When we share with
+-- the guild they get everything through it: no whispers to them as friends.
+local guildCache, guildAt
+local function guildmates()
+	local now = GetTime()
+	if guildCache and guildAt and now - guildAt < 60 then return guildCache end
+	local set = {}
+	if type(IsInGuild) == "function" and IsInGuild() and type(GetNumGuildMembers) == "function"
+		and type(GetGuildRosterInfo) == "function" then
+		pcall(function()
+			for i = 1, GetNumGuildMembers() or 0 do
+				local name = GetGuildRosterInfo(i)
+				local key = shortKey(name)
+				if key then set[key] = true end
+			end
+		end)
+	end
+	guildCache, guildAt = set, now
+	return set
+end
+
+-- A friend we reach through the guild anyway (only while we share with the guild)
+function friends.viaGuild(name)
+	if not sync().shareguild then return false end
+	local key = shortKey(name)
+	return key ~= nil and guildmates()[key] == true
+end
+
 local function inOurGroup(name)
 	for _, check in ipairs({ UnitInParty, UnitInRaid }) do
 		if type(check) == "function" then
@@ -279,7 +307,7 @@ end
 function friends.broadcast(message)
 	if not sync().sharefriends or core().inPvP() then return end
 	for _, f in ipairs(friends.withSKS()) do
-		if friends.pref(f.name).share and not inOurGroup(f.name) then
+		if friends.pref(f.name).share and not inOurGroup(f.name) and not friends.viaGuild(f.name) then
 			core().sendAddonMessage(message, "WHISPER", f.name)
 		end
 	end
@@ -303,15 +331,40 @@ end
 
 -- Ask every online friend (it's an explicit question, so it goes out whatever the share setting).
 -- announce: print each answer in chat (/sks who), for the next few seconds
+-- Questions go out one at a time, ASK_GAP seconds apart, so a long friends list never sends a
+-- burst of whispers (the server may hold back an addon that whispers many players at once)
+local ASK_GAP = 2
+local askQueue, askBusy = {}, false
+local function nextAsk()
+	local name = table.remove(askQueue, 1)
+	if not name then askBusy = false return end
+	if not core().inPvP() then core().sendAddonMessage(hello("F?"), "WHISPER", name) end
+	C_Timer.After(ASK_GAP, nextAsk)
+end
+local function ask(f)
+	friends.askedAt[f.key] = GetTime()
+	for _, queued in ipairs(askQueue) do if queued == f.name then return end end
+	askQueue[#askQueue + 1] = f.name
+	if not askBusy then
+		askBusy = true
+		nextAsk()
+	end
+end
+friends.askQueue = askQueue
+
+-- Ask every online friend (it's an explicit question, so it goes out whatever the share setting),
+-- except guildmates when we share with the guild (they answer the guild's question).
+-- announce: print each answer in chat (/sks who) while the questions go out
 function friends.check(announce)
 	if core().inPvP() then return 0 end
-	friends.announceUntil = announce and GetTime() + 8 or nil
 	local asked = 0
 	for _, f in ipairs(friends.online()) do
-		core().sendAddonMessage(hello("F?"), "WHISPER", f.name)
-		friends.askedAt[f.key] = GetTime()
-		asked = asked + 1
+		if not friends.viaGuild(f.name) then
+			ask(f)
+			asked = asked + 1
+		end
 	end
+	friends.announceUntil = announce and GetTime() + asked * ASK_GAP + 8 or nil
 	return asked
 end
 
@@ -341,9 +394,9 @@ function friends.askNew()
 	local now = GetTime()
 	for _, f in ipairs(friends.online()) do
 		local short = (strsplit("-", f.key))
-		if not friends.status[short] and (not friends.askedAt[f.key] or now - friends.askedAt[f.key] >= ASK_AGAIN) then
-			friends.askedAt[f.key] = now
-			core().sendAddonMessage(hello("F?"), "WHISPER", f.name)
+		if not friends.status[short] and not friends.viaGuild(f.name)
+			and (not friends.askedAt[f.key] or now - friends.askedAt[f.key] >= ASK_AGAIN) then
+			ask(f)
 		end
 	end
 end
