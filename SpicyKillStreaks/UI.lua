@@ -442,13 +442,14 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Lists the settings use
 -- ---------------------------------------------------------------------------------------------
-local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot" }
-local PACK_ORDER = { "male", "female", "sexy", "baby", "flamboyant", "zealot" }
+local PACKS = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot",
+	trailer = "Trailer" }
+local PACK_ORDER = { "male", "female", "sexy", "baby", "flamboyant", "zealot", "trailer" }
 local HUMILIATION = {
 	humiliation = "Humiliation (classic)", pack = "Same as the voice pack", male = "Male", female = "Female",
-	sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", custom = "Custom file",
+	sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", trailer = "Trailer", custom = "Custom file",
 }
-local HUMILIATION_ORDER = { "humiliation", "pack", "male", "female", "sexy", "baby", "flamboyant", "zealot", "custom" }
+local HUMILIATION_ORDER = { "humiliation", "pack", "male", "female", "sexy", "baby", "flamboyant", "zealot", "trailer", "custom" }
 local CHANNELS = { Master = "Master", SFX = "Effects", Dialog = "Dialog", Music = "Music", Ambience = "Ambience" }
 local CHANNEL_ORDER = { "Master", "SFX", "Dialog", "Music", "Ambience" }
 local SPARKLES = { mix = "Mix", star = "Stars", chilli = "Chillies", confetti = "Confetti" }
@@ -546,7 +547,7 @@ local function refreshPreview()
 		preview.big:SetTextColor(c[1], c[2], c[3])
 	end
 	-- A pack with taunts: the taunt under the callout, in white (as in game)
-	local taunts = p.fx.fancytext and not s.grey and not s.multi and S().PACK_TAUNTS[p.soundpack]
+	local taunts = p.fx.fancytext and not s.grey and S().PACK_TAUNTS[p.soundpack]
 	local taunt = taunts and taunts[s.text]
 	preview.small:SetText(taunt or s.small)
 	if taunt then preview.small:SetTextColor(1, 1, 1) else preview.small:SetTextColor(1, 0.91, 0.84) end
@@ -1534,7 +1535,7 @@ STEPS[1] = {
 	build = function(page)
 		local cards = cardRow(page, 3, 10, 200, 260)
 		local info = {
-			{ title = "Voices", desc = "Six announcer packs, from the classic announcer to Flamboyant and Zealot.",
+			{ title = "Voices", desc = "Seven announcer packs, from the classic announcer to Zealot and Trailer.",
 				sample = "GODLIKE!", sampleColor = { 0.34, 0.89, 1 }, sampleFont = fontInfo("bangers"), sampleSize = 30 },
 			{ title = "Flair", desc = "Big callouts in a font you pick, sparkle bursts and screen flashes. Or keep it quiet.",
 				sample = "RAMPAGE!", sampleColor = { 1, 0.35, 0.1 }, sampleFont = fontInfo("luckiest"), sampleSize = 30 },
@@ -1555,6 +1556,7 @@ local VOICE_INFO = {
 	{ key = "baby", title = "Baby", desc = "Silly", sample = "KILLING SPREE!" },
 	{ key = "flamboyant", title = "Flamboyant", desc = "Fabulous, with rainbow callouts", sample = "HOMICIDAL!", rainbow = true },
 	{ key = "zealot", title = "Zealot", desc = "Holy-warrior taunts, as callouts too", sample = "INSTRUMENT OF DEATH!", sampleSize = 14 },
+	{ key = "trailer", title = "Trailer", desc = "A movie-trailer narrator who slowly loses it", sample = "RAMPAGE!" },
 }
 STEPS[2] = {
 	title = "Pick a voice",
@@ -1562,9 +1564,9 @@ STEPS[2] = {
 	primary = "Next",
 	hint = "More voice settings (Humiliation, mute, snooze) are under Sound in /sks.",
 	build = function(page)
-		-- two rows of three
-		local cards = cardRow(page, 3, 0, 138, 190)
-		for _, b in ipairs(cardRow(page, #VOICE_INFO - 3, 152, 138, 190)) do cards[#cards + 1] = b end
+		-- a row of four over a row of three
+		local cards = cardRow(page, 4, 0, 138, 190)
+		for _, b in ipairs(cardRow(page, #VOICE_INFO - 4, 152, 138, 190)) do cards[#cards + 1] = b end
 		return function()
 			for i, b in ipairs(cards) do
 				local v = VOICE_INFO[i]

@@ -5,9 +5,26 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
-		version = "1.10.2", date = "2026-11-24",
+		version = "1.11.2", date = "2026-11-24",
 		fixed = {
 			{ "Chat", "No more \"No player named ... is currently playing\" lines from the addon's hidden whispers" },
+		},
+	},
+	{
+		version = "1.11.1", date = "2026-11-24",
+		new = {
+			{ "Trailer", "Its lines show under the callout, multikills included" },
+		},
+		fixed = {
+			{ "Trailer", "Louder, about as loud as Zealot" },
+		},
+	},
+	{
+		version = "1.11.0", date = "2026-11-24",
+		summary = "A new voice pack: Trailer, a movie-trailer narrator who slowly loses it.",
+		new = {
+			{ "Trailer", "A new voice pack: foreboding trailer lines that crack into laughter" },
+			{ "Trailer", "Humiliation, Gank and Ganked take turns through a few lines each" },
 		},
 	},
 	{

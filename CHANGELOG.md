@@ -1,8 +1,20 @@
 # Changelog
 
-## v1.10.2
+## v1.11.2
 
 - **No more "No player named 'Name Family' is currently playing."** The addon's hidden whispers (answers to "who runs it?", friends) went to players' full names with their family name, which the game can't whisper. They now go to the character's name, and if the game still can't find someone, that line is hidden.
+
+## v1.11.1
+
+- **Trailer:** the line it says now shows under the callout, smaller and in white (like Zealot), for the ranks, First Blood, Retribution and the multikills.
+- **Trailer is louder**, about as loud as Zealot (it was well under the other packs).
+- Packs with their own lines can show them under multikills too, also in the settings preview.
+
+## v1.11.0
+
+- **New voice pack: Trailer**, a movie-trailer narrator who slowly loses it. Foreboding one-liners for every rank and multikill (*Three bodies. One survivor.*, *This summer, fear has a name.*), breaking into laughter as your streak climbs, plus its own First Blood, Retribution, Pancake, Prepare, Gank and Ganked lines. Pick it under `/sks` > Sound or in the setup.
+- **Fresh lines:** Trailer takes turns through two Humiliation lines, three Gank lines and two Ganked lines, so they don't repeat every time.
+- **Setup:** the voice step shows the seven packs in a row of four and a row of three.
 
 ## v1.10.1
 

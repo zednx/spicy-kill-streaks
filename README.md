@@ -17,7 +17,7 @@ A rewrite of **dG KillShot** for WoW Forever, which does not give addons the com
   - *Pancake* when you (or a friend) die from falling or drowning
   - **Big Game Hunter**: kill a player 10+ levels above you for a callout of its own
   - **Ganks**: kill a player 10+ levels below you and get shamed instead of a callout (it doesn't count towards your streak); die to one 10+ levels above you and hear "You got ganked"
-- **Voice packs**: Male, Female, Sexy, Baby, **Flamboyant** (with rainbow callouts) and **Zealot** (holy-warrior taunts as callouts). Pick a separate voice for *Humiliation*, or add your own sound files.
+- **Voice packs**: Male, Female, Sexy, Baby, **Flamboyant** (with rainbow callouts), **Zealot** (holy-warrior taunts as callouts) and **Trailer** (a movie-trailer narrator who slowly loses it). Pick a separate voice for *Humiliation*, or add your own sound files.
 - **Only your killing blows count**, not kills your group finishes.
 - **Effects** (all optional): combat text that punches in and floats up, in a dozen fonts (or any SharedMedia font), sparkle bursts (stars, chillies or confetti), and a screen-edge flash for big moments. Drag them anywhere.
 - **Settings window** with a live preview of your font, size and voice pack, a **Sound board** that plays every sound and says when it plays, and a short **setup** on first login.
