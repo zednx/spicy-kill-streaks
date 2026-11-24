@@ -5,6 +5,12 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.10.2", date = "2026-11-24",
+		fixed = {
+			{ "Chat", "No more \"No player named ... is currently playing\" lines from the addon's hidden whispers" },
+		},
+	},
+	{
 		version = "1.10.1", date = "2026-11-23",
 		fixed = {
 			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },

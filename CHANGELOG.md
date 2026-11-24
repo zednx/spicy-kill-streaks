@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.10.2
+
+- **No more "No player named 'Name Family' is currently playing."** The addon's hidden whispers (answers to "who runs it?", friends) went to players' full names with their family name, which the game can't whisper. They now go to the character's name, and if the game still can't find someone, that line is hidden.
+
 ## v1.10.1
 
 - **Settings:** buttons next to a dropdown or text box (Play, Add...) line up with the box instead of its label.

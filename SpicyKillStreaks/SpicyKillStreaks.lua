@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.10.1"
+local VERSION = "1.10.2"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -1781,8 +1781,48 @@ SPECIAL.SEND_RESULTS = { [0] = "success", "invalid prefix", "invalid message", "
 	"addon message lockdown" }
 SPECIAL.LOCKDOWN = 11
 
+-- WoW Forever senders can carry a family name ("Aria One-Realm"), which isn't a name you can
+-- whisper ("No player named 'Aria One'..."): the character's name is the first one, plus the realm
+function SPECIAL.whisperName(name)
+	if type(name) ~= "string" or isSecret(name) then return name end
+	local first, realm = strmatch(name, "^([^%s%-]+)%s[^%-]*(.*)$")
+	return first and (first .. realm) or name
+end
+
+-- The game's "No player named 'X' is currently playing." for a name we whispered a hidden addon
+-- message to in the last few seconds: not shown (whispers you type yourself still say it)
+SPECIAL.whispered = {}
+function SPECIAL.noteWhisper(...)
+	local now = GetTime()
+	for i = 1, select("#", ...) do
+		local name = select(i, ...)
+		if type(name) == "string" and not isSecret(name) then SPECIAL.whispered[strlower(name)] = now end
+	end
+end
+function SPECIAL.hideNotFound(_, _, message)
+	if type(message) ~= "string" or isSecret(message) or type(ERR_CHAT_PLAYER_NOT_FOUND_S) ~= "string" then return false end
+	if not SPECIAL.notFoundPattern then
+		SPECIAL.notFoundPattern = "^" .. ERR_CHAT_PLAYER_NOT_FOUND_S:gsub("([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1"):gsub("%%s", "(.+)") .. "$"
+	end
+	local name = strmatch(message, SPECIAL.notFoundPattern)
+	local at = name and SPECIAL.whispered[strlower(name)]
+	if at and GetTime() - at <= 10 then
+		debugPrint("sync: hid the game's 'no player named", name .. "' (our hidden whisper)")
+		return true
+	end
+	return false
+end
+if type(ChatFrame_AddMessageEventFilter) == "function" then
+	pcall(ChatFrame_AddMessageEventFilter, "CHAT_MSG_SYSTEM", SPECIAL.hideNotFound)
+end
+
 local function sendAddonMessage(message, channel, target, isRetry)
 	if not (C_ChatInfo and C_ChatInfo.SendAddonMessage) or not registerPrefix() then return false end
+	if channel == "WHISPER" then
+		local original = target
+		target = SPECIAL.whisperName(target)
+		SPECIAL.noteWhisper(original, target, type(target) == "string" and (strsplit("-", target)) or nil)
+	end
 	-- Nothing is shared from battlegrounds and arenas: WoW Forever locks addon messages there for
 	-- the whole match anyway, and it would be spammy. They stay just for you.
 	if inBG or inArena then
