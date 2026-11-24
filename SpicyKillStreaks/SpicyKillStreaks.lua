@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.1"
+local VERSION = "1.13.2"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -1690,6 +1690,7 @@ local function registerKill(victim, isDuel, notGank)
 end
 
 local function resetStreakOnDeath()
+	SPECIAL.npcState = nil -- (the NPC kills' own streak, SPECIAL.npcKill)
 	streak = 0
 	multikill = 0
 	lastKillTime = nil
@@ -3224,6 +3225,22 @@ local GUESS_DELAY = 0.6
 -- and again in world PvP (before 1.13.2 a player we had killed once was never counted again
 -- until a zone change).
 SPECIAL.CREDIT_SAME = 5
+
+-- An NPC kill (the "Count NPC kills" option): local only. Its callouts and sounds play with a
+-- streak of its own, but nothing is sent to anyone, no statistics or guild board change, and the
+-- real (player) streak is left as it was. Dying resets the NPC streak too.
+function SPECIAL.npcKill(name)
+	local real = { streak, deathstreak, multikill, lastKillTime, lastRank, SPECIAL.rotationIndex }
+	local npc = SPECIAL.npcState or {}
+	streak, deathstreak, multikill, lastKillTime, lastRank = npc[1] or 0, 0, npc[3] or 0, npc[4], npc[5]
+	testing = true
+	local ok, err = pcall(registerKill, name, false)
+	testing = false
+	SPECIAL.npcState = { streak, 0, multikill, lastKillTime, lastRank }
+	streak, deathstreak, multikill, lastKillTime, lastRank, SPECIAL.rotationIndex = unpack(real, 1, 6)
+	if not ok then debugPrint("kill: NPC kill failed:", err) end
+end
+
 local function creditKill(guid, name)
 	local now = GetTime()
 	if credited[guid] and now - credited[guid] < SPECIAL.CREDIT_SAME then
@@ -3232,6 +3249,10 @@ local function creditKill(guid, name)
 	end
 	credited[guid] = now
 	debugPrint("kill: credited", guid, "name", name or "none")
+	if strsub(guid, 1, 7) ~= "Player-" then
+		SPECIAL.npcKill(name or "an NPC")
+		return
+	end
 	-- (the victim's GUID, for the KOS list's exact match)
 	SPECIAL.lastVictimGUID = guid
 	registerKill(name, false)

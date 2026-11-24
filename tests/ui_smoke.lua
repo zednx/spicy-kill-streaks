@@ -1298,6 +1298,36 @@ step("the same player killed again later counts again (a repeat at once doesn't)
   assert(first == 1, "the first kill counted " .. first .. " times")
   assert(killed() == 2, "killing them again a minute later wasn't counted")
 end)
+step("NPC kills: local only, their own streak, nothing sent, real streak untouched", function()
+  local P = ns.core.db().profile
+  P.dochat, P.dopve = true, true
+  P.sync.shareguild, P.sync.shareparty = true, true
+  local saved = { UnitExists, UnitName, IsInInstance, GetPlayerInfoByGUID, UnitNameFromGUID }
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  UnitExists = function(u) return u == "player" end
+  UnitName = function() return "Tester" end
+  UnitNameFromGUID = function() return "Boar" end
+  local before = ns.core.streak()
+  local m = ns.core.db().char
+  local monthKills = m.monthKills or 0
+  local sent, said = {}, {}
+  local oldSend, oldPrint = C_ChatInfo.SendAddonMessage, print
+  C_ChatInfo.SendAddonMessage = function(_, msg) sent[#sent + 1] = msg return 0 end
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  fire("PARTY_KILL", "Player-1-0001", "Creature-0-1-0-1-100-0000000001")
+  fire("PARTY_KILL", "Player-1-0001", "Creature-0-1-0-1-100-0000000002")
+  runTimers(); runTimers()
+  C_ChatInfo.SendAddonMessage, print = oldSend, oldPrint
+  UnitExists, UnitName, IsInInstance, GetPlayerInfoByGUID, UnitNameFromGUID = unpack(saved)
+  P.dopve = false
+  local out = table.concat(said, "\n")
+  assert(out:find("killed Boar!", 1, true), "no NPC kill shown: " .. out)
+  assert(out:find("(2 streak)", 1, true), "the NPC kills' own streak isn't counting: " .. out)
+  assert(#sent == 0, "an NPC kill was sent: " .. table.concat(sent, " / "))
+  assert(ns.core.streak() == before, "the real streak changed")
+  assert((m.monthKills or 0) == monthKills, "an NPC kill counted in this month's stats")
+end)
 step("big game hunter: a player 10+ levels above us", function()
   local core = ns.core
   local P = core.db().profile

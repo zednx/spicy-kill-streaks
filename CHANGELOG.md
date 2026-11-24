@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.2
+
+- **NPC kills are just for you** (with **Count NPC kills** on): their callouts, sounds and effects play with a streak of their own, but they're no longer sent to your party, guild or friends, don't count in your stats or on the guild board, and leave your real kill streak alone. Dying resets the NPC streak too.
+
 ## v1.13.1
 
 - **Fixed: killing the same player again wasn't counted.** Once you'd killed a player, every later kill on them was ignored until you changed zone (no callout, no streak, no KOS payback). In world PvP, where you meet the same players again and again, that missed a lot. Now a repeat only counts once if the game reports it twice within a few seconds.

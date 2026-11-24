@@ -635,7 +635,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 
 	c = newCard("Streaks")
 	c:add(ptoggle("dozonechange", "Reset when changing zone", nil), 0.5)
-	c:add(ptoggle("dopve", "Count NPC kills", "Spammy, handy for trying it out"), 0.5)
+	c:add(ptoggle("dopve", "Count NPC kills", "Just for you: not shared, no stats, own streak"), 0.5)
 	cards[#cards + 1] = c
 
 	c = newCard("Streak ladder")
