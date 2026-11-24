@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.11.1
+
+- **Trailer:** the line it says now shows under the callout, smaller and in white (like Zealot), for the ranks, First Blood, Retribution and the multikills.
+- **Trailer is louder**, about as loud as Zealot (it was well under the other packs).
+- Packs with their own lines can show them under multikills too, also in the settings preview.
+
 ## v1.11.0
 
 - **New voice pack: Trailer**, a movie-trailer narrator who slowly loses it. Foreboding one-liners for every rank and multikill (*Three bodies. One survivor.*, *This summer, fear has a name.*), breaking into laughter as your streak climbs, plus its own First Blood, Retribution, Pancake, Prepare, Gank and Ganked lines. Pick it under `/sks` > Sound or in the setup.

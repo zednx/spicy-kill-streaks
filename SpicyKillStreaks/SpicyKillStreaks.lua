@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.11.0"
+local VERSION = "1.11.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -683,9 +683,19 @@ SPECIAL.TOP_ROTATION = {
 		{ file = "godlike2.ogg", text = "GODLIKE!", taunt = "DEATH WARRANT ENFORCED!" },
 		{ file = "godlike3.ogg", text = "GODLIKE!", taunt = "ABSOLUTION FOR THE SOULS OF THE WRETCHED!" } },
 }
--- Voice packs whose lines are taunts: the usual callout, with the taunt under it (smaller, in white).
--- The log and chat keep the standard text.
+-- Voice packs that say their own lines: the usual callout, with the line under it (smaller, in white).
+-- Ranks, specials and multikills. The log and chat keep the standard text.
 SPECIAL.PACK_TAUNTS = {
+	trailer = {
+		["HEADSHOT!"] = "IT BEGINS.", ["FIRST BLOOD!"] = "THE FIRST OF MANY.", ["OWNAGE!"] = "ANOTHER ONE FALLS.",
+		["KILLING SPREE!"] = "THE BODY COUNT RISES!", ["RAMPAGE!"] = "THEY RAN. THEY HID. NOTHING SURVIVES THE RAMPAGE!",
+		["DOMINATING!"] = "THEY KNEEL. ALL OF THEM!", ["UNSTOPPABLE!"] = "THEY THOUGHT IT COULD BE STOPPED. THEY WERE WRONG!",
+		["GODLIKE!"] = "MORTALS BLEED. GODS DON'T!", ["WICKED SICK!"] = "SOMEBODY STOP THIS!",
+		["RETRIBUTION!"] = "THIS TIME, IT'S PERSONAL.",
+		["DOUBLE KILL!"] = "TWO FOR ONE.", ["TRIPLE KILL!"] = "THREE BODIES. ONE SURVIVOR.",
+		["MULTI KILL!"] = "THE BODIES PILE UP.", ["MEGA KILL!"] = "THEY FALL LIKE RAIN!", ["ULTRA KILL!!!"] = "MORE! MORE!",
+		["MONSTER KILL!!!"] = "THIS SUMMER, FEAR HAS A NAME.", ["LUDICROUS KILL!!!"] = "THIS IS RIDICULOUS!",
+	},
 	zealot = {
 		["HEADSHOT!"] = "ONE SHOT, ONE KILL!", ["FIRST BLOOD!"] = "MEET YOUR MAKER!",
 		["KILLING SPREE!"] = "I AM BUT AN INSTRUMENT OF DEATH!", ["RAMPAGE!"] = "HIS JUSTICE IS SWIFT!",
@@ -1285,7 +1295,7 @@ end
 function SPECIAL.screenCallout(text, kind, level, taunt)
 	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
 	if packText then return showText(SPECIAL.rainbow(packText[text] or text), kind, level) end
-	local taunts = kind == "rank" and SPECIAL.PACK_TAUNTS[db.profile.soundpack]
+	local taunts = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TAUNTS[db.profile.soundpack]
 	taunt = taunts and (taunt or taunts[text])
 	if taunt then
 		-- the callout first, so the taunt (pushing it up) sits under it

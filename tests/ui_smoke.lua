@@ -527,8 +527,19 @@ step("trailer pack: its clips for Humiliation, Gank and Ganked take turns", func
   local gank = names(4, function() ns.core.playSound("gank.ogg") end)
   local ganked = names(3, function() ns.core.playSound("ganked.ogg") end)
   local humiliation = names(3, ns.core.playHumiliation)
+  -- its lines show under the callout, for multikills too
+  local doscreen, oldPrint = P.doscreen, print
+  P.doscreen, print = true, function() end
+  clearShown()
+  ns.core.announce("RAMPAGE!", "rank", 3)
+  ns.core.announce("TRIPLE KILL!", "multi", 2)
+  print = oldPrint
+  local shown = {}
+  for _, f in ipairs(FONTSTRINGS) do if f.__text then shown[#shown + 1] = f.__text end end
+  shown = table.concat(shown, "|")
   PlaySoundFile = oldPSF
-  P.soundpack, P.dosound, P.humiliationvoice = unpack(saved)
+  P.soundpack, P.dosound, P.humiliationvoice, P.doscreen = saved[1], saved[2], saved[3], doscreen
+  assert(shown:find("NOTHING SURVIVES THE RAMPAGE!", 1, true) and shown:find("THREE BODIES. ONE SURVIVOR.", 1, true), shown)
   assert(gank:find("^gank%.ogg gank2%.ogg gank3%.ogg gank%.ogg$"), gank)
   assert(ganked:find("^ganked%.ogg ganked2%.ogg ganked%.ogg$"), ganked)
   assert(humiliation:find("^humiliation%.ogg humiliation2%.ogg humiliation%.ogg$"), humiliation)

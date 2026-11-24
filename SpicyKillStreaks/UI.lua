@@ -547,7 +547,7 @@ local function refreshPreview()
 		preview.big:SetTextColor(c[1], c[2], c[3])
 	end
 	-- A pack with taunts: the taunt under the callout, in white (as in game)
-	local taunts = p.fx.fancytext and not s.grey and not s.multi and S().PACK_TAUNTS[p.soundpack]
+	local taunts = p.fx.fancytext and not s.grey and S().PACK_TAUNTS[p.soundpack]
 	local taunt = taunts and taunts[s.text]
 	preview.small:SetText(taunt or s.small)
 	if taunt then preview.small:SetTextColor(1, 1, 1) else preview.small:SetTextColor(1, 0.91, 0.84) end
