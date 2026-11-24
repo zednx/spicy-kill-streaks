@@ -387,6 +387,47 @@ step("Do not kill: add the target, reminded once, on the tooltip, off the KOS li
   for _, item in ipairs(K.dnkSorted()) do K.dnkRemove(item.key) end
   UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName, UnitIsUnit = unpack(saved)
 end)
+step("KOS guild sharing: theirs on our tooltips, ours in answer, off by default", function()
+  local K = ns.kos
+  local P = ns.core.db().profile
+  assert(P.kos.guildshare == false, "guild sharing should be off by default")
+  local saved = { UnitIsPlayer, UnitGUID }
+  UnitIsPlayer = function() return true end
+  UnitGUID = function() return "Player-1-0999" end
+  local msg = table.concat({ "G", "1.12.0", "L", "Spice Guild", "K:Player-1-0999:Badguy;D:Player-1-0998:Niceguy" }, "\t")
+  fire("CHAT_MSG_ADDON", "SpicyKS", msg, "GUILD", "Bob")
+  assert(K.guildLine("mouseover") == nil, "shown while sharing is off")
+  P.kos.guildshare, P.sync.shareguild = true, true
+  K.add("Player-1-0997", "Mine")
+  local sent = {}
+  local old = C_ChatInfo.SendAddonMessage
+  C_ChatInfo.SendAddonMessage = function(_, m, channel) sent[#sent + 1] = channel .. ":" .. m return 0 end
+  fire("CHAT_MSG_ADDON", "SpicyKS", msg, "GUILD", "Bob")
+  runTimers(); runTimers()
+  C_ChatInfo.SendAddonMessage = old
+  local line = K.guildLine("mouseover")
+  assert(line == "Guild KOS (Bob)", tostring(line))
+  local answered = false
+  for _, m in ipairs(sent) do if m:find("^GUILD:G\t[^\t]+\tR\t") and m:find("Player-1-0997", 1, true) then answered = true end end
+  assert(answered, "no answer with our list: " .. table.concat(sent, " / "))
+  -- taken off by Bob
+  fire("CHAT_MSG_ADDON", "SpicyKS", table.concat({ "G", "1.12.0", "-", "Spice Guild", "Player-1-0999" }, "\t"), "GUILD", "Bob")
+  assert(K.guildLine("mouseover") == nil, "still shown after Bob removed them")
+  UnitGUID = function() return "Player-1-0998" end
+  assert(K.guildLine("mouseover") == "Guild: Do not kill (Bob)")
+  -- a long list goes out in several messages, the rest marked "+"
+  local items = {}
+  for i = 1, 30 do items[i] = { k = "K", guid = "Player-1-1" .. string.format("%03d", i), name = "Someone" .. i } end
+  sent = {}
+  C_ChatInfo.SendAddonMessage = function(_, m, channel) sent[#sent + 1] = m return 0 end
+  K.guildSend("L", items); runTimers(); runTimers()
+  C_ChatInfo.SendAddonMessage = old
+  assert(#sent > 1 and sent[1]:find("\tL\t") and sent[2]:find("\t%+\t"), "chunks: " .. #sent)
+  for _, m in ipairs(sent) do assert(#m <= 255, "message too long: " .. #m) end
+  K.remove("Player-1-0997")
+  P.kos.guildshare = false
+  UnitIsPlayer, UnitGUID = unpack(saved)
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)

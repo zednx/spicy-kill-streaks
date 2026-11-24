@@ -5,6 +5,13 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.0", date = "2026-11-24",
+		summary = "Share your KOS and Do not kill lists with the guild.",
+		new = {
+			{ "KOS list", "Share with the guild (optional): guildmates' KOS and Do not kill players show on your tooltips" },
+		},
+	},
+	{
 		version = "1.12.0", date = "2026-11-24",
 		summary = "A Do not kill list, and KOS on tooltips.",
 		new = {

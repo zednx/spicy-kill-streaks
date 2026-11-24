@@ -86,6 +86,7 @@ function kos.add(guid, name, nemesis)
 	-- (and off the Do not kill list)
 	local _, dnkKey = kos.dnkFind(guid, entry.name)
 	if dnkKey then kos.dnkRemove(dnkKey) end
+	kos.guildChanged("+", guid, entry.nemesis and "N" or "K", entry.name)
 	return entry
 end
 
@@ -106,6 +107,7 @@ end
 function kos.remove(key)
 	local list = store()
 	list[key] = nil
+	kos.guildChanged("-", key)
 end
 
 -- Link a typed name to the player we just saw: from now on it matches by GUID
@@ -120,6 +122,7 @@ function kos.confirm(key, guid, name)
 	entry.killedMe = math.max(entry.killedMe or 0, rival.killedMe or 0)
 	entry.iKilled = math.max(entry.iKilled or 0, rival.iKilled or 0)
 	list[guid] = entry
+	kos.guildChanged("+", guid, entry.nemesis and "N" or "K", entry.name)
 	return entry
 end
 
@@ -394,6 +397,7 @@ function kos.dnkFind(guid, name)
 	if entry and isPlayerGUID(guid) then
 		list[key] = nil
 		list[guid] = entry
+		kos.guildChanged("+", guid, "D", entry.name)
 		return entry, guid
 	end
 	return entry, key
@@ -405,6 +409,7 @@ function kos.dnkAdd(guid, name)
 	if kos.dnkFind(guid, clean) then return false, clean .. " is already on it" end
 	local key = isPlayerGUID(guid) and guid or nameKey(clean)
 	dnkStore()[key] = { name = clean, added = time() }
+	kos.guildChanged("+", key, "D", clean)
 	-- (and off the KOS list)
 	local list = store()
 	if isPlayerGUID(guid) then list[guid] = nil end
@@ -412,7 +417,10 @@ function kos.dnkAdd(guid, name)
 	return true
 end
 
-function kos.dnkRemove(key) dnkStore()[key] = nil end
+function kos.dnkRemove(key)
+	dnkStore()[key] = nil
+	kos.guildChanged("-", key)
+end
 
 function kos.dnkSorted()
 	local out = {}
@@ -437,6 +445,150 @@ function kos.dnkCheck(unit)
 	core().chat(line)
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Guild sharing (optional): our KOS and Do not kill players (the ones known by GUID) go to
+-- guildmates who share too, and theirs show on our tooltips (only there: no payback, sightings
+-- or reminders for someone else's list).
+--   "G", version, kind, guild, payload
+--   kind "L": our whole list, at login (guildmates answer with theirs, "R"); "R": a reply;
+--   "+": more entries (the rest of a long list, or one just added); "-": payload is a GUID taken off
+--   payload: "K:<guid>:<name>;N:...;D:..." (K = KOS, N = nemesis, D = Do not kill)
+-- ---------------------------------------------------------------------------------------------
+local GUILD_MAX = 40      -- entries per player
+local GUILD_SENDERS = 100 -- guildmates' lists kept
+local function field(s) return (tostring(s or ""):gsub("[:;\t|\r\n]", "")) end
+
+function kos.guildOn()
+	local p = core().db().profile
+	return cfg().enabled and cfg().guildshare and p.sync.shareguild and core().special.guildName() ~= nil
+end
+
+-- Guildmates' lists for our guild: sender -> { [guid] = { k = "K" | "N" | "D", n = name } }
+local function guildLists()
+	local guild = core().special.guildName()
+	if not guild then return nil end
+	local g = core().db().global
+	g.guildLists = g.guildLists or {}
+	g.guildLists[guild] = g.guildLists[guild] or {}
+	return g.guildLists[guild]
+end
+kos.guildLists = guildLists
+
+-- What we share: { k, guid, name }
+function kos.myShared()
+	local out = {}
+	for key, e in pairs(store()) do
+		if isPlayerGUID(key) and not e.unconfirmed then out[#out + 1] = { k = e.nemesis and "N" or "K", guid = key, name = e.name } end
+	end
+	for key, e in pairs(dnkStore()) do
+		if isPlayerGUID(key) then out[#out + 1] = { k = "D", guid = key, name = e.name } end
+	end
+	while #out > GUILD_MAX do table.remove(out) end
+	return out
+end
+
+-- Send entries: the first message has `kind`, the rest "+", half a second apart
+function kos.guildSend(kind, items)
+	if not kos.guildOn() or core().inPvP() then return end
+	local function headFor(k) return table.concat({ "G", core().VERSION, k, field(core().special.guildName()) }, "\t") .. "\t" end
+	local head = headFor(kind)
+	local chunks, current = {}, ""
+	for _, item in ipairs(items) do
+		local piece = item.k .. ":" .. item.guid .. ":" .. field(item.name)
+		if current ~= "" and #head + #current + #piece + 1 > 250 then
+			chunks[#chunks + 1] = current
+			current = ""
+		end
+		current = current == "" and piece or (current .. ";" .. piece)
+	end
+	chunks[#chunks + 1] = current
+	for i, chunk in ipairs(chunks) do
+		local message = (i == 1 and head or headFor("+")) .. chunk
+		C_Timer.After((i - 1) * 0.5, function() core().sendAddonMessage(message, "GUILD") end)
+	end
+end
+
+-- One of our entries changed: tell the guild ("+" with the entry, "-" with the GUID)
+function kos.guildChanged(kind, guid, k, name)
+	if not isPlayerGUID(guid) or not kos.guildOn() or core().inPvP() then return end
+	if kind == "-" then
+		core().sendAddonMessage(table.concat({ "G", core().VERSION, "-", field(core().special.guildName()), guid }, "\t"), "GUILD")
+	else
+		kos.guildSend("+", { { k = k, guid = guid, name = name } })
+	end
+end
+
+local replyPending = false
+function kos.guildReceive(sender, channel, fields)
+	if channel ~= "GUILD" or not kos.guildOn() then return end
+	if fields[4] ~= field(core().special.guildName()) then return end
+	local kind, payload = fields[3], fields[5] or ""
+	local who = core().safeText(core().shortName(sender))
+	local lists = guildLists()
+	if not who or not lists then return end
+	if kind == "-" then
+		if lists[who] and isPlayerGUID(payload) then lists[who][payload] = nil end
+		return
+	end
+	if kind ~= "L" and kind ~= "R" and kind ~= "+" then return end
+	if not lists[who] then
+		local count = 0
+		for _ in pairs(lists) do count = count + 1 end
+		if count >= GUILD_SENDERS then return end
+	end
+	-- a whole list replaces what we had from them
+	if kind == "L" or kind == "R" or not lists[who] then lists[who] = {} end
+	local set, count = lists[who], 0
+	for _ in pairs(set) do count = count + 1 end
+	for item in payload:gmatch("[^;]+") do
+		local k, guid, name = strmatch(item, "^([KND]):(Player%-[%w%-]+):([^:]*)$")
+		if k and isPlayerGUID(guid) and (set[guid] or count < GUILD_MAX) then
+			if not set[guid] then count = count + 1 end
+			set[guid] = { k = k, n = cleanName(core().safeText(name)) }
+		end
+	end
+	-- Their login list: answer with ours, once, after a random moment
+	if kind == "L" and not replyPending then
+		replyPending = true
+		C_Timer.After(1 + math.random() * 4, function()
+			replyPending = false
+			kos.guildSend("R", kos.myShared())
+		end)
+	end
+end
+
+-- Guildmates who have this player on a list: kosBy, dnkBy (lists of names), or nil
+function kos.guildMarks(guid)
+	if not isPlayerGUID(guid) or not kos.guildOn() then return nil end
+	local lists = guildLists()
+	local kosBy, dnkBy = {}, {}
+	for who, set in pairs(lists or {}) do
+		local e = set[guid]
+		if e then
+			if e.k == "D" then dnkBy[#dnkBy + 1] = who else kosBy[#kosBy + 1] = who end
+		end
+	end
+	table.sort(kosBy)
+	table.sort(dnkBy)
+	return kosBy, dnkBy
+end
+
+local function namesShort(list)
+	local shown = {}
+	for i = 1, math.min(2, #list) do shown[i] = list[i] end
+	return table.concat(shown, ", ") .. (#list > 2 and (" +" .. (#list - 2)) or "")
+end
+
+-- The guild's line for a player's tooltip (when they're not on our own lists), or nil
+function kos.guildLine(unit)
+	local ok, guid = pcall(function() if UnitIsPlayer(unit) then return UnitGUID(unit) end end)
+	if not ok or not isPlayerGUID(guid) then return nil end
+	local kosBy, dnkBy = kos.guildMarks(guid)
+	if kosBy and #kosBy > 0 then return "Guild KOS (" .. namesShort(kosBy) .. ")", 1, 0.54, 0.29 end
+	if dnkBy and #dnkBy > 0 then return "Guild: Do not kill (" .. namesShort(dnkBy) .. ")", 0.4, 0.85, 0.45 end
+	return nil
+end
+
 -- Tooltips: "KOS", "Nemesis" or "Do not kill" on a player's tooltip
 function kos.tooltipLine(unit)
 	local ok, guid, name = pcall(function()
@@ -457,6 +609,7 @@ local function onTooltip(tooltip)
 	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
 	if not ok or not usable(unit) then return end
 	local line, r, g, b = kos.tooltipLine(unit)
+	if not line then line, r, g, b = kos.guildLine(unit) end
 	if line then
 		tooltip:AddLine(line, r, g, b)
 		pcall(tooltip.Show, tooltip)
@@ -473,6 +626,16 @@ pcall(function()
 	elseif GameTooltip and GameTooltip.HookScript then
 		GameTooltip:HookScript("OnTooltipSetUnit", function(tooltip) pcall(onTooltip, tooltip) end)
 	end
+end)
+
+-- At login (and /reload): our list to the guild, once the guild is known
+local loginWatch = CreateFrame("Frame")
+loginWatch:RegisterEvent("PLAYER_ENTERING_WORLD")
+loginWatch:SetScript("OnEvent", function(_, _, isInitialLogin, isReloadingUi)
+	if not (isInitialLogin or isReloadingUi) then return end
+	C_Timer.After(15, function()
+		if ns.core and ns.core.db() and kos.guildOn() then kos.guildSend("L", kos.myShared()) end
+	end)
 end)
 
 local watch = CreateFrame("Frame")

@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.12.0"
+local VERSION = "1.13.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -169,6 +169,7 @@ local defaults = {
 			sightings = true,  -- an alert when a listed player is our target, mouseover or on a nameplate
 			sightsound = true, -- a sound with a sighting
 			sightkit = "raidwarning", -- which one (Kos.lua SIGHT_SOUNDS)
+			guildshare = false, -- share our lists with guildmates who share too; theirs show on tooltips
 		},
 		-- Kudos (Kudos.lua): reactions to friends' kills and deaths
 		kudos = {
@@ -2642,8 +2643,13 @@ function events.CHAT_MSG_ADDON(prefix, message, channel, sender)
 
 	local kind = fields[1]
 	-- Every message carries the sender's version second
-	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" or kind == "X" or kind == "F?" or kind == "F!" then
+	if kind == "K" or kind == "U" or kind == "T" or kind == "D" or kind == "V?" or kind == "V!" or kind == "R" or kind == "A" or kind == "W" or kind == "B" or kind == "X" or kind == "F?" or kind == "F!" or kind == "G" then
 		noticeVersion(sender, fields[2])
+	end
+	-- A guildmate's KOS / Do not kill list (Kos.lua)
+	if kind == "G" then
+		if SPECIAL.ns.kos then SPECIAL.ns.kos.guildReceive(sender, channel, fields) end
+		return
 	end
 	-- Friends asking (or answering) whether we run it (Friends.lua)
 	if kind == "F?" or kind == "F!" then

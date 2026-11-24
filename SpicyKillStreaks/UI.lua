@@ -897,6 +897,11 @@ sections[#sections + 1] = { id = "kos", label = "KOS list", hint = "Grudges and 
 	c:add(kt("offer", "Offer \"Add to KOS\"", "After a player kills you twice"), 0.5)
 	c:add(kt("nemesis", "Nemeses", "3 deaths in a row to one player adds them by itself"), 0.5)
 	c:add(kt("sightings", "Sighting alerts", "When a listed player is your target, mouseover or nameplate"), 0.5)
+	c:add(toggle("Share with the guild", "Your lists show on guildmates' tooltips, theirs on yours (needs guild sharing on)",
+		function() return P().kos.guildshare end, function(v)
+			P().kos.guildshare = v
+			if v and K then K.guildSend("L", K.myShared()) end
+		end), 1)
 	if K then
 		local list, order = { none = "None" }, { "none" }
 		for _, snd in ipairs(K.SIGHT_SOUNDS) do list[snd.key] = snd.label; order[#order + 1] = snd.key end

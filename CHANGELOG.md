@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.0
+
+- **Share your KOS and Do not kill lists with the guild** (optional, off by default: **Share with the guild** on the KOS list page, with guild sharing on). Your players go to guildmates who share too, and theirs show on your tooltips: **Guild KOS (Bob)** or **Guild: Do not kill (Bob)**, when the player isn't on your own lists. Only players you've seen (matched by their unique ID) are shared, up to 40 each. Lists go out at login and when you add or remove someone; nothing is sent from battlegrounds. A guildmate's list only shows on tooltips: payback, sightings and reminders stay yours. Guildmates need 1.13.0.
+
 ## v1.12.0
 
 - **Do not kill list** at the bottom of the KOS list page: players you'd rather leave alone (friends on the other faction...). Target one and you're reminded, once per session: "<name> is on your Do not kill list." Add your target (matched exactly) or a name, on the page or with `/sks dnk <name>`. Someone on it never becomes a nemesis or gets an "Add to KOS" offer, and adding them to one list takes them off the other.
