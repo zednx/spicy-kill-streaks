@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.11.2"
+local VERSION = "1.12.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -4598,6 +4598,19 @@ local function initialize()
 					local ok, why = K.addByName(name)
 					chat(ok and (name .. " is on your KOS list (unconfirmed until you see them).") or ("Not added: " .. tostring(why) .. "."))
 				end
+			end
+		elseif command == "dnk" or strmatch(command, "^dnk%s") then
+			-- /sks dnk <name>: the Do not kill list (by ID when it's the player we have targeted)
+			local name = strtrim((strmatch(text, "^%s*%a+%s+(.+)$") or ""))
+			local K = SPECIAL.ns.kos
+			if name == "" then
+				openOptions("kos")
+			elseif K then
+				local guid, targetName = K.targetPlayer()
+				local typed = strlower(name)
+				local same = guid and (typed == strlower(targetName) or typed == strlower((strsplit(" ", targetName))))
+				local ok, why = K.dnkAdd(same and guid or nil, same and targetName or name)
+				chat(ok and ((same and targetName or name) .. " is on your Do not kill list.") or ("Not added: " .. tostring(why) .. "."))
 			end
 		elseif command == "news" or command == "notes" then
 			openOptions("news")

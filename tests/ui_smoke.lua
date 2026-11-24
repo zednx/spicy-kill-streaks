@@ -351,6 +351,42 @@ step("the game's 'no player named' for our hidden whisper is hidden, and they ar
   assert(sp.hideNotFound(nil, "CHAT_MSG_SYSTEM", "You have learned a new spell.") == false)
   F.cantReach["festeringrotshaft"] = nil
 end)
+step("Do not kill: add the target, reminded once, on the tooltip, off the KOS list", function()
+  local K = ns.kos
+  local saved = { UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName, UnitIsUnit }
+  UnitExists = function(u) return u == "target" end
+  UnitIsPlayer = function(u) return u == "target" end
+  UnitCanAttack = function() return true end
+  UnitIsUnit = function() return false end
+  UnitGUID = function(u) return u == "target" and "Player-1-0888" or nil end
+  GetUnitName = function(u) return u == "target" and "Pal Friendly" or nil end
+  K.add("Player-1-0888", "Pal Friendly")
+  SlashCmdList.SPICYKILLSTREAKS("dnk pal")
+  assert(K.dnkFind("Player-1-0888"), "not on Do not kill")
+  assert(not K.entry("Player-1-0888"), "still on the KOS list")
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  fire("PLAYER_TARGET_CHANGED"); fire("PLAYER_TARGET_CHANGED")
+  print = oldPrint
+  local n = 0
+  for _, line in ipairs(said) do if line:find("Do not kill list", 1, true) then n = n + 1 end end
+  assert(n == 1, "expected one reminder, got " .. n)
+  assert(K.tooltipLine("target") == "Do not kill")
+  local lines = {}
+  local tip = { GetUnit = function() return "Pal", "target" end, AddLine = function(_, l) lines[#lines + 1] = l end, Show = function() end }
+  K.onTooltip(tip)
+  assert(lines[1] == "Do not kill", "tooltip: " .. tostring(lines[1]))
+  -- a typed name, then the page with its card
+  assert(K.dnkAdd(nil, "Someone Else"))
+  ns.ui.open(); ns.ui.show("kos", true)
+  -- back to KOS: off Do not kill
+  K.add("Player-1-0888", "Pal Friendly")
+  assert(not K.dnkFind("Player-1-0888") and K.tooltipLine("target") == "KOS list")
+  K.remove("Player-1-0888")
+  for _, item in ipairs(K.dnkSorted()) do K.dnkRemove(item.key) end
+  UnitExists, UnitIsPlayer, UnitCanAttack, UnitGUID, GetUnitName, UnitIsUnit = unpack(saved)
+end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)
 step("setup opens", function() SlashCmdList.SPICYKILLSTREAKS("setup"); assert(rawget(_G, "SpicyKillStreaksSetup").__shown) end)

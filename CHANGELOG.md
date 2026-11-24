@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.0
+
+- **Do not kill list** at the bottom of the KOS list page: players you'd rather leave alone (friends on the other faction...). Target one and you're reminded, once per session: "<name> is on your Do not kill list." Add your target (matched exactly) or a name, on the page or with `/sks dnk <name>`. Someone on it never becomes a nemesis or gets an "Add to KOS" offer, and adding them to one list takes them off the other.
+- **Tooltips:** a player's tooltip says **KOS list**, **Nemesis (KOS list)** or **Do not kill**.
+
 ## v1.11.2
 
 - **No more "No player named 'Name' is currently playing."** At login the addon asks your online friends whether they run it. WoW Forever doesn't say which realm a Battle.net friend is on, so it asks them all, and the game answered for those on another realm with that line. It's hidden now, and a friend the game can't reach isn't asked again that session (`/sks friends` lists them as left out).

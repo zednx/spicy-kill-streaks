@@ -962,6 +962,23 @@ sections[#sections + 1] = { id = "kos", label = "KOS list", hint = "Grudges and 
 		end
 		cards[#cards + 1] = c
 	end
+
+	-- Do not kill: a reminder when you target them (once per session)
+	c = newCard("Do not kill")
+	c:add(para("Players you'd rather leave alone. Target one and you're reminded, once per session.", 12, COLORS.muted), 1)
+	local dnkGUID, dnkName = K.targetPlayer()
+	local dnkTyped = dnkName or ""
+	c:add(edit("Name (or target them)", function() return dnkTyped end, function(v) dnkTyped = v or "" end), 0.7)
+	c:add(button("Add to Do not kill", function()
+		local ok, why = K.dnkAdd((dnkGUID and dnkTyped == dnkName) and dnkGUID or nil, dnkTyped)
+		core().chat(ok and (dnkTyped .. " is on your Do not kill list.") or ("Not added: " .. tostring(why) .. "."))
+		if ok then C_Timer.After(0, function() ui.show("kos", true, true) end) end
+	end), 0.3)
+	for _, item in ipairs(K.dnkSorted()) do
+		c:add(para("|cff66d973" .. (item.entry.name or "?") .. "|r", 13), 0.7)
+		c:add(button("Remove", function() K.dnkRemove(item.key) ui.show("kos", true, true) end), 0.3)
+	end
+	cards[#cards + 1] = c
 	return cards
 end, dynamic = true }
 

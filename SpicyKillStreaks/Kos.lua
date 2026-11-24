@@ -83,6 +83,9 @@ function kos.add(guid, name, nemesis)
 		list[guid] = entry
 	end
 	if nemesis then entry.nemesis = true end
+	-- (and off the Do not kill list)
+	local _, dnkKey = kos.dnkFind(guid, entry.name)
+	if dnkKey then kos.dnkRemove(dnkKey) end
 	return entry
 end
 
@@ -95,6 +98,8 @@ function kos.addByName(name)
 		if entry.name and nameKey(entry.name) == key then return false, clean .. " is already on your list" end
 	end
 	list[key] = { name = clean, killedMe = 0, iKilled = 0, added = time(), unconfirmed = true }
+	local _, dnkKey = kos.dnkFind(nil, clean)
+	if dnkKey then kos.dnkRemove(dnkKey) end
 	return true
 end
 
@@ -219,6 +224,8 @@ function kos.onDeath(killer, guid, level)
 		kos.askConfirm(key, guid, name, level)
 		return
 	end
+	-- On the Do not kill list: no nemesis, no offer (just the tally)
+	if kos.dnkFind(guid, name) then return end
 	if cfg().nemesis and rival.onMe >= NEMESIS_AT then
 		entry = kos.add(guid, name, true)
 		core().showText(name .. " IS NOW YOUR NEMESIS!", "death")
@@ -357,6 +364,117 @@ function kos.targetEnemy()
 	return nil
 end
 
+-- Any other player we have targeted (the Do not kill list): guid, name; or nil
+function kos.targetPlayer()
+	local ok, guid, name = pcall(function()
+		if not UnitExists("target") or not UnitIsPlayer("target") or UnitIsUnit("target", "player") then return nil end
+		return UnitGUID("target"), GetUnitName("target", true)
+	end)
+	if ok and isPlayerGUID(guid) and cleanName(name) then return guid, cleanName(name) end
+	return nil
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Do not kill: players we'd rather leave alone (friends on the other faction...). Added from the
+-- target (kept by GUID) or by name. Targeting one reminds us, once per session.
+-- ---------------------------------------------------------------------------------------------
+local function dnkStore()
+	local g = core().db().global
+	g.dnk = g.dnk or {}
+	return g.dnk
+end
+kos.dnkStore = dnkStore
+
+-- Their entry and key: by GUID, else by name (a name entry found by GUID moves to the GUID)
+function kos.dnkFind(guid, name)
+	local list = dnkStore()
+	if isPlayerGUID(guid) and list[guid] then return list[guid], guid end
+	local key = nameKey(name)
+	local entry = key and list[key]
+	if entry and isPlayerGUID(guid) then
+		list[key] = nil
+		list[guid] = entry
+		return entry, guid
+	end
+	return entry, key
+end
+
+function kos.dnkAdd(guid, name)
+	local clean = cleanName(name)
+	if not clean then return false, "no name" end
+	if kos.dnkFind(guid, clean) then return false, clean .. " is already on it" end
+	local key = isPlayerGUID(guid) and guid or nameKey(clean)
+	dnkStore()[key] = { name = clean, added = time() }
+	-- (and off the KOS list)
+	local list = store()
+	if isPlayerGUID(guid) then list[guid] = nil end
+	list[nameKey(clean)] = nil
+	return true
+end
+
+function kos.dnkRemove(key) dnkStore()[key] = nil end
+
+function kos.dnkSorted()
+	local out = {}
+	for key, entry in pairs(dnkStore()) do out[#out + 1] = { key = key, entry = entry } end
+	table.sort(out, function(a, b) return (a.entry.name or "") < (b.entry.name or "") end)
+	return out
+end
+
+local dnkReminded = {} -- key -> true: reminded this session
+function kos.dnkCheck(unit)
+	unit = unit or "target"
+	local ok, guid, name = pcall(function()
+		if not UnitExists(unit) or not UnitIsPlayer(unit) then return nil end
+		return UnitGUID(unit), GetUnitName(unit, true)
+	end)
+	if not ok or not (isPlayerGUID(guid) or usable(name)) then return end
+	local entry, key = kos.dnkFind(guid, name)
+	if not entry or dnkReminded[key] then return end
+	dnkReminded[key] = true
+	local line = (entry.name or "?") .. " is on your Do not kill list."
+	core().showText(line, "other")
+	core().chat(line)
+end
+
+-- Tooltips: "KOS", "Nemesis" or "Do not kill" on a player's tooltip
+function kos.tooltipLine(unit)
+	local ok, guid, name = pcall(function()
+		if not UnitIsPlayer(unit) then return nil end
+		return UnitGUID(unit), GetUnitName(unit, true)
+	end)
+	if not ok or not (isPlayerGUID(guid) or usable(name)) then return nil end
+	local entry = isPlayerGUID(guid) and kos.entry(guid)
+	if entry then
+		if entry.nemesis then return "Nemesis (KOS list)", 1, 0.27, 0.27 end
+		return "KOS list", 1, 0.54, 0.29
+	end
+	if kos.dnkFind(guid, name) then return "Do not kill", 0.4, 0.85, 0.45 end
+	return nil
+end
+local function onTooltip(tooltip)
+	if not (ns.core and ns.core.db()) or not cfg().enabled then return end
+	local ok, _, unit = pcall(tooltip.GetUnit, tooltip)
+	if not ok or not usable(unit) then return end
+	local line, r, g, b = kos.tooltipLine(unit)
+	if line then
+		tooltip:AddLine(line, r, g, b)
+		pcall(tooltip.Show, tooltip)
+	end
+end
+kos.onTooltip = onTooltip
+-- (newer clients: TooltipDataProcessor; older: OnTooltipSetUnit. Either may be missing.)
+pcall(function()
+	local unitType = type(Enum) == "table" and type(Enum.TooltipDataType) == "table" and Enum.TooltipDataType.Unit
+	if type(TooltipDataProcessor) == "table" and type(TooltipDataProcessor.AddTooltipPostCall) == "function" and unitType then
+		TooltipDataProcessor.AddTooltipPostCall(unitType, function(tooltip)
+			if tooltip == GameTooltip then pcall(onTooltip, tooltip) end
+		end)
+	elseif GameTooltip and GameTooltip.HookScript then
+		GameTooltip:HookScript("OnTooltipSetUnit", function(tooltip) pcall(onTooltip, tooltip) end)
+	end
+end)
+
 local watch = CreateFrame("Frame")
 for _, event in ipairs({ "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED" }) do
 	pcall(watch.RegisterEvent, watch, event)
@@ -365,6 +483,7 @@ watch:SetScript("OnEvent", function(_, event, unit)
 	if not (ns.core and ns.core.db()) then return end
 	if event == "PLAYER_TARGET_CHANGED" then
 		kos.sight("target")
+		pcall(kos.dnkCheck, "target")
 		if kos.onTarget then pcall(kos.onTarget) end
 	elseif event == "UPDATE_MOUSEOVER_UNIT" then
 		kos.sight("mouseover")

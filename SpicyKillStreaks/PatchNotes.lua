@@ -5,6 +5,14 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.12.0", date = "2026-11-24",
+		summary = "A Do not kill list, and KOS on tooltips.",
+		new = {
+			{ "KOS list", "Do not kill: a friendly list that reminds you when you target them (once per session); /sks dnk <name>" },
+			{ "Tooltips", "Players on your lists say KOS list, Nemesis or Do not kill" },
+		},
+	},
+	{
 		version = "1.11.2", date = "2026-11-24",
 		fixed = {
 			{ "Chat", "No more \"No player named ... is currently playing\" lines when the addon asks friends on other realms" },
