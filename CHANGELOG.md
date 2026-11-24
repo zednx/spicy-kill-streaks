@@ -2,6 +2,7 @@
 
 ## v1.13.1
 
+- **Fixed: killing the same player again wasn't counted.** Once you'd killed a player, every later kill on them was ignored until you changed zone (no callout, no streak, no KOS payback). In world PvP, where you meet the same players again and again, that missed a lot. Now a repeat only counts once if the game reports it twice within a few seconds.
 - **Your kill line in chat shows your streak:** "Spicy killed Bob! (4 streak)", from the 2nd kill in a row (not if your own Kill text already has `$s`). Friends' kills in your feed say it the same way now ("(4 streak)" instead of "(streak 4)").
 
 ## v1.13.0

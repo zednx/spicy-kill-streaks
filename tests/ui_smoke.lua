@@ -1265,6 +1265,39 @@ step("the kill line in chat ends with the streak", function()
   assert(out:find("killed Secondfoe! (", 1, true) and out:find(" streak)", 1, true), "no streak in chat: " .. out)
   assert(not out:find("(1 streak)", 1, true), "a first kill shouldn't say (1 streak)")
 end)
+step("the same player killed again later counts again (a repeat at once doesn't)", function()
+  local P = ns.core.db().profile
+  P.dochat = true
+  local saved = { UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance, GetTime }
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  UnitExists = function(u) return u == "player" end
+  UnitIsPlayer = function() return false end
+  UnitLevel = function() return 48 end
+  UnitName = function() return "Tester" end
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Repeatfoe" end
+  local clock = 1000
+  GetTime = function() return clock end
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  local function killed()
+    local n = 0
+    for _, line in ipairs(said) do if line:find("killed Repeatfoe!", 1, true) then n = n + 1 end end
+    return n
+  end
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0600")
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0600") -- the game repeating itself
+  runTimers(); runTimers()
+  local first = killed()
+  clock = clock + 60
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0600")
+  runTimers(); runTimers()
+  print = oldPrint
+  UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance, GetTime = unpack(saved)
+  assert(first == 1, "the first kill counted " .. first .. " times")
+  assert(killed() == 2, "killing them again a minute later wasn't counted")
+end)
 step("big game hunter: a player 10+ levels above us", function()
   local core = ns.core
   local P = core.db().profile

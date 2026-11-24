@@ -6,6 +6,9 @@ local _, ns = ...
 ns.patchNotes = {
 	{
 		version = "1.13.1", date = "2026-11-24",
+		fixed = {
+			{ "Kills", "Killing the same player again counts again (it was ignored until you changed zone)" },
+		},
 		new = {
 			{ "Chat", "Your kill line shows your streak: \"killed Bob! (4 streak)\"" },
 		},

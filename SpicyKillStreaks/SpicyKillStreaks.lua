@@ -3210,7 +3210,7 @@ end
 -- ---------------------------------------------------------------------------------------------
 -- Detection: outside battlegrounds and arenas
 -- ---------------------------------------------------------------------------------------------
-local credited = {} -- GUID -> true: this death was already announced
+local credited = {} -- GUID -> GetTime() it was announced (a repeat within seconds is the same death)
 local watched = {}  -- GUID -> "alive" | "engaged": NPC targets seen alive
 -- GUID -> GUID of whoever landed the killing blow, from PARTY_KILL. PARTY_KILL is exact, so it
 -- overrules the target-death guess: a target it credits to a group member is not our kill.
@@ -3220,9 +3220,17 @@ local killedByCount = 0
 -- just after the target turns dead)
 local GUESS_DELAY = 0.6
 
+-- A death the game reports twice counts once. Only for a few seconds: the same player dies again
+-- and again in world PvP (before 1.13.2 a player we had killed once was never counted again
+-- until a zone change).
+SPECIAL.CREDIT_SAME = 5
 local function creditKill(guid, name)
-	if credited[guid] then return end
-	credited[guid] = true
+	local now = GetTime()
+	if credited[guid] and now - credited[guid] < SPECIAL.CREDIT_SAME then
+		debugPrint("kill: already counted", guid, "a moment ago")
+		return
+	end
+	credited[guid] = now
 	debugPrint("kill: credited", guid, "name", name or "none")
 	-- (the victim's GUID, for the KOS list's exact match)
 	SPECIAL.lastVictimGUID = guid
