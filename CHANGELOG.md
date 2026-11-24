@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.1
+
+- **Your kill line in chat shows your streak:** "Spicy killed Bob! (4 streak)", from the 2nd kill in a row (not if your own Kill text already has `$s`). Friends' kills in your feed say it the same way now ("(4 streak)" instead of "(streak 4)").
+
 ## v1.13.0
 
 - **Share your KOS and Do not kill lists with the guild** (optional, off by default: **Share with the guild** on the KOS list page, with guild sharing on). Your players go to guildmates who share too, and theirs show on your tooltips: **Guild KOS (Bob)** or **Guild: Do not kill (Bob)**, when the player isn't on your own lists. Only players you've seen (matched by their unique ID) are shared, up to 40 each. Lists go out at login and when you add or remove someone; nothing is sent from battlegrounds. A guildmate's list only shows on tooltips: payback, sightings and reminders stay yours. Guildmates need 1.13.0.

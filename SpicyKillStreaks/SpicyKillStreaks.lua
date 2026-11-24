@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.0"
+local VERSION = "1.13.1"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -1308,7 +1308,8 @@ function SPECIAL.screenCallout(text, kind, level, taunt)
 end
 
 -- One line of news: the log, the chat window and the screen
-local function announce(text, kind, level, taunt)
+-- chatText: what chat says instead, if different (a kill line with the streak added)
+local function announce(text, kind, level, taunt, chatText)
 	-- A pack with its own words says them in the log and chat too (rainbow in chat)
 	local packText = (kind == "rank" or kind == "multi") and SPECIAL.PACK_TEXT[db.profile.soundpack]
 	local logged = packText and packText[text] or text
@@ -1316,7 +1317,7 @@ local function announce(text, kind, level, taunt)
 		table.insert(db.profile.log, 1, "[" .. date("%m/%d %H:%M:%S") .. "] " .. logged)
 		while #db.profile.log > LOG_LIMIT do table.remove(db.profile.log) end
 	end
-	if db.profile.dochat then chat(packText and SPECIAL.rainbow(logged) or text) end
+	if db.profile.dochat then chat(packText and SPECIAL.rainbow(logged) or chatText or text) end
 	if db.profile.doscreen then SPECIAL.screenCallout(text, kind, level, taunt) end
 end
 
@@ -1344,7 +1345,7 @@ local function preview(what)
 		showText("You were killed by Test-Killer.", "death")
 		playHumiliation()
 	elseif what == "other" then
-		showText("Friend-Name (10) killed Test-Victim (12)! (streak 3)", "other")
+		showText("Friend-Name (10) killed Test-Victim (12)! (3 streak)", "other")
 		celebrate("other")
 	end
 end
@@ -1546,7 +1547,13 @@ local function registerKill(victim, isDuel, notGank)
 
 	local values = { k = playerName or "You", v = victim, s = streak }
 	local colorRank = rankForStreak(streak)
-	announce(fill(isDuel and profile.dueltext or profile.kstext, values), "kill", colorRank)
+	-- In chat the kill line ends with the streak ("Spicy killed Bob! (4 streak)"), unless the
+	-- player's own kill text already shows it ($s)
+	local template = isDuel and profile.dueltext or profile.kstext
+	local killText = fill(template, values)
+	local withStreak = not isDuel and streak > 1 and not strfind(template or "", "$s", 1, true)
+		and (killText .. " (" .. streak .. " streak)") or nil
+	announce(killText, "kill", colorRank, nil, withStreak)
 
 	-- Retribution and First Blood (not for duels or tests; both remember state)
 	local retribution, firstBlood, comeback = false, false, false
@@ -2234,7 +2241,7 @@ local function onFeedMessage(kind, sender, channel, fields)
 	else
 		rest = " killed " .. nameShown .. "!"
 	end
-	if streakCount > 1 then rest = rest .. " (streak " .. streakCount .. ")" end
+	if streakCount > 1 then rest = rest .. " (" .. streakCount .. " streak)" end
 	if kind == "T" then rest = rest .. " [test]" end
 	local text = whoShown .. rest
 

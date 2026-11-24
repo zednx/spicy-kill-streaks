@@ -1240,6 +1240,31 @@ step("muting covers kudos and help requests too, and the guild board has Mute bu
   assert(muteButton, "no Mute button on the guild board")
   kudos.clear()
 end)
+step("the kill line in chat ends with the streak", function()
+  local P = ns.core.db().profile
+  P.dochat = true
+  local saved = { UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance }
+  IsInInstance = function() return false, "none" end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  UnitExists = function(u) return u == "target" or u == "player" end
+  UnitIsPlayer = function(u) return u == "target" end
+  UnitLevel = function() return 48 end
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  for i, name in ipairs({ "Firstfoe", "Secondfoe" }) do
+    UnitName = function(u) if u == "target" then return name end return "Tester" end
+    GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, name end
+    fire("PLAYER_TARGET_CHANGED")
+    fire("PARTY_KILL", "Player-1-0001", "Player-1-050" .. i)
+    runTimers(); runTimers()
+  end
+  print = oldPrint
+  UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance = unpack(saved)
+  local out = table.concat(said, "\n")
+  assert(out:find("killed Secondfoe! (", 1, true) and out:find(" streak)", 1, true), "no streak in chat: " .. out)
+  assert(not out:find("(1 streak)", 1, true), "a first kill shouldn't say (1 streak)")
+end)
 step("big game hunter: a player 10+ levels above us", function()
   local core = ns.core
   local P = core.db().profile

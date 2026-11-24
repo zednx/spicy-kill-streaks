@@ -5,6 +5,12 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.1", date = "2026-11-24",
+		new = {
+			{ "Chat", "Your kill line shows your streak: \"killed Bob! (4 streak)\"" },
+		},
+	},
+	{
 		version = "1.13.0", date = "2026-11-24",
 		summary = "Share your KOS and Do not kill lists with the guild.",
 		new = {
