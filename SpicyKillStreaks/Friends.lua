@@ -185,6 +185,7 @@ function friends.explain()
 		local key = shortKey(friends.bnetTarget(game) or "")
 		if why == "realm unknown" then
 			why = friends.status[key or ""] and "realm not given, but they answered: included"
+				or (friends.cantReach[key or ""] and "realm not given, and the game can't whisper them (another realm): left out")
 				or "realm not given: included once they answer Who runs it? (asked at login)"
 		end
 		say("Battle.net: " .. tostring(game.characterName or "?") .. " - " .. (why or ("included, whispered as " .. friends.bnetTarget(game)))
@@ -350,7 +351,14 @@ local function nextAsk()
 	if not core().inPvP() then core().sendAddonMessage(hello("F?"), "WHISPER", name) end
 	C_Timer.After(ASK_GAP, nextAsk)
 end
+-- Friends the game says it can't whisper ("No player named..."): skipped for the rest of the session
+friends.cantReach = {}
+function friends.unreachable(name)
+	local key = shortKey(name)
+	if key then friends.cantReach[key] = true end
+end
 local function ask(f)
+	if friends.cantReach[shortKey(f.name) or ""] then return end
 	friends.askedAt[f.key] = GetTime()
 	for _, queued in ipairs(askQueue) do if queued == f.name then return end end
 	askQueue[#askQueue + 1] = f.name
@@ -368,7 +376,7 @@ function friends.check(announce)
 	if core().inPvP() then return 0 end
 	local asked = 0
 	for _, f in ipairs(friends.online()) do
-		if not friends.viaGuild(f.name) then
+		if not friends.viaGuild(f.name) and not friends.cantReach[shortKey(f.name) or ""] then
 			ask(f)
 			asked = asked + 1
 		end

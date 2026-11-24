@@ -2,7 +2,7 @@
 
 ## v1.11.2
 
-- **No more "No player named 'Name Family' is currently playing."** The addon's hidden whispers (answers to "who runs it?", friends) went to players' full names with their family name, which the game can't whisper. They now go to the character's name, and if the game still can't find someone, that line is hidden.
+- **No more "No player named 'Name' is currently playing."** At login the addon asks your online friends whether they run it. WoW Forever doesn't say which realm a Battle.net friend is on, so it asks them all, and the game answered for those on another realm with that line. It's hidden now, and a friend the game can't reach isn't asked again that session (`/sks friends` lists them as left out).
 
 ## v1.11.1
 

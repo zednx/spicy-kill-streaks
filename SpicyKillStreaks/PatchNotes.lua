@@ -7,7 +7,7 @@ ns.patchNotes = {
 	{
 		version = "1.11.2", date = "2026-11-24",
 		fixed = {
-			{ "Chat", "No more \"No player named ... is currently playing\" lines from the addon's hidden whispers" },
+			{ "Chat", "No more \"No player named ... is currently playing\" lines when the addon asks friends on other realms" },
 		},
 	},
 	{

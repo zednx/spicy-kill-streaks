@@ -335,23 +335,21 @@ step("the streak survives a /reload, not a long logout", function()
   sp.restoreStreak()
   assert(ns.core.streak() == 0)
 end)
-step("whispers go to the first name; the game's 'no player named' for them is hidden", function()
-  local sp = ns.core.special
-  assert(sp.whisperName("Aria One") == "Aria", sp.whisperName("Aria One"))
-  assert(sp.whisperName("Aria One-SomeRealm") == "Aria-SomeRealm", sp.whisperName("Aria One-SomeRealm"))
-  assert(sp.whisperName("Bob") == "Bob" and sp.whisperName("Bob-Realm") == "Bob-Realm")
+step("the game's 'no player named' for our hidden whisper is hidden, and they aren't asked again", function()
+  local sp, F = ns.core.special, ns.friends
   local targets = {}
   local old = C_ChatInfo.SendAddonMessage
   C_ChatInfo.SendAddonMessage = function(_, _, channel, target) targets[#targets + 1] = tostring(target) return 0 end
-  ns.core.sendAddonMessage("V!\t1.0.0", "WHISPER", "Festering Rotshaft")
+  ns.core.sendAddonMessage("F?\t1.0.0", "WHISPER", "Festering Rotshaft")
   C_ChatInfo.SendAddonMessage = old
-  assert(targets[1] == "Festering", "whispered " .. tostring(targets[1]))
+  assert(targets[1] == "Festering Rotshaft", "whispered " .. tostring(targets[1]))
   ERR_CHAT_PLAYER_NOT_FOUND_S = "No player named '%s' is currently playing."
   sp.notFoundPattern = nil
   assert(sp.hideNotFound(nil, "CHAT_MSG_SYSTEM", "No player named 'Festering Rotshaft' is currently playing.") == true)
-  assert(sp.hideNotFound(nil, "CHAT_MSG_SYSTEM", "No player named 'Festering' is currently playing.") == true)
+  assert(F.cantReach["festeringrotshaft"], "not remembered as unreachable")
   assert(sp.hideNotFound(nil, "CHAT_MSG_SYSTEM", "No player named 'Somebody' is currently playing.") == false)
   assert(sp.hideNotFound(nil, "CHAT_MSG_SYSTEM", "You have learned a new spell.") == false)
+  F.cantReach["festeringrotshaft"] = nil
 end)
 step("unreal style section", function() ns.core.db().profile.style = "ut"; ns.ui.show("announcer") end)
 step("flamboyant preview", function() ns.core.db().profile.soundpack = "flamboyant"; ns.ui.show("screen") end)

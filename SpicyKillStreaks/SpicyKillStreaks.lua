@@ -1800,16 +1800,10 @@ SPECIAL.SEND_RESULTS = { [0] = "success", "invalid prefix", "invalid message", "
 	"addon message lockdown" }
 SPECIAL.LOCKDOWN = 11
 
--- WoW Forever senders can carry a family name ("Aria One-Realm"), which isn't a name you can
--- whisper ("No player named 'Aria One'..."): the character's name is the first one, plus the realm
-function SPECIAL.whisperName(name)
-	if type(name) ~= "string" or isSecret(name) then return name end
-	local first, realm = strmatch(name, "^([^%s%-]+)%s[^%-]*(.*)$")
-	return first and (first .. realm) or name
-end
-
 -- The game's "No player named 'X' is currently playing." for a name we whispered a hidden addon
--- message to in the last few seconds: not shown (whispers you type yourself still say it)
+-- message to in the last few seconds: not shown (whispers you type yourself still say it). Mostly
+-- Battle.net friends on another realm: WoW Forever doesn't say which realm they're on, so the
+-- friends check asks them anyway; they aren't asked again this session (Friends.lua).
 SPECIAL.whispered = {}
 function SPECIAL.noteWhisper(...)
 	local now = GetTime()
@@ -1826,7 +1820,8 @@ function SPECIAL.hideNotFound(_, _, message)
 	local name = strmatch(message, SPECIAL.notFoundPattern)
 	local at = name and SPECIAL.whispered[strlower(name)]
 	if at and GetTime() - at <= 10 then
-		debugPrint("sync: hid the game's 'no player named", name .. "' (our hidden whisper)")
+		debugPrint("sync: hid the game's 'no player named", name .. "' (our hidden whisper); not whispering them again this session")
+		if SPECIAL.ns.friends and SPECIAL.ns.friends.unreachable then SPECIAL.ns.friends.unreachable(name) end
 		return true
 	end
 	return false
@@ -1837,11 +1832,7 @@ end
 
 local function sendAddonMessage(message, channel, target, isRetry)
 	if not (C_ChatInfo and C_ChatInfo.SendAddonMessage) or not registerPrefix() then return false end
-	if channel == "WHISPER" then
-		local original = target
-		target = SPECIAL.whisperName(target)
-		SPECIAL.noteWhisper(original, target, type(target) == "string" and (strsplit("-", target)) or nil)
-	end
+	if channel == "WHISPER" then SPECIAL.noteWhisper(target, type(target) == "string" and (strsplit("-", target)) or nil) end
 	-- Nothing is shared from battlegrounds and arenas: WoW Forever locks addon messages there for
 	-- the whole match anyway, and it would be spammy. They stay just for you.
 	if inBG or inArena then
