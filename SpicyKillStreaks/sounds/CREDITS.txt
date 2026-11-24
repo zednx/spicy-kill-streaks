@@ -38,6 +38,9 @@ zealot\
   Added for Spicy Kill Streaks 1.9.0 from files supplied by the author: taunts from Unreal
   Tournament 3 ((c) Epic Games), pitched down two semitones and evened out in loudness.
 
+trailer\
+  Made for Spicy Kill Streaks 1.11.0 by the author; the lines were written for this addon.
+
 biggame.ogg
   Added for Spicy Kill Streaks 1.9.0 from a file supplied by the author: an announcer line.
   Source: to be confirmed.

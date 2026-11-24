@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.11.0
+
+- **New voice pack: Trailer**, a movie-trailer narrator who slowly loses it. Foreboding one-liners for every rank and multikill (*Three bodies. One survivor.*, *This summer, fear has a name.*), breaking into laughter as your streak climbs, plus its own First Blood, Retribution, Pancake, Prepare, Gank and Ganked lines. Pick it under `/sks` > Sound or in the setup.
+- **Fresh lines:** Trailer takes turns through two Humiliation lines, three Gank lines and two Ganked lines, so they don't repeat every time.
+- **Setup:** the voice step shows the seven packs in a row of four and a row of three.
+
 ## v1.10.1
 
 - **Settings:** buttons next to a dropdown or text box (Play, Add...) line up with the box instead of its label.

@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.10.1"
+local VERSION = "1.11.0"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -22,7 +22,7 @@ local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- there falls back to sounds\
 -- "humiliation" only has humiliation (the default humiliation voice).
 local PACK_FOLDER = { male = "", female = "female\\", sexy = "sexy\\", baby = "baby\\", flamboyant = "flamboyant\\",
-	zealot = "zealot\\", humiliation = "humiliation\\", custom = "custom\\" }
+	zealot = "zealot\\", trailer = "trailer\\", humiliation = "humiliation\\", custom = "custom\\" }
 -- Files a voice pack does not ship; these are played from sounds\ instead
 local PACK_MISSING = { baby = { ["monsterkill.ogg"] = true } }
 
@@ -102,7 +102,7 @@ local defaults = {
 		soundchannel = "Master",
 		doprepare = false,
 		dodeathsound = true, -- "humiliation" when we die
-		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / flamboyant / zealot / custom
+		humiliationvoice = "humiliation", -- the bundled one, or "pack" = the chosen voice pack, or male / female / sexy / baby / flamboyant / zealot / trailer / custom
 		-- text
 		dochat = true,
 		doscreen = true,
@@ -585,6 +585,13 @@ function playSound(file, pack)
 		return ok and played
 	end
 	pack = pack or db.profile.soundpack
+	-- Packs with a few clips for one sound take them in turn
+	local turns = SPECIAL.ROTATION[pack] and SPECIAL.ROTATION[pack][file]
+	if turns then
+		local key = pack .. file
+		SPECIAL.turn[key] = (SPECIAL.turn[key] or 0) % #turns + 1
+		file = turns[SPECIAL.turn[key]]
+	end
 	local folder = PACK_FOLDER[pack] or ""
 	local missing = PACK_MISSING[pack]
 	if missing and missing[file] then folder = "" end
@@ -622,13 +629,7 @@ end -- do
 local function playHumiliation()
 	local voice = db.profile.humiliationvoice
 	local pack = (voice and voice ~= "pack") and voice or db.profile.soundpack
-	local rotation = SPECIAL.HUMILIATION_ROTATION[pack]
-	local file = SOUND_HUMILIATION
-	if rotation then
-		SPECIAL.humiliationIndex = (SPECIAL.humiliationIndex or 0) % #rotation + 1
-		file = rotation[SPECIAL.humiliationIndex]
-	end
-	playSound(file, pack)
+	return playSound(SOUND_HUMILIATION, pack)
 end
 
 -- The streak ranks, fixed: one per kill from Killing Spree at 3 to Godlike at 8, which then
@@ -698,8 +699,16 @@ SPECIAL.PACK_TAUNTS = {
 }
 -- Moments only some packs have a line for (playSound returns false elsewhere, so the usual sound plays)
 SPECIAL.comebackSound, SPECIAL.duelWinSound, SPECIAL.avengedSound = "comeback.ogg", "duelwin.ogg", "avenged.ogg"
--- Packs with a few Humiliation clips, taken in turn
-SPECIAL.HUMILIATION_ROTATION = { zealot = { "humiliation.ogg", "humiliation2.ogg", "humiliation3.ogg" } }
+-- Packs with a few clips for one sound, taken in turn (playSound): pack -> sound -> its clips
+SPECIAL.ROTATION = {
+	zealot = { ["humiliation.ogg"] = { "humiliation.ogg", "humiliation2.ogg", "humiliation3.ogg" } },
+	trailer = {
+		["humiliation.ogg"] = { "humiliation.ogg", "humiliation2.ogg" },
+		["gank.ogg"] = { "gank.ogg", "gank2.ogg", "gank3.ogg" },
+		["ganked.ogg"] = { "ganked.ogg", "ganked2.ogg" },
+	},
+}
+SPECIAL.turn = {} -- pack .. sound -> the clip it played last
 SPECIAL.RAINBOW = { "ff3b30", "ff9500", "ffcc00", "34c759", "32ade6", "af52de" }
 
 -- "BIG BEAR!" with every letter in the next rainbow colour
@@ -3812,7 +3821,7 @@ local function buildSetup()
 		"Choose the announcer. Click a voice to hear it.",
 		function(page, refreshers)
 			local packs = { { "male", "Male" }, { "female", "Female" }, { "sexy", "Sexy" }, { "baby", "Baby" },
-				{ "flamboyant", "Flamboyant" }, { "zealot", "Zealot" } }
+				{ "flamboyant", "Flamboyant" }, { "zealot", "Zealot" }, { "trailer", "Trailer" } }
 			local buttons = {}
 			for i, pack in ipairs(packs) do
 				local b = makeButton(page, pack[2], 100, function()
@@ -3823,7 +3832,7 @@ local function buildSetup()
 					db.profile.dosound = was
 					for _, r in ipairs(refreshers) do r() end
 				end)
-				b:SetPoint("TOPLEFT", ((i - 1) % 3) * 108, -math.floor((i - 1) / 3) * 30)
+				b:SetPoint("TOPLEFT", ((i - 1) % 4) * 108, -math.floor((i - 1) / 4) * 30)
 				buttons[i] = { button = b, key = pack[1], label = pack[2] }
 			end
 			refreshers[#refreshers + 1] = function()
@@ -4173,7 +4182,8 @@ local function buildOptions()
 						.. "/sks snooze off to undo). Text and effects still show.", 8),
 					soundpack = {
 						type = "select", name = "Voice pack", order = 2,
-						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot" },
+						values = { male = "Male", female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot",
+							trailer = "Trailer" },
 						desc = "Flamboyant also changes the callout text to match, in rainbow letters.",
 						get = function() return db.profile.soundpack end,
 						set = function(_, value) db.profile.soundpack = value end,
@@ -4191,7 +4201,8 @@ local function buildOptions()
 						desc = "Each voice pack has its own recording. \"Custom\" plays sounds\\custom\\humiliation.ogg if you add one.",
 						values = {
 							humiliation = "Humiliation (default)", pack = "Same as the voice pack", male = "Male",
-							female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", custom = "Custom file",
+							female = "Female", sexy = "Sexy", baby = "Baby", flamboyant = "Flamboyant", zealot = "Zealot", trailer = "Trailer",
+							custom = "Custom file",
 						},
 						get = function() return db.profile.humiliationvoice end,
 						set = function(_, value)

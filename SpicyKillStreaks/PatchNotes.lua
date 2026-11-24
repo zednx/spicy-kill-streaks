@@ -5,6 +5,14 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.11.0", date = "2026-11-24",
+		summary = "A new voice pack: Trailer, a movie-trailer narrator who slowly loses it.",
+		new = {
+			{ "Trailer", "A new voice pack: foreboding trailer lines that crack into laughter" },
+			{ "Trailer", "Humiliation, Gank and Ganked take turns through a few lines each" },
+		},
+	},
+	{
 		version = "1.10.1", date = "2026-11-23",
 		fixed = {
 			{ "Zealot", "The taunt shows smaller, in white, under the callout (as in the preview)" },

@@ -194,7 +194,8 @@ step("patch notes: newest open, a click opens another, /sks news", function()
   local out = shownText()
   local newest = ns.patchNotes[1]
   assert(out:find((newest.new or newest.fixed)[1][2], 1, true), "newest notes not open")
-  assert(not out:find(ns.patchNotes[2].summary, 1, true), "older notes should start closed")
+  local older = ns.patchNotes[2]
+  assert(not out:find(older.summary or (older.new or older.fixed)[1][2], 1, true), "older notes should start closed")
   -- click the second version's header
   local second
   for _, fs in ipairs(FONTSTRINGS) do
@@ -203,7 +204,7 @@ step("patch notes: newest open, a click opens another, /sks news", function()
   assert(second and second.__scripts.OnClick, "no header for " .. ns.patchNotes[2].version)
   clearShown()
   second.__scripts.OnClick(second); runTimers()
-  assert(shownText():find(ns.patchNotes[2].summary, 1, true), "a click should open it")
+  assert(shownText():find(older.summary or (older.new or older.fixed)[1][2], 1, true), "a click should open it")
 end)
 step("an update says where the patch notes are, once", function()
   local g = ns.core.db().global
@@ -507,6 +508,30 @@ step("zealot pack: taunts on screen, standard text in chat, its own sounds", fun
   assert(shown:find("DEATH WARRANT ENFORCED!", 1, true), shown)
   assert(played[1]:find("zealot\\humiliation%.ogg$") and played[#played]:find("zealot\\humiliation2%.ogg$"), table.concat(played, " "))
   P.soundpack, P.dochat, P.doscreen, P.dosound, P.humiliationvoice = unpack(saved)
+end)
+step("trailer pack: its clips for Humiliation, Gank and Ganked take turns", function()
+  local P = ns.core.db().profile
+  local saved = { P.soundpack, P.dosound, P.humiliationvoice }
+  P.soundpack, P.dosound, P.humiliationvoice = "trailer", true, "pack"
+  ns.core.db().global.snoozeUntil = 0
+  P.mutebg, P.mutedungeon, P.muteraid = false, false, false
+  local played = {}
+  local oldPSF = PlaySoundFile
+  PlaySoundFile = function(f) played[#played + 1] = tostring(f) return true end
+  local function names(n, play)
+    played = {}
+    for _ = 1, n do play() end
+    for i, f in ipairs(played) do played[i] = f:match("([^\\]+)$") end
+    return table.concat(played, " ")
+  end
+  local gank = names(4, function() ns.core.playSound("gank.ogg") end)
+  local ganked = names(3, function() ns.core.playSound("ganked.ogg") end)
+  local humiliation = names(3, ns.core.playHumiliation)
+  PlaySoundFile = oldPSF
+  P.soundpack, P.dosound, P.humiliationvoice = unpack(saved)
+  assert(gank:find("^gank%.ogg gank2%.ogg gank3%.ogg gank%.ogg$"), gank)
+  assert(ganked:find("^ganked%.ogg ganked2%.ogg ganked%.ogg$"), ganked)
+  assert(humiliation:find("^humiliation%.ogg humiliation2%.ogg humiliation%.ogg$"), humiliation)
 end)
 step("gank line at most once a minute, Headshot and Ownage in between", function()
   local played = {}
