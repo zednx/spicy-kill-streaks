@@ -190,7 +190,7 @@ local function place()
 	holder:ClearAllPoints()
 	-- From the left edge of the screen (lx: to the stack's middle) and its vertical middle (ly), in
 	-- screen units; the offsets are in the holder's own (scaled) units
-	local scale = tonumber(cfg().scale) or 0.85
+	local scale = tonumber(cfg().scale) or 0.9
 	holder:SetScale(scale)
 	holder:SetPoint(growsUp() and "BOTTOM" or "TOP", UIParent, "LEFT", (cfg().lx or 150) / scale, (cfg().ly or 120) / scale)
 	if kudos.grip then
@@ -678,7 +678,7 @@ end
 
 -- The popup's size (a scale, 0.6 to 1.2)
 function kudos.setScale(value)
-	cfg().scale = math.min(math.max(tonumber(value) or 0.85, 0.6), 1.2)
+	cfg().scale = math.min(math.max(tonumber(value) or 0.9, 0.6), 1.2)
 	place()
 end
 

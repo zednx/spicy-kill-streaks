@@ -851,9 +851,9 @@ sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to frie
 	cards[#cards + 1] = c
 
 	c = newCard("Popup")
-	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.85 end,
+	c:add(slider("Popup size", 0.6, 1.2, 0.05, function() return P().kudos.scale or 0.9 end,
 		function(v) if ns.kudos then ns.kudos.setScale(v) else P().kudos.scale = v end end, true), 0.5)
-	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 220 end,
+	c:add(slider("Card width", 180, 380, 10, function() return P().kudos.width or 340 end,
 		function(v) if ns.kudos then ns.kudos.setWidth(v) else P().kudos.width = v end end), 0.5)
 	c:add(toggle("Grow upwards", "New cards stack up from the popup's spot instead of down",
 		function() return P().kudos.growup end, function(v) if ns.kudos then ns.kudos.setGrowUp(v) else P().kudos.growup = v end end), 0.5)

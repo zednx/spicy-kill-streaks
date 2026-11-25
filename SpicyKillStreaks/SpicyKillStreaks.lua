@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.2"
+local VERSION = "1.13.3"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -146,12 +146,12 @@ local defaults = {
 			-- What to do with kills and deaths shared by others
 			--   feed: a line in the chat window   sound: their streak / multikill sound
 			--   text: on-screen combat text       deaths: also show when they die
-			party = { feed = true, sound = true, text = true, deaths = false },
-			guild = { feed = true, sound = false, text = false, deaths = false },
+			party = { feed = true, sound = true, text = true, deaths = true },
+			guild = { feed = true, sound = true, text = true, deaths = true },
 			-- Friends (Friends.lua): the friends list and Battle.net friends on our realm and faction.
 			-- Off by default: they see our kills and deaths even when we're not grouped.
 			sharefriends = false,
-			friends = { feed = true, sound = false, text = true, deaths = false },
+			friends = { feed = true, sound = true, text = false, deaths = true },
 		},
 		-- Request aid (Aid.lua)
 		aid = {
@@ -178,9 +178,9 @@ local defaults = {
 			chat = false,    -- also post the reaction as a normal line in party or guild chat
 			sound = true,    -- kudos we get: the sender's /cheer, loot toasts as they stack, Shadow Word: Pain for a death
 			lx = 150, ly = 120, -- where the popup sits: from the left edge of the screen and its middle (left side by default)
-			scale = 0.85,    -- the popup's size
-			width = 220,     -- the cards' width (wider fits longer names and text)
-			growup = false,  -- new cards stack downwards from that point (true: upwards)
+			scale = 0.9,     -- the popup's size
+			width = 340,     -- the cards' width (wider fits longer names and text)
+			growup = true,   -- new cards stack upwards from that point (false: downwards)
 			combathide = true, -- the whole popup fades out in combat and back in after
 			got = 0,         -- kudos received in total (flair)
 		},

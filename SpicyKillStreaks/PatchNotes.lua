@@ -5,6 +5,13 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.3", date = "2026-11-25",
+		new = {
+			{ "Friends", "Party and guild kills and deaths show as combat text with sounds by default" },
+			{ "Kudos", "The popup is a bit bigger and wider by default, and grows upwards" },
+		},
+	},
+	{
 		version = "1.13.2", date = "2026-11-24",
 		fixed = {
 			{ "NPC kills", "Just for you: not shared, not in your stats, and they don't touch your real streak" },

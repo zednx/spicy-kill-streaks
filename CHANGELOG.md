@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.13.3
+
+- **New defaults** for others' kills and deaths (Friends page): party and guild members' kills now show in chat, as combat text and with sounds, and their deaths too. Friends' show in chat and with sounds (no combat text), deaths included.
+- **New Kudos popup defaults:** 90% size, 340-wide cards, growing upwards.
+- Only settings you never changed follow the new defaults; anything you set yourself stays as it is.
+
 ## v1.13.2
 
 - **NPC kills are just for you** (with **Count NPC kills** on): their callouts, sounds and effects play with a streak of their own, but they're no longer sent to your party, guild or friends, don't count in your stats or on the guild board, and leave your real kill streak alone. Dying resets the NPC streak too.
