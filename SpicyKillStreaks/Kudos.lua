@@ -97,6 +97,23 @@ local CHEERS = {
 	Worgen = { [2] = { 542207, 542194 }, [3] = { 542062, 542081 } },
 	Pandaren = { [2] = { 630064, 630066 }, [3] = { 636413, 636415 } },
 }
+-- 😂 plays the sender's /laugh instead (for a kill or a death)
+local LAUGHS = {
+	Human = { [2] = { 540739 }, [3] = { 540540 } },
+	Orc = { [2] = { 541230 }, [3] = { 541153 } },
+	Dwarf = { [2] = { 539883 }, [3] = { 539798 } },
+	NightElf = { [2] = { 540945 }, [3] = { 540877 } },
+	Scourge = { [2] = { 542595 }, [3] = { 542518 } },
+	Tauren = { [2] = { 542898 }, [3] = { 542806 } },
+	Gnome = { [2] = { 540267 }, [3] = { 540268 } },
+	Troll = { [2] = { 543094 }, [3] = { 543091 } },
+	BloodElf = { [2] = { 539287 }, [3] = { 539267 } },
+	Draenei = { [2] = { 539604 }, [3] = { 539719 } },
+	Goblin = { [2] = { 541902, 541940, 541894, 541985 }, [3] = { 541840 } },
+	Worgen = { [2] = { 542246 }, [3] = { 542077 } },
+	Pandaren = { [2] = { 641324, 641326, 641328 }, [3] = { 644720, 644722, 644724 } },
+}
+kudos.LAUGHS = LAUGHS
 -- the 3rd and 5th kudos for the same kill add a loot toast; kudos for a death play Shadow Word: Pain
 local STACK_SOUNDS = { [3] = 1489461, [5] = 2174248 } -- legendary item toast, Azerite loot toast
 local DEATH_SOUND = 568353                             -- shadowwordpain_chest
@@ -117,8 +134,8 @@ local function myRaceAndSex()
 end
 
 -- A cheer for this race and sex, or nil (an unknown race, or one sent by a broken client)
-local function cheerFor(race, sex)
-	local voices = CHEERS[race]
+local function cheerFor(race, sex, laugh)
+	local voices = (laugh and LAUGHS or CHEERS)[race]
 	local list = voices and voices[sex]
 	return list and list[math.random(#list)]
 end
@@ -550,7 +567,8 @@ function kudos.receive(sender, channel, fields)
 	-- The sender's race and sex pick their cheer (only names in CHEERS are used)
 	local race, sex = fields[7], tonumber(fields[8])
 	if #fields < 9 or not CHEERS[race] then race, sex = nil, nil end
-	kudos.showGot(who, words, ownDeedText(kind, event.what), event.count, { kind = kind, race = race, sex = sex })
+	kudos.showGot(who, words, ownDeedText(kind, event.what), event.count,
+		{ kind = kind, race = race, sex = sex, laugh = id == "laugh" })
 end
 
 -- The sounds for a kudos we got: their cheer (kill) or Shadow Word: Pain (death), plus a loot toast
@@ -562,11 +580,13 @@ local function playKudosSound(sound, count, forced)
 	-- Played once, at the game's own volume: kudos are a quiet moment, unlike the announcer
 	special.soundOnce = true
 	pcall(function()
+		-- 😂: their laugh, for a kill or a death
+		local laugh = sound.laugh and cheerFor(sound.race, sound.sex, true)
 		if sound.kind == "D" then
-			play(DEATH_SOUND)
+			play(laugh or DEATH_SOUND)
 			return
 		end
-		local cheer = cheerFor(sound.race, sound.sex)
+		local cheer = laugh or cheerFor(sound.race, sound.sex)
 		if cheer then play(cheer) end
 		if STACK_SOUNDS[count] then play(STACK_SOUNDS[count]) end
 	end)
@@ -708,14 +728,14 @@ end
 function kudos.previewGot()
 	local sample = {
 		{ "Bob", emoji("thumbsup"), "Orc", 2 },
-		{ "Panda", emoji("laugh"), "Pandaren", 3 },
+		{ "Panda", emoji("laugh"), "Pandaren", 3, true },
 		{ "Alice", emoji("heart"), "Human", 3 },
 		{ "Grug", emoji("party"), "Tauren", 2 },
 		{ "Mira", emoji("smile"), "Gnome", 3 },
 	}
 	for i, entry in ipairs(sample) do
 		C_Timer.After((i - 1) * 1.4, function()
-			kudos.showGot(entry[1], entry[2], "Rampage", i, { kind = "K", race = entry[3], sex = entry[4] }, true)
+			kudos.showGot(entry[1], entry[2], "Rampage", i, { kind = "K", race = entry[3], sex = entry[4], laugh = entry[5] }, true)
 		end)
 	end
 end

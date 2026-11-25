@@ -555,6 +555,12 @@ step("kudos: offer, send, chat post, receive", function()
   fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "R", "1.3.0", "Player-1-0001", "party", "K", "H", "Orc", "2", "Player-1-0004" }, "\t"), "GUILD", "Dan-Realm")
   assert(#kudos.rows == 2 and kudos.rows[2].label:GetText():find("|TInterface\\AddOns\\SpicyKillStreaks\\Media\\Emoji\\party:0|t", 1, true), kudos.rows[2] and kudos.rows[2].label:GetText())
   assert(P.kudos.got == before + 2, "got not counted")
+  -- 😂 plays the sender's laugh instead of their cheer
+  played = {}
+  PlaySoundFile = function(f) played[#played + 1] = f return true end
+  fire("CHAT_MSG_ADDON", PREFIX, table.concat({ "R", "1.13.3", "Player-1-0001", "laugh", "K", "H", "Orc", "2", "Player-1-0005" }, "\t"), "GUILD", "Eve-Realm")
+  PlaySoundFile = oldPSF
+  assert(played[1] == 541230, "expected an orc male laugh, got " .. tostring(played[1]))
   -- preview, move, lock
   kudos.previewGot(); for _ = 1, 5 do runTimers() end; kudos.previewDeath(); kudos.clear()
   SlashCmdList.SPICYKILLSTREAKS("kudos got"); runTimers()

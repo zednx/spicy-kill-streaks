@@ -846,7 +846,7 @@ sections[#sections + 1] = { id = "kudos", label = "Kudos", hint = "React to frie
 	c:add(ktoggle("give", "Kudos popup for friends' kills and deaths",
 		"Ten emoji to pick from, for kills and deaths alike"), 1)
 	c:add(ktoggle("receive", "Show kudos friends send me", nil), 0.5)
-	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer; loot toasts at 3 and 5; a death has its own"), 0.5)
+	c:add(ktoggle("sound", "Kudos sounds", "Their /cheer (/laugh for 😂); loot toasts at 3 and 5"), 0.5)
 	c:add(ktoggle("chat", "Also post my reactions in chat", "Everyone sees it; one every 15 seconds at most"), 1)
 	cards[#cards + 1] = c
 

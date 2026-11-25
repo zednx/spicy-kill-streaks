@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.4
+
+- **Kudos:** 😂 now plays the sender's `/laugh` (their race and sex) instead of their `/cheer`, for a kill or a death. The other emoji are unchanged.
+
 ## v1.13.3
 
 - **New defaults** for others' kills and deaths (Friends page): party and guild members' kills now show in chat, as combat text and with sounds, and their deaths too. Friends' show in chat and with sounds (no combat text), deaths included.

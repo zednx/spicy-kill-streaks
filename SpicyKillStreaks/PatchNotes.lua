@@ -5,6 +5,12 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.4", date = "2026-11-25",
+		new = {
+			{ "Kudos", "😂 plays the sender's /laugh instead of their /cheer" },
+		},
+	},
+	{
 		version = "1.13.3", date = "2026-11-25",
 		new = {
 			{ "Friends", "Party and guild kills and deaths show as combat text with sounds by default" },

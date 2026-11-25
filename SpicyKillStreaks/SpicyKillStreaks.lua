@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.3"
+local VERSION = "1.13.4"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
