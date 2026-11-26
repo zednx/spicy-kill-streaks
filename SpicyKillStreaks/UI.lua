@@ -621,7 +621,7 @@ sections[#sections + 1] = { id = "announcer", label = "Announcer", hint = "Callo
 	cards[#cards + 1] = c
 
 	c = newCard("Ganks")
-	c:add(ptoggle("dogank", "Shame ganks", "Killing a player 10+ levels below you"), 0.5)
+	c:add(ptoggle("dogank", "Shame ganks", "Killing a grey-level player (worth no honor)"), 0.5)
 	c:add(ptoggle("doganked", "Got ganked", "Killed by a player 10+ levels above you"), 0.5)
 	cards[#cards + 1] = c
 
@@ -1672,7 +1672,7 @@ local CALLOUTS = {
 	{ key = "doheadshot", title = "Headshot", desc = "Your first kill of a streak (First Blood once a day)" },
 	{ key = "doretribution", title = "Retribution", desc = "Kill someone who killed you in the last hour" },
 	{ key = "docomeback", title = "Comeback", desc = "It's a surprise." },
-	{ key = "dogank", title = "Shame ganks", desc = "You kill a player 10+ levels below you" },
+	{ key = "dogank", title = "Shame ganks", desc = "You kill a grey-level player" },
 	{ key = "doganked", title = "Got ganked", desc = "A player 10+ levels above you kills you" },
 	{ key = "dopancake", title = "Pancake", desc = "Falling or drowning, yours or a friend's" },
 }

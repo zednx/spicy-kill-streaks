@@ -1334,6 +1334,32 @@ step("NPC kills: local only, their own streak, nothing sent, real streak untouch
   assert(ns.core.streak() == before, "the real streak changed")
   assert((m.monthKills or 0) == monthKills, "an NPC kill counted in this month's stats")
 end)
+step("a grey player with a family name is a gank (UnitName gives only the first name)", function()
+  local P = ns.core.db().profile
+  P.dochat, P.dogank = true, true
+  local sp = ns.core.special
+  assert(sp.greyLevel(41) == 32 and sp.greyLevel(60) == 47 and sp.greyLevel(20) == 13, "grey levels")
+  local saved = { UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance, IsInGroup }
+  IsInInstance = function() return false, "none" end
+  IsInGroup = function() return false end
+  fire("PLAYER_ENTERING_WORLD", false, false); runTimers()
+  UnitExists = function(u) return u == "target" or u == "player" end
+  UnitIsPlayer = function(u) return u == "target" end
+  UnitName = function(u) if u == "target" then return "Xc" end return "Tester" end
+  UnitLevel = function(u) if u == "target" then return 32 end return 41 end
+  fire("PLAYER_TARGET_CHANGED")
+  UnitExists = function(u) return u == "player" end -- (they're dead and gone from the target)
+  GetPlayerInfoByGUID = function() return nil, nil, nil, nil, nil, "Xc Bnm" end
+  local said = {}
+  local oldPrint = print
+  print = function(...) said[#said + 1] = table.concat({ ... }, " ") end
+  fire("PARTY_KILL", "Player-1-0001", "Player-1-0700")
+  for _ = 1, 3 do runTimers() end
+  print = oldPrint
+  UnitExists, UnitName, UnitLevel, UnitIsPlayer, GetPlayerInfoByGUID, IsInInstance, IsInGroup = unpack(saved)
+  local out = table.concat(said, "\n")
+  assert(out:find("ganked a level 32 Xc Bnm", 1, true), "not a gank: " .. out)
+end)
 step("big game hunter: a player 10+ levels above us", function()
   local core = ns.core
   local P = core.db().profile

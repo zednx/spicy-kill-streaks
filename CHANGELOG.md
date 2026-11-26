@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.13.5
+
+- **Fixed: ganks on players with a family name weren't caught.** The level the addon saw ("Xc", from your target or a nameplate) never matched the name in the kill ("Xc Bnm"), so with no known level the kill played the normal callouts and counted towards your streak. Levels are now matched by first name. This also fixes Big Game Hunter and Got ganked for those players.
+- **A gank is now a grey-level player** (worth no honor), the game's own rule, instead of "10+ levels below you": at level 41 that's level 32 and below.
+
 ## v1.13.4
 
 - **Kudos:** 😂 now plays the sender's `/laugh` (their race and sex) instead of their `/cheer`, for a kill or a death. The other emoji are unchanged.

@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.4"
+local VERSION = "1.13.5"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -85,7 +85,7 @@ local defaults = {
 		dopancake = true,        -- "Pancake" for a death with no killer (falling, drowning)
 		docomeback = true,       -- a surprise for the first kill after 3+ deaths in a row
 		dobiggame = true,        -- "BIG GAME HUNTER!" for killing a player 10+ levels above us (or ??)
-		dogank = true,           -- shame instead of a callout for killing a player 10+ levels below you
+		dogank = true,           -- shame instead of a callout for killing a grey-level player (SPECIAL.greyLevel)
 		doganked = true,         -- "got ganked by" when a player 10+ levels above you kills you
 		dopve = false,
 		dobgsummary = true,      -- at the end of a battleground or arena: our killing blows and best streak, to share or not
@@ -1385,9 +1385,11 @@ local syncSendKill, syncSendDeath -- defined in the sync section below
 -- (One table: Lua 5.1 allows only 200 locals at the top of a file.)
 local Levels = { byName = {}, players = {}, seenAt = {}, count = 0 }
 
+-- The first name only: WoW Forever characters have a family name, which UnitName leaves out
+-- ("Xc") but kills and addon messages include ("Xc Bnm"). Before 1.13.5 the two never matched.
 function Levels.key(name)
 	if not usableString(name) then return nil end
-	return strlower(strmatch(name, "^([^%-]+)") or name)
+	return strlower(strmatch(name, "^([^%s%-]+)") or name)
 end
 
 function Levels.note(unit)
@@ -1458,11 +1460,18 @@ end
 SPECIAL.ganked = "ganked.ogg" -- Flamboyant has one; the other packs play the Peon (SOUND_STANDIN)
 SPECIAL.FLAIR = { "Bully!", "Pick on someone your own size!", "Big hero.", "Shameful.", "Their mum is on the way." }
 
--- Our kill of victim is a gank: a player we saw in the last 5 minutes, 10+ levels below us
+-- The highest level that is grey to us (worth no honor or experience): the game's own rule
+function SPECIAL.greyLevel(ours)
+	if ours <= 5 then return 0 end
+	if ours <= 39 then return ours - 5 - math.floor(ours / 10) end
+	return ours - 1 - math.floor(ours / 5)
+end
+
+-- Our kill of victim is a gank: a player we saw in the last 5 minutes who is grey to us
 function SPECIAL.gankCandidate(victim)
 	if inBG or inArena then return false end -- levels are bracketed there, and kills always give honor
 	local theirs, ours = Levels.recentPlayer(victim), Levels.player()
-	return theirs ~= nil and ours ~= nil and theirs > 0 and ours - theirs >= SPECIAL.GANK_LEVELS
+	return theirs ~= nil and ours ~= nil and theirs > 0 and theirs <= SPECIAL.greyLevel(ours)
 end
 
 -- Big game: our kill of a player 10+ levels above us (or "??" = -1), as sure as the gank checks
@@ -1494,7 +1503,7 @@ local function registerKill(victim, isDuel, notGank)
 	local now = GetTime()
 	victim = usableString(victim) and victim or UNKNOWN_VICTIM
 
-	-- A gank (a player 10+ levels below us, worth no honor): wait a moment for an honorable
+	-- A gank (a grey-level player, worth no honor): wait a moment for an honorable
 	-- kill. If one comes, it was not a gank after all and counts as a normal kill. In a group the
 	-- level gap decides alone: a lower-level member can earn honor from a victim gray to us.
 	if not isDuel and not notGank and not testing and profile.dogank and SPECIAL.gankCandidate(victim) then
@@ -4231,7 +4240,7 @@ local function buildOptions()
 					dopancake = toggle("dopancake", "\"Pancake\" when you or a friend die with no killer (falling, drowning)", 1.8,
 						"Plays instead of Humiliation."),
 					docomeback = toggle("docomeback", "Comeback", 1.84),
-					dogank = toggle("dogank", "Shame ganks: killing a player 10+ levels below you", 1.85,
+					dogank = toggle("dogank", "Shame ganks: killing a grey-level player", 1.85,
 						"No callout and no streak for it, just a bit of shame. Only when the levels are certain "
 						.. "and no honor came for the kill; otherwise it counts as a normal kill."),
 					doganked = toggle("doganked", "\"Got ganked\" when a player 10+ levels above you (or ??) kills you", 1.86,

@@ -5,6 +5,13 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.5", date = "2026-11-26",
+		fixed = {
+			{ "Ganks", "Players with a family name are caught as ganks (and for Big Game Hunter)" },
+			{ "Ganks", "A gank is a grey-level player (worth no honor), not \"10+ levels below\"" },
+		},
+	},
+	{
 		version = "1.13.4", date = "2026-11-25",
 		new = {
 			{ "Kudos", "😂 plays the sender's /laugh instead of their /cheer" },
