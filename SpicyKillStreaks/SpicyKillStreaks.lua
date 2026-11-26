@@ -1471,7 +1471,11 @@ end
 function SPECIAL.gankCandidate(victim)
 	if inBG or inArena then return false end -- levels are bracketed there, and kills always give honor
 	local theirs, ours = Levels.recentPlayer(victim), Levels.player()
-	return theirs ~= nil and ours ~= nil and theirs > 0 and theirs <= SPECIAL.greyLevel(ours)
+	local grey = ours and SPECIAL.greyLevel(ours)
+	local gank = theirs ~= nil and grey ~= nil and theirs > 0 and theirs <= grey
+	debugPrint("gank check:", victim, "level", theirs or "unknown (not seen as a player lately)", "- grey for us is",
+		grey and ("<= " .. grey) or "?", gank and "- a gank" or "- not a gank")
+	return gank
 end
 
 -- Big game: our kill of a player 10+ levels above us (or "??" = -1), as sure as the gank checks
