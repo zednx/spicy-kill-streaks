@@ -37,6 +37,6 @@ The game's `Interface/AddOns/SpicyKillStreaks` is installed and updated by WowUp
 
 ## Versioning and releases
 
-Bump `## Version` in the `.toc` **and** `VERSION` in `SpicyKillStreaks.lua` (CI checks they match the tag), add a `## vX.Y.Z` section to `CHANGELOG.md` and the same version (short `{ area, line }` entries, newest first) to `SpicyKillStreaks/PatchNotes.lua` (the in-game Patch notes page; CI and the smoke test check it), commit, then the user tags: `git tag vX.Y.Z && git push origin vX.Y.Z`. Claude sessions can't push tags.
+Bump `## Version` in the `.toc` **and** `VERSION` in `SpicyKillStreaks.lua` (CI checks they match the tag), add a `## vX.Y.Z` section to `CHANGELOG.md` and the same version (short `{ area, line }` entries, newest first) to `SpicyKillStreaks/PatchNotes.lua` (the in-game Patch notes page; CI and the smoke test check it; its `new` entries are also what the short "Updated to X. New:" chat note lists after an update, so put new features there and fixes under `fixed`), commit, then the user tags: `git tag vX.Y.Z && git push origin vX.Y.Z`. Claude sessions can't push tags.
 
 - **patch**: fixes and small tweaks; **minor**: new features; **major**: breaking changes (saved data or sync message format).

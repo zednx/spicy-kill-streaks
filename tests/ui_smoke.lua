@@ -218,6 +218,16 @@ step("an update says where the patch notes are, once", function()
   for _, line in ipairs(said) do if line:find("/sks news", 1, true) then n = n + 1 end end
   assert(n == 1, "expected one patch notes line, got " .. n)
   assert(g.notesSeen == ns.core.VERSION)
+  -- the note lists new features (a few at most), and says when it was only fixes
+  local sp = ns.core.special
+  local lines = sp.whatsNew("1.8.3")
+  assert(lines[1]:find("New:", 1, true) and #lines <= sp.WHATS_NEW_MAX + 2, table.concat(lines, " / "))
+  assert(lines[#lines]:find("more", 1, true), "should say there's more: " .. lines[#lines])
+  local saved = ns.patchNotes
+  ns.patchNotes = { { version = "9.9.9", fixed = { { "X", "a fix" } } }, { version = "9.9.8" } }
+  lines = sp.whatsNew("9.9.8")
+  ns.patchNotes = saved
+  assert(#lines == 1 and lines[1]:find("(fixes)", 1, true), table.concat(lines, " / "))
 end)
 step("Show in game matches the chosen sample", function()
   ns.ui.open(); ns.ui.show("screen")

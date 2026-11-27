@@ -5,6 +5,12 @@ local _, ns = ...
 
 ns.patchNotes = {
 	{
+		version = "1.13.6", date = "2026-11-27",
+		new = {
+			{ "Updates", "After an update, a short note in chat lists what's new" },
+		},
+	},
+	{
 		version = "1.13.5", date = "2026-11-26",
 		fixed = {
 			{ "Ganks", "Players with a family name are caught as ganks (and for Big Game Hunter)" },

@@ -14,7 +14,7 @@
 
 local ADDON = "SpicyKillStreaks"
 local TITLE = "Spicy Kill Streaks"
-local VERSION = "1.13.5"
+local VERSION = "1.13.6"
 
 local SOUND_ROOT = "Interface\\AddOns\\" .. ADDON .. "\\sounds\\"
 -- Voice pack -> folder under sounds\ ("" = sounds\ itself)
@@ -3714,13 +3714,39 @@ function events.PLAYER_ENTERING_WORLD(isInitialLogin, isReloadingUi)
 			if not db.global.setup1Done then openSetup() end
 		end)
 	end
-	-- After an update: one line pointing at the patch notes (a new install doesn't need it)
+	-- After an update: a short note in chat with what's new (a new install doesn't need it)
 	if db.global.notesSeen ~= VERSION then
 		if db.global.setup1Done then
-			chat("Updated to " .. VERSION .. ". See what's new: |cffffd100/sks news|r")
+			for _, line in ipairs(SPECIAL.whatsNew(db.global.notesSeen)) do chat(line) end
 		end
 		db.global.notesSeen = VERSION
 	end
+end
+
+-- The update note: the new features in every version since the one we last saw (PatchNotes.lua),
+-- a few lines at most, then where to read the rest. Fixes alone just get the one line.
+SPECIAL.WHATS_NEW_MAX = 3
+function SPECIAL.whatsNew(lastSeen)
+	local news, more = {}, 0
+	for i, notes in ipairs(SPECIAL.ns.patchNotes or {}) do
+		if notes.version == lastSeen or i > 10 then break end
+		for _, item in ipairs(notes.new or {}) do
+			if #news < SPECIAL.WHATS_NEW_MAX then
+				news[#news + 1] = "  |cffff8a4a" .. item[1] .. "|r: " .. item[2]
+			else
+				more = more + 1
+			end
+		end
+	end
+	local lines = {}
+	if #news == 0 then
+		lines[1] = "Updated to " .. VERSION .. " (fixes). Details: |cffffd100/sks news|r"
+		return lines
+	end
+	lines[1] = "Updated to " .. VERSION .. ". New:"
+	for _, line in ipairs(news) do lines[#lines + 1] = line end
+	lines[#lines + 1] = (more > 0 and ("  ...and " .. more .. " more. ") or "  ") .. "All of it: |cffffd100/sks news|r"
+	return lines
 end
 
 -- ---------------------------------------------------------------------------------------------

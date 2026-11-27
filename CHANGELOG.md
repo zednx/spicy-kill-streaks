@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.13.6
+
+- **After an update, chat says what's new:** a short note with the new features since the version you had (three at most, then "...and N more"), and where to read the rest (`/sks news`). An update with only fixes gets a single line.
+
 ## v1.13.5
 
 - **Fixed: ganks on players with a family name weren't caught.** The level the addon saw ("Xc", from your target or a nameplate) never matched the name in the kill ("Xc Bnm"), so with no known level the kill played the normal callouts and counted towards your streak. Levels are now matched by first name. This also fixes Big Game Hunter and Got ganked for those players.
